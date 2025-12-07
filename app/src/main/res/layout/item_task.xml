@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="12dp"
+    app:cardCornerRadius="16dp"
+    app:cardElevation="1dp"
+    app:strokeWidth="1dp"
+    app:strokeColor="#E1D9F7">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="20dp">
+
+        <!-- Checkbox -->
+        <CheckBox
+            android:id="@+id/checkbox_task_done"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:buttonTint="#333333"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="4dp"/>
+
+        <!-- Chevron -->
+        <ImageView
+            android:id="@+id/btn_chevron"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_chevron_right"
+            app:tint="#A0A0A0"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            android:contentDescription="Detail"/>
+
+        <!-- Title -->
+        <TextView
+            android:id="@+id/tv_task_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="Prepare presentation for Q3 review meeting with marketing team and stakeholders"
+            android:textColor="#222222"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:lineSpacingExtra="2dp"
+            android:maxLines="3"
+            android:ellipsize="end"
+            android:layout_marginStart="12dp"
+            android:layout_marginEnd="12dp"
+            app:layout_constraintStart_toEndOf="@id/checkbox_task_done"
+            app:layout_constraintEnd_toStartOf="@id/btn_chevron"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:text="Prepare presentation for Q3 review meeting with marketing team and stakeholders"/>
+
+        <!-- Chip ngày: icon lịch + text, nền đỏ, chữ trắng, bo tròn -->
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chip_task_date"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:layout_marginTop="10dp"
+            app:layout_constraintStart_toStartOf="@id/tv_task_title"
+            app:layout_constraintTop_toBottomOf="@id/tv_task_title"
+            app:chipIcon="@drawable/ic_calendar_custom"
+            app:chipIconTint="#FFFFFF"
+            app:chipBackgroundColor="#F44336"
+            android:text="Today, 5:00 PM"
+            android:textColor="#FFFFFF"
+            android:textStyle="bold"
+            android:textAppearance="@style/TextAppearance.MaterialComponents.Body2"
+            android:clickable="false"
+            android:checkable="false"
+            style="@style/Widget.MaterialComponents.Chip.Entry"/>
+
+        <!-- Chip Priority tím -->
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chip_priority"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:layout_marginTop="10dp"
+            app:layout_constraintStart_toStartOf="@id/tv_task_title"
+            app:layout_constraintTop_toBottomOf="@id/chip_task_date"
+            app:chipIcon="@drawable/ic_flag"
+            app:chipIconTint="#FFFFFF"
+            app:chipBackgroundColor="#A259E6"
+            android:text="High Priority"
+            android:textColor="#FFFFFF"
+            android:textStyle="bold"
+            android:textAppearance="@style/TextAppearance.MaterialComponents.Body2"
+            android:clickable="false"
+            android:checkable="false"
+            style="@style/Widget.MaterialComponents.Chip.Entry"/>
+
+        <!-- Chip tags xám đậm -->
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/chip_group_tags"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            app:chipSpacing="8dp"
+            app:layout_constraintStart_toStartOf="@id/tv_task_title"
+            app:layout_constraintTop_toBottomOf="@id/chip_priority">
+            <com.google.android.material.chip.Chip
+                android:layout_width="wrap_content"
+                android:layout_height="32dp"
+                android:text="Work"
+                android:textColor="#333333"
+                android:textSize="14sp"
+                app:chipBackgroundColor="#E0E0E0"
+                app:chipMinHeight="32dp"
+                app:chipCornerRadius="16dp"
+                android:clickable="false"
+                android:checkable="false"
+                style="@style/Widget.MaterialComponents.Chip.Action"/>
+            <com.google.android.material.chip.Chip
+                android:layout_width="wrap_content"
+                android:layout_height="32dp"
+                android:text="Marketing"
+                android:textColor="#333333"
+                android:textSize="14sp"
+                app:chipBackgroundColor="#E0E0E0"
+                app:chipMinHeight="32dp"
+                app:chipCornerRadius="16dp"
+                android:clickable="false"
+                android:checkable="false"
+                style="@style/Widget.MaterialComponents.Chip.Action"/>
+        </com.google.android.material.chip.ChipGroup>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</com.google.android.material.card.MaterialCardView>
