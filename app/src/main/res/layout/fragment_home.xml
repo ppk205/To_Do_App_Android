@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-<<<<<<< HEAD
 <androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -20,7 +19,7 @@
         android:id="@+id/tv_header_title"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:text="Personal To-Dos"
+        android:text="@string/personal_todos"
         android:textColor="#000000"
         android:textSize="28sp"
         android:textStyle="bold"
@@ -34,7 +33,7 @@
         android:id="@+id/btn_search"
         android:layout_width="24dp"
         android:layout_height="24dp"
-        android:contentDescription="Search"
+        android:contentDescription="@string/search_desc"
         android:src="@android:drawable/ic_menu_search"
         app:layout_constraintTop_toTopOf="@id/tv_header_title"
         app:layout_constraintBottom_toBottomOf="@id/tv_header_title"
@@ -46,7 +45,7 @@
         android:id="@+id/btn_more"
         android:layout_width="24dp"
         android:layout_height="24dp"
-        android:contentDescription="More"
+        android:contentDescription="@string/more_desc"
         android:src="@drawable/ic_menu_handle_custom"
         app:layout_constraintTop_toTopOf="@id/tv_header_title"
         app:layout_constraintBottom_toBottomOf="@id/tv_header_title"
@@ -84,49 +83,41 @@
             <com.google.android.material.chip.Chip
                 android:layout_width="90dp"
                 android:layout_height="44dp"
-                android:text="All"
+                android:text="@string/tab_all"
                 android:textColor="#FFFFFF"
                 app:chipBackgroundColor="#29B6F6"
                 android:textStyle="bold"
                 android:textSize="18sp"
-                android:checkedIconVisible="false"
-                android:checkable="true"
-                android:checked="true"
                 style="@style/Widget.MaterialComponents.Chip.Choice"
-                app:shapeAppearanceOverlay="@style/ShapeAppearance.Chip.Rounded"/>
+                android:checkable="true"
+                android:checked="true"/>
             <com.google.android.material.chip.Chip
                 android:layout_width="90dp"
                 android:layout_height="44dp"
-                android:text="To Do"
+                android:text="@string/tab_todo"
                 android:textColor="#222222"
                 app:chipBackgroundColor="#F5F5F5"
                 android:textStyle="bold"
                 android:textSize="18sp"
-                android:checkedIconVisible="false"
-                style="@style/Widget.MaterialComponents.Chip.Choice"
-                app:shapeAppearanceOverlay="@style/ShapeAppearance.Chip.Rounded"/>
+                style="@style/Widget.MaterialComponents.Chip.Choice"/>
             <com.google.android.material.chip.Chip
                 android:layout_width="130dp"
                 android:layout_height="44dp"
-                android:text="In Progress"
+                android:text="@string/tab_in_progress"
                 android:textColor="#222222"
                 app:chipBackgroundColor="#F5F5F5"
                 android:textStyle="bold"
                 android:textSize="18sp"
-                android:checkedIconVisible="false"
-                style="@style/Widget.MaterialComponents.Chip.Choice"
-                app:shapeAppearanceOverlay="@style/ShapeAppearance.Chip.Rounded"/>
+                style="@style/Widget.MaterialComponents.Chip.Choice"/>
             <com.google.android.material.chip.Chip
                 android:layout_width="90dp"
                 android:layout_height="44dp"
-                android:text="Done"
+                android:text="@string/tab_done"
                 android:textColor="#222222"
                 app:chipBackgroundColor="#F5F5F5"
                 android:textStyle="bold"
                 android:textSize="18sp"
-                android:checkedIconVisible="false"
-                style="@style/Widget.MaterialComponents.Chip.Choice"
-                app:shapeAppearanceOverlay="@style/ShapeAppearance.Chip.Rounded"/>
+                style="@style/Widget.MaterialComponents.Chip.Choice"/>
         </com.google.android.material.chip.ChipGroup>
     </HorizontalScrollView>
 
@@ -149,39 +140,36 @@
             <com.google.android.material.chip.Chip
                 android:layout_width="120dp"
                 android:layout_height="44dp"
-                android:text="Date"
+                android:text="@string/filter_date"
                 app:chipIcon="@drawable/ic_calendar_custom"
                 app:chipIconTint="#333333"
                 app:chipBackgroundColor="#F5F5F5"
                 android:textColor="#222222"
                 android:textStyle="bold"
                 android:textSize="18sp"
-                style="@style/Widget.MaterialComponents.Chip.Action"
-                app:shapeAppearanceOverlay="@style/ShapeAppearance.Chip.Rounded"/>
+                style="@style/Widget.MaterialComponents.Chip.Action"/>
             <com.google.android.material.chip.Chip
                 android:layout_width="120dp"
                 android:layout_height="44dp"
-                android:text="Priority"
+                android:text="@string/filter_priority"
                 app:chipIcon="@drawable/ic_flag"
                 app:chipIconTint="#333333"
                 app:chipBackgroundColor="#F5F5F5"
                 android:textColor="#222222"
                 android:textStyle="bold"
                 android:textSize="18sp"
-                style="@style/Widget.MaterialComponents.Chip.Action"
-                app:shapeAppearanceOverlay="@style/ShapeAppearance.Chip.Rounded"/>
+                style="@style/Widget.MaterialComponents.Chip.Action"/>
             <com.google.android.material.chip.Chip
                 android:layout_width="120dp"
                 android:layout_height="44dp"
-                android:text="Tag"
+                android:text="@string/filter_tag"
                 app:chipIcon="@drawable/ic_tag"
                 app:chipIconTint="#333333"
                 app:chipBackgroundColor="#F5F5F5"
                 android:textColor="#222222"
                 android:textStyle="bold"
                 android:textSize="18sp"
-                style="@style/Widget.MaterialComponents.Chip.Action"
-                app:shapeAppearanceOverlay="@style/ShapeAppearance.Chip.Rounded"/>
+                style="@style/Widget.MaterialComponents.Chip.Action"/>
         </com.google.android.material.chip.ChipGroup>
     </HorizontalScrollView>
 
@@ -226,21 +214,7 @@
             android:padding="15dp"
             android:src="@drawable/ic_plus"
             app:tint="#FFFFFF"
-            android:contentDescription="Add New Task" />
+            android:contentDescription="@string/add_task_desc" />
     </com.google.android.material.card.MaterialCardView>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
-=======
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    tools:context=".ui.HomeFragment">
-
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:text="Home Fragment" />
-
-</FrameLayout>
->>>>>>> 232e2f6849fc09982772be74c4e4b0984b4ca5f8
