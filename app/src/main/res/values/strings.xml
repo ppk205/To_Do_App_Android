@@ -1,3 +1,33 @@
 <resources>
     <string name="app_name">MORP-PRJ</string>
+
+    <!-- Onboarding content strings -->
+    <string name="cd_logo_taskflow">TaskFlow logo</string>
+    <string name="cd_onboarding_illustration">Onboarding illustration</string>
+    <string name="cd_dot_1">Dot 1</string>
+    <string name="cd_dot_2">Dot 2</string>
+    <string name="cd_dot_3">Dot 3</string>
+
+    <!-- Localized UI strings used in onboarding layout -->
+    <string name="taskflow_name">TaskFlow</string>
+    <string name="onboarding_title">Organize Your Personal World</string>
+    <string name="onboarding_description">Manage your daily tasks, set priorities, and track progress effortlessly to boost your individual productivity.</string>
+    <string name="get_started">Get Started</string>
+    <string name="try_offline">Try Offline (Guest Mode)</string>
+
+    <!-- Register screen strings -->
+    <string name="register_title">Register</string>
+    <string name="register_subtitle">Create Your Account</string>
+    <string name="register_tagline">Join TaskFlow to organize your life and collaborate effortlessly.</string>
+
+    <string name="hint_first_name">First Name</string>
+    <string name="hint_last_name">Last Name</string>
+    <string name="hint_username">Username</string>
+    <string name="hint_email">Email</string>
+    <string name="email_note">A verification link will be sent to this email.</string>
+    <string name="hint_password">Password</string>
+    <string name="hint_phone">Phone Number (Optional)</string>
+    <string name="security_note">Your password will be encrypted using industry-standard protocols. We utilize JWT tokens for secure session management.</string>
+    <string name="privacy_note">TaskFlow prioritizes your data privacy and security.</string>
+    <string name="register_button">Register Account</string>
 </resources>
