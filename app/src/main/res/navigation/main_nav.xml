@@ -9,7 +9,37 @@
         android:id="@+id/onboarding_fragment"
         android:name="com.example.morp_prj.ui.OnboardingFragment"
         android:label="fragment_onboarding"
-        tools:layout="@layout/fragment_onboarding" />
+        tools:layout="@layout/fragment_onboarding">
+        <action
+            android:id="@+id/action_onboarding_to_login"
+            app:destination="@id/login_fragment" />
+        <action
+            android:id="@+id/action_onboarding_to_home"
+            app:destination="@id/menu_home" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/login_fragment"
+        android:name="com.example.morp_prj.ui.LoginFragment"
+        android:label="fragment_login"
+        tools:layout="@layout/fragment_login">
+        <action
+            android:id="@+id/action_login_to_register"
+            app:destination="@id/register_fragment" />
+        <action
+            android:id="@+id/action_login_to_home"
+            app:destination="@id/menu_home" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/register_fragment"
+        android:name="com.example.morp_prj.ui.RegisterFragment"
+        android:label="fragment_register"
+        tools:layout="@layout/fragment_register">
+        <action
+            android:id="@+id/action_register_to_home"
+            app:destination="@id/menu_home" />
+    </fragment>
 
     <fragment
         android:id="@id/menu_personal"
@@ -35,5 +65,15 @@
         android:id="@id/menu_profile"
         android:name="com.example.morp_prj.ui.ProfileFragment"
         android:label="fragment_profile"
-        tools:layout="@layout/fragment_profile" />
+        tools:layout="@layout/fragment_profile">
+        <action
+            android:id="@+id/action_profile_to_logout"
+            app:destination="@id/logout_fragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/logout_fragment"
+        android:name="com.example.morp_prj.ui.LogoutFragment"
+        android:label="fragment_logout"
+        tools:layout="@layout/fragment_logout" />
 </navigation>

@@ -37,14 +37,11 @@
             android:textColor="@color/black" />
     </LinearLayout>
 
-    <!-- Hình minh họa -->
-    <ImageView
-        android:id="@+id/img_illustration"
+    <!-- Hình minh họa (ViewPager2 để lướt ảnh) -->
+    <androidx.viewpager2.widget.ViewPager2
+        android:id="@+id/view_pager"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:src="@drawable/img_onboarding_work"
-        android:contentDescription="@string/cd_onboarding_illustration"
-        android:scaleType="centerInside"
         app:layout_constraintTop_toBottomOf="@id/logo_container"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
@@ -64,7 +61,7 @@
         android:layout_marginStart="24dp"
         android:layout_marginEnd="24dp"
         android:textColor="@color/black"
-        app:layout_constraintTop_toBottomOf="@id/img_illustration"
+        app:layout_constraintTop_toBottomOf="@id/view_pager"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
@@ -97,6 +94,7 @@
         app:layout_constraintEnd_toEndOf="parent">
 
         <ImageView
+            android:id="@+id/dot1"
             android:layout_width="8dp"
             android:layout_height="8dp"
             android:layout_margin="4dp"
@@ -104,13 +102,15 @@
             android:contentDescription="@string/cd_dot_1" />
 
         <ImageView
+            android:id="@+id/dot2"
             android:layout_width="8dp"
             android:layout_height="8dp"
             android:layout_margin="4dp"
-            android:src="@drawable/dot_active"
+            android:src="@drawable/dot_inactive"
             android:contentDescription="@string/cd_dot_2" />
 
         <ImageView
+            android:id="@+id/dot3"
             android:layout_width="8dp"
             android:layout_height="8dp"
             android:layout_margin="4dp"

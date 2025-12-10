@@ -27,10 +27,10 @@ class MainActivity : AppCompatActivity() {
         val bottomNav = findViewById<BottomNavigationView>(R.id.bottom_nav_view)
         bottomNav.setupWithNavController(navController)
 
-        // Hide bottom navigation on destinations that shouldn't show it (e.g. onboarding)
+        // Hide bottom navigation on destinations that shouldn't show it (e.g. onboarding, login, register)
         navController.addOnDestinationChangedListener { _, destination, _ ->
             when (destination.id) {
-                R.id.onboarding_fragment -> bottomNav.visibility = View.GONE
+                R.id.onboarding_fragment, R.id.login_fragment, R.id.register_fragment -> bottomNav.visibility = View.GONE
                 else -> bottomNav.visibility = View.VISIBLE
             }
         }

@@ -30,4 +30,21 @@
     <string name="security_note">Your password will be encrypted using industry-standard protocols. We utilize JWT tokens for secure session management.</string>
     <string name="privacy_note">TaskFlow prioritizes your data privacy and security.</string>
     <string name="register_button">Register Account</string>
+
+    <!-- Login strings -->
+    <string name="cd_back">Back</string>
+    <string name="login_title">Login</string>
+    <string name="login_welcome">Welcome Back!</string>
+    <string name="login_email_label">Email or Username</string>
+    <string name="login_email_hint">Enter your email or username</string>
+    <string name="login_password_label">Password</string>
+    <string name="login_password_hint">Enter your password</string>
+    <string name="login_button">Login</string>
+    <string name="login_forgot_password">Forgot Password?</string>
+    <string name="login_no_account">No account?</string>
+    <string name="login_register_now">Register Now</string>
+
+    <!-- Guest prompt strings -->
+    <string name="guest_prompt_title">Register to sync and access Team features!</string>
+    <string name="guest_register_now">Register Now</string>
 </resources>

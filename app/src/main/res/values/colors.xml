@@ -16,4 +16,5 @@
 
     <!-- Added missing color used by onboarding layout -->
     <color name="dark_gray">#707070</color>
+    <color name="gray_background">#F5F6F8</color>
 </resources>
