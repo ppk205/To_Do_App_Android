@@ -1,13 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".ui.activity.NotificationsFragment">
+    android:padding="8dp">
 
-    <TextView
+    <ImageView
+        android:id="@+id/img_item"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:text="Notifications Fragment" />
+        android:scaleType="centerInside"
+        android:contentDescription="@string/cd_onboarding_illustration" />
 
 </FrameLayout>
