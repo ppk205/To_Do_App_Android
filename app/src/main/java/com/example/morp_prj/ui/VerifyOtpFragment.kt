@@ -11,11 +11,13 @@ import android.view.View
 import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.EditText
+import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputEditText
 import androidx.core.content.ContextCompat
+import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
@@ -32,9 +34,11 @@ class VerifyOtpFragment : Fragment(R.layout.fragment_verify_otp) {
     private lateinit var preferenceManager: PreferenceManager
     private var userId: String? = null
     private var email: String? = null
+    private var username: String? = null
     private var countDownTimer: CountDownTimer? = null
     private var otpAttempts = 0
 
+    private lateinit var btnBack: ImageView
     private lateinit var tvEmail: TextView
     private lateinit var tvTimer: TextView
     private lateinit var etOtp1: TextInputEditText
@@ -56,8 +60,9 @@ class VerifyOtpFragment : Fragment(R.layout.fragment_verify_otp) {
         // Get arguments
         userId = arguments?.getString("userId")
         email = arguments?.getString("email")
+        username = arguments?.getString("username")
 
-        android.util.Log.d("VerifyOtpFragment", "userId: $userId, email: $email")
+        android.util.Log.d("VerifyOtpFragment", "userId: $userId, email: $email, username: $username")
 
         if (userId == null || email == null) {
             Toast.makeText(requireContext(), getString(R.string.missing_user_info), Toast.LENGTH_LONG).show()
@@ -75,6 +80,7 @@ class VerifyOtpFragment : Fragment(R.layout.fragment_verify_otp) {
 
             btnVerify.setOnClickListener { verifyOTP() }
             btnResend.setOnClickListener { resendOTP() }
+            btnBack.setOnClickListener { findNavController().navigateUp() }
 
             btnPaste.setOnClickListener { pasteFromClipboard() }
 
@@ -86,6 +92,7 @@ class VerifyOtpFragment : Fragment(R.layout.fragment_verify_otp) {
     }
 
     private fun initViews(view: View) {
+         btnBack = view.findViewById(R.id.btn_back)
          tvEmail = view.findViewById(R.id.tvEmail)
          tvTimer = view.findViewById(R.id.tvTimer)
          etOtp1 = view.findViewById(R.id.etOtp1)
@@ -214,7 +221,7 @@ class VerifyOtpFragment : Fragment(R.layout.fragment_verify_otp) {
             }
 
             override fun onFinish() {
-                tvTimer.text = "00:00"
+                tvTimer.text = getString(R.string.otp_timer_placeholder).replace("05:00", "00:00")
                 tvTimer.setTextColor(ContextCompat.getColor(requireContext(), R.color.error))
                 btnResend.isEnabled = true
                 Toast.makeText(requireContext(), getString(R.string.otp_expired), Toast.LENGTH_SHORT).show()
@@ -271,7 +278,7 @@ class VerifyOtpFragment : Fragment(R.layout.fragment_verify_otp) {
 
                         // Save user data and token
                         val savedUserId = authResponse.user?.id ?: authResponse.userId ?: userId!!
-                        val savedUsername = authResponse.user?.username ?: ""
+                        val savedUsername = authResponse.user?.username ?: username ?: ""
                         val savedDisplayName = authResponse.user?.displayName ?: ""
                         val savedEmail = authResponse.user?.email ?: email!!
                         val savedToken = authResponse.token ?: ""
@@ -286,15 +293,18 @@ class VerifyOtpFragment : Fragment(R.layout.fragment_verify_otp) {
                             token = savedToken
                         )
 
-                        Toast.makeText(requireContext(), getString(R.string.verify_success_welcome, savedDisplayName), Toast.LENGTH_LONG).show()
-
-                        // Navigate to home
+                        // Navigate to register success fragment
                         try {
-                            findNavController().navigate(R.id.action_verifyOtp_to_home)
+                            val bundle = bundleOf(
+                                "username" to savedUsername,
+                                "email" to savedEmail
+                            )
+                            findNavController().navigate(R.id.action_verifyOtp_to_registerSuccess, bundle)
                         } catch (e: Exception) {
                             android.util.Log.e("VerifyOtpFragment", "Navigation error", e)
-                            // Fallback: pop back stack và navigate
-                            findNavController().popBackStack()
+                            // Fallback: show toast and navigate to home
+                            Toast.makeText(requireContext(), getString(R.string.verify_success_welcome, savedDisplayName), Toast.LENGTH_LONG).show()
+                            findNavController().navigate(R.id.action_verifyOtp_to_home)
                         }
                     } else {
                         val errorMsg = authResponse?.message ?: "Xác thực thất bại"
@@ -318,8 +328,21 @@ class VerifyOtpFragment : Fragment(R.layout.fragment_verify_otp) {
                     clearOtpInputs()
 
                     if (otpAttempts >= 5) {
+                        // Navigate to OTP resend required fragment
+                        try {
+                            val bundle = bundleOf(
+                                "userId" to userId,
+                                "email" to email
+                            )
+                            findNavController().navigate(R.id.action_verifyOtp_to_otpResendRequired, bundle)
+                        } catch (e: Exception) {
+                            android.util.Log.e("VerifyOtpFragment", "Navigation to resend required error", e)
+                            btnResend.isEnabled = true
+                            Toast.makeText(requireContext(), getString(R.string.attempts_limit_message), Toast.LENGTH_LONG).show()
+                        }
+                    } else {
+                        // allow resend after a failed attempt when not exceeding limit
                         btnResend.isEnabled = true
-                        Toast.makeText(requireContext(), getString(R.string.attempts_limit_message), Toast.LENGTH_LONG).show()
                     }
                 }
             } catch (e: Exception) {
@@ -374,7 +397,7 @@ class VerifyOtpFragment : Fragment(R.layout.fragment_verify_otp) {
                     otpAttempts = 0
                     tvAttempts.text = getString(R.string.attempts_format, 0)
                     tvAttempts.setTextColor(ContextCompat.getColor(requireContext(), R.color.text_secondary))
-                    tvTimer.setTextColor(ContextCompat.getColor(requireContext(), R.color.primary))
+                    tvTimer.setTextColor(ContextCompat.getColor(requireContext(), R.color.text_secondary))
 
                     // Clear OTP inputs
                     clearOtpInputs()
@@ -394,6 +417,7 @@ class VerifyOtpFragment : Fragment(R.layout.fragment_verify_otp) {
                         response.body()?.message ?: getString(R.string.resend_failed_default)
                      }
                      Toast.makeText(requireContext(), errorMsg, Toast.LENGTH_LONG).show()
+                    btnResend.isEnabled = true
                 }
             } catch (e: Exception) {
                 btnResend.isEnabled = true

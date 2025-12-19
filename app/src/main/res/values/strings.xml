@@ -116,4 +116,17 @@
     <!-- Missing user info & init error -->
     <string name="missing_user_info">Lỗi: Thiếu thông tin userId hoặc email</string>
     <string name="init_error_format">Lỗi khởi tạo: %1$s</string>
+
+    <!-- Register Success Fragment -->
+    <string name="continue_to_login">Đăng Nhập Ngay</string>
+
+    <!-- OTP Resend Required Fragment -->
+    <string name="otp_attempts_exceeded_title">Vượt Quá Số Lần Thử</string>
+    <string name="otp_attempts_exceeded_message">Bạn đã nhập sai mã OTP quá 5 lần. Vui lòng yêu cầu gửi lại mã OTP mới.</string>
+    <string name="otp_attempts_exceeded_info">Vì lý do bảo mật, mã OTP cũ đã bị vô hiệu hóa. Hãy nhấn nút bên dưới để nhận mã mới qua email.</string>
+    <string name="cancel_and_back">Hủy và Quay Lại</string>
+
+    <!-- OTP resend cooldown -->
+    <string name="resend_countdown_format">Vui lòng đợi %1$d giây để gửi lại mã</string>
+    <string name="resend_ready">Bạn có thể gửi lại OTP</string>
 </resources>

@@ -18,8 +18,10 @@ router.post('/verify-otp', verifyOTPValidation, validate, authController.verifyO
 // Resend OTP route - Resend OTP if expired or lost
 router.post('/resend-otp', resendOTPValidation, validate, authController.resendOTP);
 
+// Debug: Get OTP status (TTL, attempts, cooldowns)
+router.post('/otp-status', authController.getOTPStatus);
+
 // Login route
 router.post('/login', loginValidation, validate, authController.login);
 
 module.exports = router;
-

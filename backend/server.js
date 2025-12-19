@@ -3,9 +3,10 @@ const cors = require('cors');
 require('dotenv').config();
 
 const authRoutes = require('./routes/authRoutes');
+const redisClient = require('./config/redis'); // Import Redis client
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const DEFAULT_PORT = parseInt(process.env.PORT, 10) || 3001;
 
 // Middleware
 app.use(cors());
@@ -37,10 +38,34 @@ app.use((err, req, res, next) => {
     });
 });
 
-// Start server
-app.listen(PORT, () => {
-    console.log(`🚀 Server is running on port ${PORT}`);
-    console.log(`📍 API URL: http://localhost:${PORT}`);
-    console.log(`🌍 Environment: ${process.env.NODE_ENV}`);
-});
+// Start server with robust EADDRINUSE handling and fallback
+function startServer(port = DEFAULT_PORT, maxRetries = 3) {
+    const server = app.listen(port, () => {
+        console.log(`🚀 Server is running on port ${port}`);
+        console.log(`📍 API URL: http://localhost:${port}`);
+        console.log(`🌍 Environment: ${process.env.NODE_ENV}`);
+    });
 
+    server.on('error', (err) => {
+        if (err && err.code === 'EADDRINUSE') {
+            console.error(`Port ${port} is already in use.`);
+            if (maxRetries > 0) {
+                const nextPort = port + 1;
+                console.log(`Trying to start on port ${nextPort} (retries left: ${maxRetries - 1})...`);
+                setTimeout(() => startServer(nextPort, maxRetries - 1), 500);
+            } else {
+                console.error(`Failed to start server after trying multiple ports.`);
+                console.error(`Possible fixes:
+- Stop the process currently using port ${port} (Windows: 'netstat -ano | findstr ${port}' then 'taskkill /PID <pid> /F')
+- Or set a different PORT in your environment: 'PORT=4000 npm run dev' (or on Windows PowerShell: '$env:PORT=4000; npm run dev')
+`);
+                process.exit(1);
+            }
+        } else {
+            console.error('Server error:', err);
+            process.exit(1);
+        }
+    });
+}
+
+startServer();
