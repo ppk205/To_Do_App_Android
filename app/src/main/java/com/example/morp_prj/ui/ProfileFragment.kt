@@ -174,7 +174,7 @@ class ProfileFragment : Fragment() {
         btnLogout.setOnClickListener {
             preferenceManager.clearLoginData()
             Toast.makeText(requireContext(), "Đã đăng xuất", Toast.LENGTH_SHORT).show()
-            findNavController().navigate(R.id.loginFragment)
+            findNavController().navigate(R.id.login_fragment)
         }
     }
 

@@ -45,6 +45,54 @@ const loginValidation = [
         .withMessage('Mật khẩu không được để trống')
 ];
 
+// Validation middleware cho verify OTP
+const verifyOTPValidation = [
+    // userId có thể optional - controller sẽ dùng email để tìm nếu không có
+    body('userId')
+        .optional({ nullable: true })
+        .trim(),
+
+    body('email')
+        .trim()
+        .isEmail()
+        .withMessage('Email không hợp lệ')
+        .normalizeEmail(),
+
+    body('otp')
+        .trim()
+        .isLength({ min: 6, max: 6 })
+        .withMessage('OTP phải có 6 chữ số')
+        .isNumeric()
+        .withMessage('OTP phải là số'),
+
+    // purpose optional - controller sẽ mặc định 'REGISTER'
+    body('purpose')
+        .optional({ nullable: true })
+        .trim()
+        .isIn(['REGISTER', 'RESET_PASSWORD'])
+        .withMessage('Purpose không hợp lệ')
+];
+
+// Validation middleware cho resend OTP
+const resendOTPValidation = [
+    // userId optional
+    body('userId')
+        .optional({ nullable: true })
+        .trim(),
+
+    body('email')
+        .trim()
+        .isEmail()
+        .withMessage('Email không hợp lệ')
+        .normalizeEmail(),
+
+    body('purpose')
+        .optional({ nullable: true })
+        .trim()
+        .isIn(['REGISTER', 'RESET_PASSWORD'])
+        .withMessage('Purpose không hợp lệ')
+];
+
 // Middleware kiểm tra validation errors
 const validate = (req, res, next) => {
     const errors = validationResult(req);
@@ -61,6 +109,7 @@ const validate = (req, res, next) => {
 module.exports = {
     registerValidation,
     loginValidation,
+    verifyOTPValidation,
+    resendOTPValidation,
     validate
 };
-

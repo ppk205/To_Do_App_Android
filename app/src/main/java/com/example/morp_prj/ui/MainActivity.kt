@@ -13,6 +13,7 @@ import com.example.morp_prj.utils.PreferenceManager
 import com.google.android.material.bottomnavigation.BottomNavigationView
 
 class MainActivity : AppCompatActivity() {
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -23,8 +24,10 @@ class MainActivity : AppCompatActivity() {
             insets
         }
 
-        val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment
+        val navHostFragment = supportFragmentManager
+            .findFragmentById(R.id.nav_host_fragment) as NavHostFragment
         val navController = navHostFragment.navController
+
         val bottomNav = findViewById<BottomNavigationView>(R.id.bottom_nav_view)
         bottomNav.setupWithNavController(navController)
 
@@ -38,7 +41,7 @@ class MainActivity : AppCompatActivity() {
             }
             if (restricted && prefs.isGuest()) {
                 // redirect to guest prompt instead of navigating
-                navController.navigate(R.id.guestPromptFragment)
+                navController.navigate(R.id.guest_prompt_fragment)
                 return@setOnItemSelectedListener true
             }
             // fallback to default behavior
@@ -49,7 +52,7 @@ class MainActivity : AppCompatActivity() {
         // Hide bottom navigation on destinations that shouldn't show it (e.g. onboarding, login, register)
         navController.addOnDestinationChangedListener { _, destination, _ ->
             when (destination.id) {
-                R.id.onboardingFragment, R.id.loginFragment, R.id.registerFragment -> bottomNav.visibility = View.GONE
+                R.id.onboarding_fragment, R.id.login_fragment, R.id.register_fragment -> bottomNav.visibility = View.GONE
                 else -> bottomNav.visibility = View.VISIBLE
             }
         }

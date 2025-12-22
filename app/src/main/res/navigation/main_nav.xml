@@ -3,80 +3,160 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/main_nav"
-    app:startDestination="@id/onboardingFragment">
+    app:startDestination="@id/onboarding_fragment">
 
     <fragment
-        android:id="@+id/onboardingFragment"
+        android:id="@+id/onboarding_fragment"
         android:name="com.example.morp_prj.ui.OnboardingFragment"
         android:label="fragment_onboarding"
         tools:layout="@layout/fragment_onboarding">
         <action
             android:id="@+id/action_onboarding_to_login"
-            app:destination="@id/loginFragment" />
+            app:destination="@id/login_fragment" />
         <action
             android:id="@+id/action_onboarding_to_home"
-            app:destination="@id/homeFragment" />
+            app:destination="@id/menu_home" />
     </fragment>
 
     <fragment
-        android:id="@+id/loginFragment"
+        android:id="@+id/login_fragment"
         android:name="com.example.morp_prj.ui.LoginFragment"
         android:label="fragment_login"
         tools:layout="@layout/fragment_login">
         <action
             android:id="@+id/action_login_to_register"
-            app:destination="@id/registerFragment" />
+            app:destination="@id/register_fragment" />
         <action
             android:id="@+id/action_login_to_home"
-            app:destination="@id/homeFragment" />
+            app:destination="@id/menu_home" />
     </fragment>
 
     <fragment
-        android:id="@+id/homeFragment"
-        android:name="com.example.morp_prj.ui.PersonalFragment"
-        android:label="fragment_personal"
-        tools:layout="@layout/fragment_personal" />
+        android:id="@+id/register_fragment"
+        android:name="com.example.morp_prj.ui.RegisterFragment"
+        android:label="fragment_register"
+        tools:layout="@layout/fragment_register">
+        <action
+            android:id="@+id/action_register_to_verifyOtp"
+            app:destination="@id/verify_otp_fragment" />
+        <action
+            android:id="@+id/action_register_to_home"
+            app:destination="@id/menu_home" />
+    </fragment>
 
     <fragment
-        android:id="@id/menu_personal"
+        android:id="@+id/verify_otp_fragment"
+        android:name="com.example.morp_prj.ui.VerifyOtpFragment"
+        android:label="fragment_verify_otp"
+        tools:layout="@layout/fragment_verify_otp">
+        <action
+            android:id="@+id/action_verifyOtp_to_home"
+            app:destination="@id/menu_home" />
+        <action
+            android:id="@+id/action_verifyOtp_to_registerSuccess"
+            app:destination="@id/register_success_fragment" />
+        <action
+            android:id="@+id/action_verifyOtp_to_otpResendRequired"
+            app:destination="@id/otp_resend_required_fragment" />
+        <argument
+            android:name="userId"
+            app:argType="string" />
+        <argument
+            android:name="email"
+            app:argType="string" />
+        <argument
+            android:name="username"
+            app:argType="string"
+            app:nullable="true"
+            android:defaultValue="@null" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/register_success_fragment"
+        android:name="com.example.morp_prj.ui.RegisterSuccessFragment"
+        android:label="fragment_register_success"
+        tools:layout="@layout/fragment_register_success">
+        <action
+            android:id="@+id/action_registerSuccess_to_login"
+            app:destination="@id/login_fragment"
+            app:popUpTo="@id/onboarding_fragment" />
+        <argument
+            android:name="username"
+            app:argType="string" />
+        <argument
+            android:name="email"
+            app:argType="string" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/otp_resend_required_fragment"
+        android:name="com.example.morp_prj.ui.OtpResendRequiredFragment"
+        android:label="fragment_otp_resend_required"
+        tools:layout="@layout/fragment_otp_resend_required">
+        <action
+            android:id="@+id/action_otpResendRequired_to_verifyOtp"
+            app:destination="@id/verify_otp_fragment"
+            app:popUpTo="@id/verify_otp_fragment"
+            app:popUpToInclusive="true" />
+        <action
+            android:id="@+id/action_otpResendRequired_to_register"
+            app:destination="@id/register_fragment"
+            app:popUpTo="@id/register_fragment"
+            app:popUpToInclusive="true" />
+        <argument
+            android:name="userId"
+            app:argType="string" />
+        <argument
+            android:name="email"
+            app:argType="string" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/guest_prompt_fragment"
+        android:name="com.example.morp_prj.ui.GuestPromptFragment"
+        android:label="fragment_guest_prompt"
+        tools:layout="@layout/fragment_guest_prompt">
+        <action
+            android:id="@+id/action_guestPrompt_to_register"
+            app:destination="@id/register_fragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/menu_personal"
         android:name="com.example.morp_prj.ui.PersonalFragment"
         android:label="fragment_personal"
-        tools:layout="@layout/fragment_personal" />
+        tools:layout="@layout/fragment_personal">
+
+        <action
+            android:id="@+id/action_personal_to_task"
+            app:destination="@id/taskFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"/>
+    </fragment>
     <fragment
-        android:id="@id/menu_team"
+        android:id="@+id/menu_team"
         android:name="com.example.morp_prj.ui.TeamFragment"
         android:label="fragment_team"
         tools:layout="@layout/fragment_team" />
     <fragment
-        android:id="@id/menu_notifications"
+        android:id="@+id/menu_home"
+        android:name="com.example.morp_prj.ui.HomeFragment"
+        android:label="fragment_home"
+        tools:layout="@layout/fragment_home" />
+    <fragment
+        android:id="@+id/menu_notifications"
         android:name="com.example.morp_prj.ui.NotificationsFragment"
         android:label="fragment_notifications"
         tools:layout="@layout/fragment_notifications" />
     <fragment
-        android:id="@id/menu_profile"
+        android:id="@+id/menu_profile"
         android:name="com.example.morp_prj.ui.ProfileFragment"
         android:label="fragment_profile"
-        tools:layout="@layout/fragment_profile">
-        <action
-            android:id="@+id/action_profile_to_login"
-            app:destination="@id/loginFragment"
-            app:popUpTo="@id/main_nav"
-            app:popUpToInclusive="true" />
-    </fragment>
-
+        tools:layout="@layout/fragment_profile" />
     <fragment
-        android:id="@+id/registerFragment"
-        android:name="com.example.morp_prj.ui.RegisterFragment"
-        android:label="fragment_register"
-        tools:layout="@layout/fragment_register" />
+        android:id="@+id/taskFragment"
+        android:name="com.example.morp_prj.ui.TaskFragment"
+        android:label="fragment_task"
+        tools:layout="@layout/fragment_task" />
 
-    <fragment
-        android:id="@+id/guestPromptFragment"
-        android:name="com.example.morp_prj.ui.GuestPromptFragment"
-        android:label="fragment_guest_prompt"
-        tools:layout="@layout/fragment_guest_prompt" />
-
-    <action
-        android:id="@+id/action_register_to_home"
-        app:destination="@id/homeFragment" />
 </navigation>

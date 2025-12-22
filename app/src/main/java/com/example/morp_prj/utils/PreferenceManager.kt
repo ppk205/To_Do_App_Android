@@ -47,12 +47,12 @@ class PreferenceManager(context: Context) {
         }
     }
 
-    fun isGuest(): Boolean {
-        return sharedPreferences.getBoolean(KEY_IS_GUEST, false)
-    }
-
     fun isLoggedIn(): Boolean {
         return sharedPreferences.getBoolean(KEY_IS_LOGGED_IN, false)
+    }
+
+    fun isGuest(): Boolean {
+        return sharedPreferences.getBoolean(KEY_IS_GUEST, false)
     }
 
     fun getUserId(): String? {

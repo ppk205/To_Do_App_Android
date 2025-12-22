@@ -11,7 +11,7 @@
 
     <item android:title="Home"
         android:icon="@drawable/ic_home_selector"
-        android:id="@+id/homeFragment"/>
+        android:id="@+id/menu_home"/>
 
     <item android:title="Notifications"
         android:icon="@drawable/ic_notification_selector"

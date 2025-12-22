@@ -6,7 +6,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import com.example.morp_prj.R
-import androidx.navigation.fragment.findNavController
 
 class NotificationsFragment : Fragment() {
 

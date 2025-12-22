@@ -1,0 +1,135 @@
+{
+  "info": {
+    "name": "MOPR Register + OTP Flow",
+    "description": "Test register dengan OTP verification",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Register",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"testuser2025\",\n  \"password\": \"Password123!\",\n  \"email\": \"testuser2025@gmail.com\",\n  \"displayName\": \"Test User 2025\",\n  \"phone\": \"0123456789\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:3000/api/auth/register",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["api", "auth", "register"]
+        },
+        "description": "Step 1: Register + Send OTP\nResponse sẽ chứa userId để dùng ở bước verify"
+      },
+      "response": []
+    },
+    {
+      "name": "2. Resend OTP",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"userId\": \"paste_userId_from_register_response\",\n  \"email\": \"testuser2025@gmail.com\",\n  \"purpose\": \"REGISTER\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:3000/api/auth/resend-otp",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["api", "auth", "resend-otp"]
+        },
+        "description": "Optional: Resend OTP nếu không nhận được email hoặc OTP hết hạn\nInvalidate OTP cũ → Generate OTP mới"
+      },
+      "response": []
+    },
+    {
+      "name": "3. Verify OTP",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"userId\": \"paste_userId_from_register_response\",\n  \"email\": \"testuser2025@gmail.com\",\n  \"otp\": \"paste_otp_from_email\",\n  \"purpose\": \"REGISTER\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:3000/api/auth/verify-otp",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["api", "auth", "verify-otp"]
+        },
+        "description": "Step 3: Verify OTP + Activate account\nResponse sẽ chứa JWT token để login"
+      },
+      "response": []
+    },
+    {
+      "name": "4. Login",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"usernameOrEmail\": \"testuser2025\",\n  \"password\": \"Password123!\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:3000/api/auth/login",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["api", "auth", "login"]
+        },
+        "description": "Login: Kiểm tra user đã verified mới cho login\nResponse chứa JWT token"
+      },
+      "response": []
+    },
+    {
+      "name": "4. Login - Unverified Account (Test Error)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"usernameOrEmail\": \"another_unverified_user\",\n  \"password\": \"Password123!\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:3000/api/auth/login",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["api", "auth", "login"]
+        },
+        "description": "Test: Nếu user chưa verified → Error 403\nResponse: 'Tài khoản chưa được xác thực' + userId để resend OTP"
+      },
+      "response": []
+    }
+  ]
+}
+

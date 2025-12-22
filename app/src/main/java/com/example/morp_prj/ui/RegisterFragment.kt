@@ -114,18 +114,15 @@ class RegisterFragment : Fragment(R.layout.fragment_register) {
             view?.findViewById<MaterialButton>(R.id.btn_register)?.isEnabled = true
 
             result.onSuccess { response ->
-                if (response.success && response.user != null) {
-                    // Save user data
-                    preferenceManager.saveLoginData(
-                        userId = response.user.id,
-                        username = response.user.username,
-                        displayName = response.user.displayName,
-                        email = response.user.email,
-                        token = response.token
-                    )
+                if (response.success && response.userId != null && response.email != null) {
+                    // Navigate to OTP verification screen
+                    Toast.makeText(requireContext(), response.message, Toast.LENGTH_SHORT).show()
 
-                    Toast.makeText(requireContext(), "Đăng ký thành công!", Toast.LENGTH_SHORT).show()
-                    findNavController().navigate(R.id.action_register_to_home)
+                    val bundle = Bundle().apply {
+                        putString("userId", response.userId)
+                        putString("email", response.email)
+                    }
+                    findNavController().navigate(R.id.action_register_to_verifyOtp, bundle)
                 } else {
                     Toast.makeText(requireContext(), response.message, Toast.LENGTH_SHORT).show()
                 }
