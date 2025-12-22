@@ -3,7 +3,113 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/main_nav"
-    app:startDestination="@id/menu_home">
+    app:startDestination="@id/onboarding_fragment">
+
+    <fragment
+        android:id="@+id/onboarding_fragment"
+        android:name="com.example.morp_prj.ui.OnboardingFragment"
+        android:label="fragment_onboarding"
+        tools:layout="@layout/fragment_onboarding">
+        <action
+            android:id="@+id/action_onboarding_to_login"
+            app:destination="@id/login_fragment" />
+        <action
+            android:id="@+id/action_onboarding_to_home"
+            app:destination="@id/menu_home" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/login_fragment"
+        android:name="com.example.morp_prj.ui.LoginFragment"
+        android:label="fragment_login"
+        tools:layout="@layout/fragment_login">
+        <action
+            android:id="@+id/action_login_to_register"
+            app:destination="@id/register_fragment" />
+        <action
+            android:id="@+id/action_login_to_home"
+            app:destination="@id/menu_home" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/register_fragment"
+        android:name="com.example.morp_prj.ui.RegisterFragment"
+        android:label="fragment_register"
+        tools:layout="@layout/fragment_register">
+        <action
+            android:id="@+id/action_register_to_verifyOtp"
+            app:destination="@id/verify_otp_fragment" />
+        <action
+            android:id="@+id/action_register_to_home"
+            app:destination="@id/menu_home" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/verify_otp_fragment"
+        android:name="com.example.morp_prj.ui.VerifyOtpFragment"
+        android:label="fragment_verify_otp"
+        tools:layout="@layout/fragment_verify_otp">
+        <action
+            android:id="@+id/action_verifyOtp_to_home"
+            app:destination="@id/menu_home" />
+        <action
+            android:id="@+id/action_verifyOtp_to_registerSuccess"
+            app:destination="@id/register_success_fragment" />
+        <action
+            android:id="@+id/action_verifyOtp_to_otpResendRequired"
+            app:destination="@id/otp_resend_required_fragment" />
+        <argument
+            android:name="userId"
+            app:argType="string" />
+        <argument
+            android:name="email"
+            app:argType="string" />
+        <argument
+            android:name="username"
+            app:argType="string"
+            app:nullable="true"
+            android:defaultValue="@null" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/register_success_fragment"
+        android:name="com.example.morp_prj.ui.RegisterSuccessFragment"
+        android:label="fragment_register_success"
+        tools:layout="@layout/fragment_register_success">
+        <action
+            android:id="@+id/action_registerSuccess_to_login"
+            app:destination="@id/login_fragment"
+            app:popUpTo="@id/onboarding_fragment" />
+        <argument
+            android:name="username"
+            app:argType="string" />
+        <argument
+            android:name="email"
+            app:argType="string" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/otp_resend_required_fragment"
+        android:name="com.example.morp_prj.ui.OtpResendRequiredFragment"
+        android:label="fragment_otp_resend_required"
+        tools:layout="@layout/fragment_otp_resend_required">
+        <action
+            android:id="@+id/action_otpResendRequired_to_verifyOtp"
+            app:destination="@id/verify_otp_fragment"
+            app:popUpTo="@id/verify_otp_fragment"
+            app:popUpToInclusive="true" />
+        <action
+            android:id="@+id/action_otpResendRequired_to_register"
+            app:destination="@id/register_fragment"
+            app:popUpTo="@id/register_fragment"
+            app:popUpToInclusive="true" />
+        <argument
+            android:name="userId"
+            app:argType="string" />
+        <argument
+            android:name="email"
+            app:argType="string" />
+    </fragment>
 
     <fragment
         android:id="@id/menu_personal"
@@ -42,4 +148,5 @@
         android:name="com.example.morp_prj.ui.TaskFragment"
         android:label="fragment_task"
         tools:layout="@layout/fragment_task" />
+
 </navigation>

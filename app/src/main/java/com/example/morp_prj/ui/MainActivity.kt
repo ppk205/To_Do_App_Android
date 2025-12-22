@@ -38,6 +38,16 @@ class MainActivity : AppCompatActivity() {
                 R.id.taskFragment -> View.GONE
                 else -> View.VISIBLE
             }
+            when (destination.id) {
+                R.id.onboarding_fragment,
+                R.id.login_fragment,
+                R.id.register_fragment,
+                R.id.verify_otp_fragment,
+                R.id.otp_resend_required_fragment,
+                R.id.register_success_fragment -> bottomNav.visibility = View.GONE
+
+                else -> bottomNav.visibility = View.VISIBLE
+            }
         }
     }
 }
