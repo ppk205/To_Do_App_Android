@@ -9,7 +9,14 @@
         android:id="@id/menu_personal"
         android:name="com.example.morp_prj.ui.PersonalFragment"
         android:label="fragment_personal"
-        tools:layout="@layout/fragment_personal" />
+        tools:layout="@layout/fragment_personal">
+
+        <action
+            android:id="@+id/action_personal_to_task"
+            app:destination="@id/taskFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"/>
+    </fragment>
     <fragment
         android:id="@id/menu_team"
         android:name="com.example.morp_prj.ui.TeamFragment"
@@ -30,4 +37,9 @@
         android:name="com.example.morp_prj.ui.ProfileFragment"
         android:label="fragment_profile"
         tools:layout="@layout/fragment_profile" />
+    <fragment
+        android:id="@id/taskFragment"
+        android:name="com.example.morp_prj.ui.TaskFragment"
+        android:label="fragment_task"
+        tools:layout="@layout/fragment_task" />
 </navigation>
