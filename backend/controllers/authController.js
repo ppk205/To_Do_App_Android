@@ -2,11 +2,12 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const RedisOTPService = require('../services/redisOTPService');
+const tokenService = require('../services/tokenService');
 const { generateUserId, sanitizeUser } = require('../utils/helpers');
 const { sendOTPEmail } = require('../utils/emailService');
 
 // ============================================
-// 1. REGISTER (Step 1) - Tạo user chưa verify + gửi OTP
+// 1. REGISTER (Step 1) - Lưu pending registration vào Redis + gửi OTP
 // ============================================
 async function register(req, res) {
     try {
@@ -21,7 +22,7 @@ async function register(req, res) {
             });
         }
 
-        // Kiểm tra username đã tồn tại (trừ trường hợp trùng chính user đang reuse email chưa verify)
+        // Kiểm tra username đã tồn tại
         const existingUsernameUser = await User.findByUsername(username);
         if (existingUsernameUser && (!existingEmailUser || existingUsernameUser.id !== existingEmailUser.id)) {
             return res.status(400).json({
@@ -33,53 +34,43 @@ async function register(req, res) {
         // Hash password
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // Chọn userId: nếu email chưa verify đã tồn tại thì reuse id đó, ngược lại tạo mới
-        const userId = existingEmailUser ? existingEmailUser.id : generateUserId();
+        // Chuẩn bị pending data (chưa lưu vào DB)
+        const pendingData = {
+            id: generateUserId(),
+            username,
+            hashedPassword,
+            displayName,
+            email,
+            phone: phone || null,
+            createdAt: Date.now()
+        };
 
-        if (existingEmailUser) {
-            // Cập nhật lại thông tin user chưa verify
-            await User.update(userId, {
-                username,
-                hashedPassword,
-                displayName,
-                email,
-                phone: phone || null,
-                verified: 0
-            });
-        } else {
-            // Tạo user mới (chưa verified)
-            const userData = {
-                id: userId,
-                username,
-                hashedPassword,
-                displayName,
-                email,
-                phone: phone || null,
-                verified: 0
-            };
-            await User.create(userData);
-        }
+        // Sinh OTP và lưu pendingData vào Redis (KHÔNG tạo user DB ở bước này)
+        const otpData = await RedisOTPService.createOTP(email, 'REGISTER', 2, pendingData); // 2 phút TTL
 
-        // Sinh OTP và lưu vào Redis (KHÔNG lưu database)
-        const otpData = await RedisOTPService.createOTP(email, 'REGISTER', 2); // 2 phút TTL
-
-        // Gửi OTP qua email
-        const emailResult = await sendOTPEmail(email, otpData.otpCode, displayName);
-
-        if (!emailResult.success) {
-            return res.status(500).json({
+        if (!otpData.success) {
+            return res.status(429).json({
                 success: false,
-                message: 'Không thể gửi OTP qua email. Vui lòng thử lại.'
+                message: otpData.message || 'Không thể gửi OTP'
             });
         }
 
-        // ✅ CHỈ trả userId, KHÔNG trả token
-        res.status(201).json({
+        // Trả response ngay — để client (mobile) có thể chuyển sang màn hình verify
+        const responsePayload = {
             success: true,
             message: 'OTP đã được gửi đến email của bạn',
-            userId: userId,
-            email: email
-        });
+            email: email,
+            userId: pendingData.id,
+            expiresIn: (otpData.ttl || 2) * 60, // seconds
+            resendAvailableIn: RedisOTPService.config.RESEND_COOLDOWN_SECONDS
+        };
+
+        res.status(201).json(responsePayload);
+
+        // Gửi OTP qua email bất đồng bộ (fire-and-forget). Trong production, không log OTP.
+        sendOTPEmail(email, otpData.otpCode, displayName)
+            .then(info => console.log('Email send result:', info))
+            .catch(err => console.error('Failed to send OTP email (async):', err));
 
     } catch (error) {
         console.error('Register error:', error);
@@ -92,7 +83,7 @@ async function register(req, res) {
 }
 
 // ============================================
-// 2. VERIFY OTP (Step 3) - Xác thực OTP + Active account
+// 2. VERIFY OTP (Step 3) - Xác thực OTP + Create user + Issue tokens
 // ============================================
 async function verifyOTP(req, res) {
     try {
@@ -100,61 +91,90 @@ async function verifyOTP(req, res) {
 
         purpose = (purpose || 'REGISTER').toUpperCase();
 
-        // Nếu userId không được gửi, tìm theo email (case-insensitive)
+        // Nếu userId không được gửi, tìm pending registration trong Redis
+        let pending = null;
+        if (email) {
+            pending = await RedisOTPService.getPendingRegistration(email);
+        }
+
+        // Nếu không có pending và userId không đưa lên, kiểm tra DB
         let user = null;
         if (userId) {
             user = await User.findById(userId);
-        } else {
+        } else if (!pending) {
             user = await User.findByEmail(email);
             if (user) userId = user.id;
         }
 
-        // Kiểm tra user tồn tại
-        if (!user) {
+        // Nếu không có pending và không có user -> not found
+        if (!pending && !user) {
             return res.status(404).json({
                 success: false,
-                message: 'Không tìm thấy tài khoản'
+                message: 'Không tìm thấy tài khoản hoặc đăng ký chưa được bắt đầu'
             });
         }
 
-        // Kiểm tra email match
-        if (user.email.toLowerCase() !== (email || '').toLowerCase()) {
-            return res.status(400).json({
-                success: false,
-                message: 'Email không khớp'
-            });
+        // Nếu user exists in DB and already verified, reject
+        if (user && user.verified === 1) {
+            return res.status(400).json({ success: false, message: 'Tài khoản đã được xác thực' });
         }
 
         // Xác thực OTP từ Redis
-        const otpResult = await RedisOTPService.verifyOTP(user.email, otp, purpose);
+        const otpResult = await RedisOTPService.verifyOTP(email, otp, purpose);
 
         if (!otpResult.success) {
             // Trả message cụ thể từ service
-            return res.status(400).json({
+            const statusCode = otpResult.reason === 'FAIL_COOLDOWN' || otpResult.reason === 'MAX_ATTEMPTS_EXCEEDED' ? 423 : 400;
+            return res.status(statusCode).json({
                 success: false,
                 message: otpResult.message,
-                remainingAttempts: otpResult.remainingAttempts
+                remainingAttempts: otpResult.remainingAttempts || 0,
+                remainingSeconds: otpResult.remainingSeconds || 0,
+                reason: otpResult.reason
             });
         }
 
-        // ✅ OTP chính xác - Active user (set verified = 1)
-        await User.updateVerified(userId);
+        // OTP chính xác - tạo user nếu chưa có
+        let createdUser = user;
+        if (!createdUser) {
+            // Pending phải tồn tại
+            if (!pending) {
+                return res.status(500).json({ success: false, message: 'Dữ liệu đăng ký không tồn tại' });
+            }
 
-        // Lấy user info sau khi verified
-        const verifiedUser = await User.findById(userId);
+            // Tạo user trong DB
+            const userData = {
+                id: pending.id,
+                username: pending.username,
+                hashedPassword: pending.hashedPassword,
+                displayName: pending.displayName,
+                email: pending.email,
+                phone: pending.phone
+            };
 
-        // Generate JWT token
-        const token = jwt.sign(
-            { userId: verifiedUser.id, username: verifiedUser.username, email: verifiedUser.email },
-            process.env.JWT_SECRET,
-            { expiresIn: '30d' }
-        );
+            await User.create(userData);
+            await User.updateVerified(pending.id);
+            createdUser = await User.findById(pending.id);
+
+            // Xóa pending registration
+            await RedisOTPService.clearPendingRegistration(email);
+        } else {
+            // Nếu user tồn tại nhưng chưa verified -> set verified
+            await User.updateVerified(createdUser.id);
+            createdUser = await User.findById(createdUser.id);
+        }
+
+        // Issue tokens
+        const tokens = await tokenService.issueTokens(createdUser);
 
         res.status(200).json({
             success: true,
             message: 'Xác thực OTP thành công. Tài khoản đã được kích hoạt.',
-            token: token,
-            user: sanitizeUser(verifiedUser)
+            accessToken: tokens.accessToken,
+            refreshToken: tokens.refreshToken,
+            accessTTL: tokens.accessTTL,
+            refreshTTL: tokens.refreshTTL,
+            user: sanitizeUser(createdUser)
         });
 
     } catch (error) {
@@ -175,72 +195,62 @@ async function resendOTP(req, res) {
         let { userId, email, purpose } = req.body;
         purpose = (purpose || 'REGISTER').toUpperCase();
 
-        // Nếu userId không được gửi, tìm theo email
+        // Nếu userId không được gửi, tìm pending registration hoặc user
+        let pending = null;
+        if (email) pending = await RedisOTPService.getPendingRegistration(email);
+
         let user = null;
         if (userId) {
             user = await User.findById(userId);
-        } else {
+        } else if (!pending) {
             user = await User.findByEmail(email);
             if (user) userId = user.id;
         }
 
-        // Kiểm tra user tồn tại
-        if (!user) {
-            return res.status(404).json({
-                success: false,
-                message: 'Không tìm thấy tài khoản'
-            });
+        if (!pending && !user) {
+            return res.status(404).json({ success: false, message: 'Không tìm thấy tài khoản hoặc đăng ký chưa được bắt đầu' });
         }
 
-        // Kiểm tra email match
-        if (user.email.toLowerCase() !== (email || '').toLowerCase()) {
-            return res.status(400).json({
-                success: false,
-                message: 'Email không khớp'
-            });
+        // Nếu user đã verified thì không resend
+        if (user && user.verified === 1) {
+            return res.status(400).json({ success: false, message: 'Tài khoản đã được xác thực' });
         }
 
-        // Resend OTP (tự động xóa OTP cũ và tạo mới, có cooldown 60s khi cần)
-        const otpData = await RedisOTPService.resendOTP(user.email, purpose, 2);
+        // Resend OTP (hàm sẽ kiểm tra fail/resend cooldown và trả về remainingSeconds nếu bị khóa)
+        const pendingData = pending || (user ? { id: user.id, username: user.username, hashedPassword: user.hashedPassword, displayName: user.displayName, email: user.email, phone: user.phone } : null);
+        const otpData = await RedisOTPService.resendOTP(email, purpose, 2, pendingData);
+
         if (!otpData.success) {
-            return res.status(429).json({
-                success: false,
-                message: otpData.message || 'Không thể gửi lại OTP',
-                remainingSeconds: otpData.remainingSeconds || 0
-            });
+            const statusCode = otpData.reason === 'FAIL_COOLDOWN' ? 423 : 429;
+            return res.status(statusCode).json({ success: false, message: otpData.message || 'Không thể gửi lại OTP', remainingSeconds: otpData.remainingSeconds || 0 });
         }
 
-        // Gửi OTP qua email
-        const emailResult = await sendOTPEmail(user.email, otpData.otpCode, user.displayName);
-
+        // Gửi email
+        const emailResult = await sendOTPEmail(email, otpData.otpCode, (pending && pending.displayName) || (user && user.displayName) || 'User');
         if (!emailResult.success) {
-            return res.status(500).json({
-                success: false,
-                message: 'Không thể gửi OTP qua email. Vui lòng thử lại.'
-            });
+            return res.status(500).json({ success: false, message: 'Không thể gửi OTP qua email. Vui lòng thử lại.' });
         }
 
+        // Trả về expiresIn để client biết thời gian TTL mới
         res.status(200).json({
             success: true,
-            message: 'OTP mới đã được gửi đến email của bạn'
+            message: 'OTP mới đã được gửi đến email của bạn',
+            expiresIn: (otpData.ttl || 2) * 60,
+            resendAvailableIn: RedisOTPService.config.RESEND_COOLDOWN_SECONDS
         });
 
     } catch (error) {
         console.error('Resend OTP error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Lỗi server khi gửi lại OTP',
-            error: error.message
-        });
+        res.status(500).json({ success: false, message: 'Lỗi server khi gửi lại OTP', error: error.message });
     }
 }
 
 // ============================================
-// 4. LOGIN - Kiểm tra verified status
+// 4. LOGIN - Kiểm tra verified status và tạo session
 // ============================================
 async function login(req, res) {
     try {
-        const { usernameOrEmail, password } = req.body;
+        const { usernameOrEmail, password, deviceId, deviceName } = req.body;
 
         // Tìm user theo username hoặc email
         const user = await User.findByUsernameOrEmail(usernameOrEmail);
@@ -271,18 +281,25 @@ async function login(req, res) {
             });
         }
 
-        // Tạo JWT token
-        const token = jwt.sign(
-            { userId: user.id, username: user.username, email: user.email },
-            process.env.JWT_SECRET,
-            { expiresIn: '30d' }
-        );
+        // Tạo session và issue tokens (OWASP MASTG compliant)
+        const deviceInfo = {
+            deviceId: deviceId || null,
+            deviceName: deviceName || req.headers['user-agent'] || 'Unknown Device',
+            ipAddress: req.ip || req.connection.remoteAddress,
+            userAgent: req.headers['user-agent']
+        };
+
+        const tokens = await tokenService.issueTokens(user, deviceInfo);
 
         res.status(200).json({
             success: true,
             message: 'Đăng nhập thành công',
-            user: sanitizeUser(user),
-            token: token
+            accessToken: tokens.accessToken,
+            refreshToken: tokens.refreshToken,
+            accessTTL: tokens.accessTTL,
+            refreshTTL: tokens.refreshTTL,
+            sessionId: tokens.sessionId,
+            user: sanitizeUser(user)
         });
 
     } catch (error) {
@@ -290,6 +307,159 @@ async function login(req, res) {
         res.status(500).json({
             success: false,
             message: 'Lỗi server khi đăng nhập',
+            error: error.message
+        });
+    }
+}
+
+// ============================================
+// 5. REFRESH TOKEN - Rotate tokens and maintain session
+// ============================================
+async function refreshToken(req, res) {
+    try {
+        const { refreshToken } = req.body;
+
+        if (!refreshToken) {
+            return res.status(400).json({
+                success: false,
+                message: 'Refresh token required'
+            });
+        }
+
+        const deviceInfo = {
+            ipAddress: req.ip || req.connection.remoteAddress,
+            userAgent: req.headers['user-agent']
+        };
+
+        const tokens = await tokenService.refreshTokens(refreshToken, deviceInfo);
+
+        res.status(200).json({
+            success: true,
+            message: 'Tokens refreshed successfully',
+            accessToken: tokens.accessToken,
+            refreshToken: tokens.refreshToken,
+            accessTTL: tokens.accessTTL,
+            refreshTTL: tokens.refreshTTL
+        });
+
+    } catch (error) {
+        console.error('Refresh token error:', error);
+
+        // Map error codes to appropriate responses
+        const errorMap = {
+            'INVALID_TOKEN': { status: 401, message: 'Invalid refresh token', code: 'INVALID_TOKEN' },
+            'SESSION_NOT_FOUND': { status: 401, message: 'Session not found', code: 'SESSION_EXPIRED' },
+            'SESSION_REVOKED': { status: 401, message: 'Session has been revoked', code: 'SESSION_REVOKED' },
+            'SESSION_EXPIRED': { status: 401, message: 'Session expired. Please login again', code: 'SESSION_EXPIRED' },
+            'TOKEN_REUSE_DETECTED': { status: 401, message: 'Security violation detected. Please login again', code: 'TOKEN_REUSE' }
+        };
+
+        const errorInfo = errorMap[error.message] || { status: 500, message: 'Internal server error', code: 'SERVER_ERROR' };
+
+        res.status(errorInfo.status).json({
+            success: false,
+            message: errorInfo.message,
+            code: errorInfo.code
+        });
+    }
+}
+
+// ============================================
+// 6. LOGOUT - Revoke session
+// ============================================
+async function logout(req, res) {
+    try {
+        const { refreshToken } = req.body;
+
+        if (!refreshToken) {
+            return res.status(400).json({
+                success: false,
+                message: 'Refresh token required'
+            });
+        }
+
+        const revoked = await tokenService.revokeSession(refreshToken, 'USER_LOGOUT');
+
+        if (revoked) {
+            res.status(200).json({
+                success: true,
+                message: 'Đăng xuất thành công'
+            });
+        } else {
+            res.status(404).json({
+                success: false,
+                message: 'Session not found or already revoked'
+            });
+        }
+
+    } catch (error) {
+        console.error('Logout error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi server khi đăng xuất',
+            error: error.message
+        });
+    }
+}
+
+// ============================================
+// 7. GET USER SESSIONS - Device management
+// ============================================
+async function getUserSessions(req, res) {
+    try {
+        const userId = req.user.id; // From auth middleware
+
+        const sessions = await tokenService.getUserSessions(userId);
+
+        res.status(200).json({
+            success: true,
+            sessions: sessions
+        });
+
+    } catch (error) {
+        console.error('Get sessions error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi server khi lấy danh sách phiên',
+            error: error.message
+        });
+    }
+}
+
+// ============================================
+// 8. REVOKE SESSION - Revoke specific device/session
+// ============================================
+async function revokeSessionById(req, res) {
+    try {
+        const { sessionId } = req.body;
+        const userId = req.user.id;
+
+        if (!sessionId) {
+            return res.status(400).json({
+                success: false,
+                message: 'Session ID required'
+            });
+        }
+
+        const revoked = await tokenService.revokeSessionById(sessionId, userId);
+
+        if (revoked) {
+            res.status(200).json({
+                success: true,
+                message: 'Session revoked successfully'
+            });
+        } else {
+            res.status(404).json({
+                success: false,
+                message: 'Session not found or unauthorized'
+            });
+        }
+
+    } catch (error) {
+        console.error('Revoke session error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi server khi thu hồi phiên',
             error: error.message
         });
     }
@@ -320,5 +490,9 @@ module.exports = {
     verifyOTP,
     resendOTP,
     login,
+    refreshToken,
+    logout,
+    getUserSessions,
+    revokeSessionById,
     getOTPStatus
 };
