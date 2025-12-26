@@ -16,6 +16,7 @@ class PreferenceManager(context: Context) {
         private const val KEY_EMAIL = "email"
         private const val KEY_TOKEN = "auth_token"
         private const val KEY_IS_LOGGED_IN = "is_logged_in"
+        private const val KEY_IS_GUEST = "is_guest"
     }
 
     fun saveLoginData(
@@ -32,12 +33,26 @@ class PreferenceManager(context: Context) {
             putString(KEY_EMAIL, email)
             putString(KEY_TOKEN, token)
             putBoolean(KEY_IS_LOGGED_IN, true)
+            // clear guest flag when a real user logs in
+            putBoolean(KEY_IS_GUEST, false)
+            apply()
+        }
+    }
+
+    fun saveGuestMode() {
+        sharedPreferences.edit().apply {
+            putBoolean(KEY_IS_GUEST, true)
+            putBoolean(KEY_IS_LOGGED_IN, false)
             apply()
         }
     }
 
     fun isLoggedIn(): Boolean {
         return sharedPreferences.getBoolean(KEY_IS_LOGGED_IN, false)
+    }
+
+    fun isGuest(): Boolean {
+        return sharedPreferences.getBoolean(KEY_IS_GUEST, false)
     }
 
     fun getUserId(): String? {
@@ -64,4 +79,3 @@ class PreferenceManager(context: Context) {
         sharedPreferences.edit().clear().apply()
     }
 }
-

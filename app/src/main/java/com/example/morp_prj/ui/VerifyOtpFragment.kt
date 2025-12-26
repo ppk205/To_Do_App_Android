@@ -9,6 +9,8 @@ import android.text.TextWatcher
 import android.view.KeyEvent
 import android.view.View
 import android.view.inputmethod.InputMethodManager
+import android.widget.Button
+import android.widget.EditText
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
@@ -361,22 +363,22 @@ class VerifyOtpFragment : Fragment(R.layout.fragment_verify_otp) {
                     }
                 }
             } catch (e: Exception) {
-                 btnVerify.isEnabled = true
-                 btnVerify.text = getString(R.string.verify)
-                 android.util.Log.e("VerifyOtpFragment", "Exception during verification", e)
+                btnVerify.isEnabled = true
+                btnVerify.text = getString(R.string.verify)
+                android.util.Log.e("VerifyOtpFragment", "Exception during verification", e)
 
-                 val errorMessage = when {
-                     e.message?.contains("timeout", ignoreCase = true) == true ->
-                         getString(R.string.network_timeout)
-                     e.message?.contains("unable to resolve host", ignoreCase = true) == true ->
-                         getString(R.string.network_unreachable)
-                     else -> getString(R.string.generic_error, e.message ?: "")
-                 }
+                val errorMessage = when {
+                    e.message?.contains("timeout", ignoreCase = true) == true ->
+                        getString(R.string.network_timeout)
+                    e.message?.contains("unable to resolve host", ignoreCase = true) == true ->
+                        getString(R.string.network_unreachable)
+                    else -> getString(R.string.generic_error, e.message ?: "")
+                }
 
-                 Toast.makeText(requireContext(), errorMessage, Toast.LENGTH_LONG).show()
-             }
-         }
-     }
+                Toast.makeText(requireContext(), errorMessage, Toast.LENGTH_LONG).show()
+            }
+        }
+    }
 
     private fun clearOtpInputs() {
         etOtp1.text?.clear()

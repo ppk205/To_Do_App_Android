@@ -130,4 +130,17 @@
     <string name="resend_countdown_format">Vui lòng đợi %1$d giây để gửi lại mã</string>
     <string name="resend_ready">Bạn có thể gửi lại OTP</string>
     <string name="to_do_tasks">Prepare presentation for Q3 review meeting with marketing team and stakeholders</string>
+
+    <!-- Home Fragment Strings -->
+    <string name="personal_todos">Personal Todos</string>
+    <string name="search_desc">Search tasks</string>
+    <string name="more_desc">More options</string>
+    <string name="tab_all">All</string>
+    <string name="tab_todo">Todo</string>
+    <string name="tab_in_progress">In Progress</string>
+    <string name="tab_done">Done</string>
+    <string name="filter_date">Date</string>
+    <string name="filter_priority">Priority</string>
+    <string name="filter_tag">Tag</string>
+    <string name="add_task_desc">Add new task</string>
 </resources>

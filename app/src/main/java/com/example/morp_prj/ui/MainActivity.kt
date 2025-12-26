@@ -9,6 +9,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.setupWithNavController
 import com.example.morp_prj.R
+import com.example.morp_prj.utils.PreferenceManager
 import com.google.android.material.bottomnavigation.BottomNavigationView
 
 class MainActivity : AppCompatActivity() {
@@ -32,7 +33,25 @@ class MainActivity : AppCompatActivity() {
         bottomNav = findViewById(R.id.bottom_nav_view)
         bottomNav.setupWithNavController(navController)
 
-        // Hide bottom nav on screens that shouldn't show it (e.g., Create Task)
+        val prefs = PreferenceManager(this)
+
+        // intercept bottom navigation selections to block guest users from restricted tabs
+        bottomNav.setOnItemSelectedListener { item ->
+            val restricted = when (item.itemId) {
+                R.id.menu_team, R.id.menu_profile -> true
+                else -> false
+            }
+            if (restricted && prefs.isGuest()) {
+                // redirect to guest prompt instead of navigating
+                navController.navigate(R.id.guest_prompt_fragment)
+                return@setOnItemSelectedListener true
+            }
+            // fallback to default behavior
+            navController.navigate(item.itemId)
+            true
+        }
+
+        // Hide bottom navigation on destinations that shouldn't show it (e.g. onboarding, login, register)
         navController.addOnDestinationChangedListener { _, destination, _ ->
             bottomNav.visibility = when (destination.id) {
                 R.id.taskFragment -> View.GONE
