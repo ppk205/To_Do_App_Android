@@ -25,15 +25,15 @@ class PreferenceManager(context: Context) {
         email: String,
         token: String? = null
     ) {
-        sharedPreferences.edit().apply {
-            putString(KEY_USER_ID, userId)
-            putString(KEY_USERNAME, username)
-            putString(KEY_DISPLAY_NAME, displayName)
-            putString(KEY_EMAIL, email)
-            putString(KEY_TOKEN, token)
-            putBoolean(KEY_IS_LOGGED_IN, true)
-            apply()
-        }
+        // Use synchronous commit to ensure data is written to disk before process can be killed
+        val editor = sharedPreferences.edit()
+        editor.putString(KEY_USER_ID, userId)
+        editor.putString(KEY_USERNAME, username)
+        editor.putString(KEY_DISPLAY_NAME, displayName)
+        editor.putString(KEY_EMAIL, email)
+        editor.putString(KEY_TOKEN, token)
+        editor.putBoolean(KEY_IS_LOGGED_IN, true)
+        editor.commit() // synchronous
     }
 
     fun isLoggedIn(): Boolean {
@@ -64,4 +64,3 @@ class PreferenceManager(context: Context) {
         sharedPreferences.edit().clear().apply()
     }
 }
-

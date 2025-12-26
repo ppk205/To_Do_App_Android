@@ -29,16 +29,26 @@ class AuthInterceptor(
     private val tokenStorage = SecureTokenStorage(context)
     private val refreshLock = Any()
 
+    /**
+     * Check if app is in debug mode
+     */
+    private fun isDebugBuild(): Boolean {
+        return try {
+            Class.forName("com.example.morp_prj.BuildConfig")
+                .getDeclaredField("DEBUG")
+                .getBoolean(null)
+        } catch (e: Exception) {
+            // Fallback: assume debug if we can't determine
+            true
+        }
+    }
+
     @Throws(IOException::class)
     override fun intercept(chain: Interceptor.Chain): Response {
         val originalRequest = chain.request()
 
         // Skip auth for public endpoints
-        if (originalRequest.url().encodedPath().contains("/auth/login") ||
-            originalRequest.url().encodedPath().contains("/auth/register") ||
-            originalRequest.url().encodedPath().contains("/auth/refresh") ||
-            originalRequest.url().encodedPath().contains("/auth/verify-otp")
-        ) {
+        if (isPublicEndpoint(originalRequest.url().encodedPath())) {
             return chain.proceed(originalRequest)
         }
 
@@ -68,7 +78,7 @@ class AuthInterceptor(
                 if (token != null && token != accessToken) {
                     token // Use the already refreshed token
                 } else {
-                    refreshAccessToken()
+                    refreshTokenSync()
                 }
             }
 
@@ -89,6 +99,17 @@ class AuthInterceptor(
     }
 
     /**
+     * Check if endpoint is public (no auth required)
+     */
+    private fun isPublicEndpoint(path: String): Boolean {
+        return path.contains("/auth/login") ||
+                path.contains("/auth/register") ||
+                path.contains("/auth/refresh") ||
+                path.contains("/auth/verify-otp") ||
+                path.contains("/auth/resend-otp")
+    }
+
+    /**
      * Get valid access token or null if expired/missing
      */
     private fun getValidAccessToken(): String? {
@@ -103,32 +124,33 @@ class AuthInterceptor(
             if (!tokenStorage.isAccessTokenExpired()) {
                 tokenStorage.getAccessToken()
             } else {
-                refreshAccessToken()
+                refreshTokenSync()
             }
         }
     }
 
     /**
-     * Refresh access token using refresh token
+     * Refresh access token using refresh token (synchronous but thread-safe)
      * @return new access token or null if refresh failed
      */
-    private fun refreshAccessToken(): String? {
+    private fun refreshTokenSync(): String? {
         val refreshToken = tokenStorage.getRefreshToken()
             ?: return null
 
         return try {
+            // ✅ Using runBlocking in synchronized block - safe for OkHttp interceptor
             runBlocking {
                 val response = authApiService.refreshToken(RefreshTokenRequest(refreshToken))
 
                 if (response.isSuccessful && response.body()?.success == true) {
                     val body = response.body()!!
 
-                    // Save new tokens
-                    tokenStorage.saveAccessToken(
-                        body.accessToken ?: return@runBlocking null,
-                        body.accessTTL ?: 1800
-                    )
+                    // Save new access token
+                    body.accessToken?.let { newToken ->
+                        tokenStorage.saveAccessToken(newToken, body.accessTTL ?: 1800)
+                    }
 
+                    // Save new refresh token if rotated
                     body.refreshToken?.let { newRefreshToken ->
                         tokenStorage.saveRefreshToken(
                             newRefreshToken,
@@ -138,13 +160,16 @@ class AuthInterceptor(
 
                     body.accessToken
                 } else {
-                    // Refresh failed
+                    // Refresh failed, clear tokens
                     tokenStorage.clearTokens()
                     null
                 }
             }
         } catch (e: Exception) {
-            android.util.Log.e("AuthInterceptor", "Refresh failed", e)
+            // ✅ Only log in debug builds to avoid leaking info
+            if (isDebugBuild()) {
+                android.util.Log.e("AuthInterceptor", "Refresh failed", e)
+            }
             tokenStorage.clearTokens()
             null
         }

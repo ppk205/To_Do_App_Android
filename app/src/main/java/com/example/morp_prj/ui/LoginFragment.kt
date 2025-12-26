@@ -22,7 +22,7 @@ class LoginFragment : Fragment(R.layout.fragment_login) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        authRepository = AuthRepository()
+        authRepository = AuthRepository(requireContext())
         preferenceManager = PreferenceManager(requireContext())
 
         val inputEmailOrUsername = view.findViewById<TextInputEditText>(R.id.input_email_or_username)

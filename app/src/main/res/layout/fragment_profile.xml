@@ -5,9 +5,30 @@
     android:layout_height="match_parent"
     tools:context=".ui.ProfileFragment">
 
-    <TextView
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:text="Profile Fragment" />
+        android:orientation="vertical"
+        android:padding="24dp">
+
+        <TextView
+            android:id="@+id/tv_profile_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Profile"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:paddingBottom="16dp" />
+
+        <!-- Add logout button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_logout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Đăng xuất"
+            android:backgroundTint="@color/danger_500"
+            android:textColor="@android:color/white" />
+
+    </LinearLayout>
 
 </FrameLayout>

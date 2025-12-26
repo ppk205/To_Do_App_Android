@@ -49,11 +49,10 @@ class SecureTokenStorage(private val context: Context) {
      */
     fun saveAccessToken(token: String, expiresInSeconds: Int) {
         val expiryTime = System.currentTimeMillis() + (expiresInSeconds * 1000L)
-        encryptedPrefs.edit().apply {
-            putString(KEY_ACCESS_TOKEN, token)
-            putLong(KEY_ACCESS_EXPIRY, expiryTime)
-            apply()
-        }
+        val editor = encryptedPrefs.edit()
+        editor.putString(KEY_ACCESS_TOKEN, token)
+        editor.putLong(KEY_ACCESS_EXPIRY, expiryTime)
+        editor.commit() // synchronous
     }
 
     /**
@@ -61,22 +60,20 @@ class SecureTokenStorage(private val context: Context) {
      */
     fun saveRefreshToken(token: String, expiresInSeconds: Int) {
         val expiryTime = System.currentTimeMillis() + (expiresInSeconds * 1000L)
-        encryptedPrefs.edit().apply {
-            putString(KEY_REFRESH_TOKEN, token)
-            putLong(KEY_REFRESH_EXPIRY, expiryTime)
-            apply()
-        }
+        val editor = encryptedPrefs.edit()
+        editor.putString(KEY_REFRESH_TOKEN, token)
+        editor.putLong(KEY_REFRESH_EXPIRY, expiryTime)
+        editor.commit() // synchronous
     }
 
     /**
      * Save session metadata
      */
     fun saveSessionMetadata(sessionId: String, userId: String) {
-        encryptedPrefs.edit().apply {
-            putString(KEY_SESSION_ID, sessionId)
-            putString(KEY_USER_ID, userId)
-            apply()
-        }
+        val editor = encryptedPrefs.edit()
+        editor.putString(KEY_SESSION_ID, sessionId)
+        editor.putString(KEY_USER_ID, userId)
+        editor.commit() // synchronous
     }
 
     /**
@@ -135,15 +132,14 @@ class SecureTokenStorage(private val context: Context) {
      * Clear all tokens (logout)
      */
     fun clearTokens() {
-        encryptedPrefs.edit().apply {
-            remove(KEY_ACCESS_TOKEN)
-            remove(KEY_REFRESH_TOKEN)
-            remove(KEY_ACCESS_EXPIRY)
-            remove(KEY_REFRESH_EXPIRY)
-            remove(KEY_SESSION_ID)
-            remove(KEY_USER_ID)
-            apply()
-        }
+        val editor = encryptedPrefs.edit()
+        editor.remove(KEY_ACCESS_TOKEN)
+        editor.remove(KEY_REFRESH_TOKEN)
+        editor.remove(KEY_ACCESS_EXPIRY)
+        editor.remove(KEY_REFRESH_EXPIRY)
+        editor.remove(KEY_SESSION_ID)
+        editor.remove(KEY_USER_ID)
+        editor.commit()
     }
 
     /**
@@ -153,4 +149,3 @@ class SecureTokenStorage(private val context: Context) {
         encryptedPrefs.edit().clear().apply()
     }
 }
-

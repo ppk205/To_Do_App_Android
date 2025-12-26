@@ -1,17 +1,46 @@
 package com.example.morp_prj.ui
 
+import android.annotation.SuppressLint
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.os.Build
 import android.os.Bundle
 import android.view.View
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.navigation.NavOptions
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.setupWithNavController
+import com.example.morp_prj.MyApplication
 import com.example.morp_prj.R
 import com.google.android.material.bottomnavigation.BottomNavigationView
+import com.example.morp_prj.utils.PreferenceManager
+import com.example.morp_prj.security.SecureTokenStorage
 
 class MainActivity : AppCompatActivity() {
+
+    private val sessionExpiredReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            // Navigate to login and clear backstack
+            try {
+                val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment
+                val navController = navHostFragment.navController
+                val navOptions = NavOptions.Builder()
+                    .setPopUpTo(navController.graph.startDestinationId, true)
+                    .build()
+                navController.navigate(R.id.login_fragment, null, navOptions)
+                android.widget.Toast.makeText(this@MainActivity, "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.", android.widget.Toast.LENGTH_LONG).show()
+            } catch (e: Exception) {
+                android.util.Log.e("MainActivity", "Error handling session expired broadcast", e)
+            }
+        }
+    }
+
+    @SuppressLint("UnprotectedBroadcastReceiver")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -27,6 +56,31 @@ class MainActivity : AppCompatActivity() {
         val bottomNav = findViewById<BottomNavigationView>(R.id.bottom_nav_view)
         bottomNav.setupWithNavController(navController)
 
+        // Register session expired receiver. Use API-guarded overload to avoid NoSuchMethodError on older devices
+        val filter = IntentFilter(MyApplication.ACTION_SESSION_EXPIRED)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(sessionExpiredReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            // Older overload (no flags)
+            registerReceiver(sessionExpiredReceiver, filter)
+        }
+
+        // If user already logged in (saved state) or has valid refresh token, navigate directly to home
+        try {
+            val preferenceManager = PreferenceManager(this)
+            val tokenStorage = SecureTokenStorage(this)
+            val shouldGoHome = preferenceManager.isLoggedIn() || tokenStorage.hasValidRefreshToken()
+            if (shouldGoHome) {
+                // Navigate to home and clear start destination from backstack so user can't navigate back to onboarding/login
+                val navOptions = NavOptions.Builder()
+                    .setPopUpTo(navController.graph.startDestinationId, true)
+                    .build()
+                navController.navigate(R.id.menu_home, null, navOptions)
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("MainActivity", "Error checking login state", e)
+        }
+
         // Hide bottom navigation on destinations that shouldn't show it (e.g. onboarding, login, register)
         navController.addOnDestinationChangedListener { _, destination, _ ->
             when (destination.id) {
@@ -38,6 +92,15 @@ class MainActivity : AppCompatActivity() {
                 R.id.register_success_fragment -> bottomNav.visibility = View.GONE
                 else -> bottomNav.visibility = View.VISIBLE
             }
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        try {
+            unregisterReceiver(sessionExpiredReceiver)
+        } catch (e: Exception) {
+            // ignore
         }
     }
 }
