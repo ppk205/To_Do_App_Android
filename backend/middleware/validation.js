@@ -93,6 +93,27 @@ const resendOTPValidation = [
         .withMessage('Purpose không hợp lệ')
 ];
 
+// Validation middleware cho register-init (chỉ email)
+const registerInitValidation = [
+    body('email')
+        .trim()
+        .isEmail()
+        .withMessage('Email không hợp lệ')
+        .normalizeEmail(),
+
+    body('displayName')
+        .optional({ nullable: true })
+        .trim()
+        .isLength({ max: 150 })
+        .withMessage('Display name không được vượt quá 150 ký tự'),
+
+    body('phone')
+        .optional({ nullable: true })
+        .trim()
+        .matches(/^[0-9+\-\s()]+$/)
+        .withMessage('Số điện thoại không hợp lệ')
+];
+
 // Middleware kiểm tra validation errors
 const validate = (req, res, next) => {
     const errors = validationResult(req);
@@ -111,5 +132,6 @@ module.exports = {
     loginValidation,
     verifyOTPValidation,
     resendOTPValidation,
+    registerInitValidation,
     validate
 };

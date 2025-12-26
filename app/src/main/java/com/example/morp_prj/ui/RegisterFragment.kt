@@ -121,6 +121,8 @@ class RegisterFragment : Fragment(R.layout.fragment_register) {
                     val bundle = Bundle().apply {
                         putString("userId", response.userId)
                         putString("email", response.email)
+                        putInt("expiresIn", response.expiresIn ?: (2 * 60))
+                        putInt("resendAvailableIn", response.resendAvailableIn ?: 60)
                     }
                     findNavController().navigate(R.id.action_register_to_verifyOtp, bundle)
                 } else {

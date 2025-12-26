@@ -9,8 +9,6 @@ import android.text.TextWatcher
 import android.view.KeyEvent
 import android.view.View
 import android.view.inputmethod.InputMethodManager
-import android.widget.Button
-import android.widget.EditText
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
@@ -36,6 +34,8 @@ class VerifyOtpFragment : Fragment(R.layout.fragment_verify_otp) {
     private var email: String? = null
     private var username: String? = null
     private var countDownTimer: CountDownTimer? = null
+    private var initialExpiresInSeconds: Int = 120
+    private var resendAvailableInSeconds: Int = 60
     private var otpAttempts = 0
 
     private lateinit var btnBack: ImageView
@@ -61,8 +61,11 @@ class VerifyOtpFragment : Fragment(R.layout.fragment_verify_otp) {
         userId = arguments?.getString("userId")
         email = arguments?.getString("email")
         username = arguments?.getString("username")
+        // Read TTL values passed from register response (seconds)
+        initialExpiresInSeconds = arguments?.getInt("expiresIn") ?: initialExpiresInSeconds
+        resendAvailableInSeconds = arguments?.getInt("resendAvailableIn") ?: resendAvailableInSeconds
 
-        android.util.Log.d("VerifyOtpFragment", "userId: $userId, email: $email, username: $username")
+        android.util.Log.d("VerifyOtpFragment", "userId: $userId, email: $email, username: $username, expiresIn=$initialExpiresInSeconds, resendIn=$resendAvailableInSeconds")
 
         if (userId == null || email == null) {
             Toast.makeText(requireContext(), getString(R.string.missing_user_info), Toast.LENGTH_LONG).show()
@@ -213,7 +216,8 @@ class VerifyOtpFragment : Fragment(R.layout.fragment_verify_otp) {
         btnResend.isEnabled = false
         countDownTimer?.cancel()
 
-        countDownTimer = object : CountDownTimer(300000, 1000) { // 5 minutes
+        val millis = initialExpiresInSeconds * 1000L
+        countDownTimer = object : CountDownTimer(millis, 1000) {
             override fun onTick(millisUntilFinished: Long) {
                 val minutes = millisUntilFinished / 1000 / 60
                 val seconds = millisUntilFinished / 1000 % 60
@@ -221,12 +225,23 @@ class VerifyOtpFragment : Fragment(R.layout.fragment_verify_otp) {
             }
 
             override fun onFinish() {
-                tvTimer.text = getString(R.string.otp_timer_placeholder).replace("05:00", "00:00")
+                tvTimer.text = "00:00"
                 tvTimer.setTextColor(ContextCompat.getColor(requireContext(), R.color.error))
                 btnResend.isEnabled = true
                 Toast.makeText(requireContext(), getString(R.string.otp_expired), Toast.LENGTH_SHORT).show()
             }
         }.start()
+
+        // Disable resend for resendAvailableInSeconds
+        btnResend.isEnabled = false
+        if (resendAvailableInSeconds > 0) {
+            object : CountDownTimer(resendAvailableInSeconds * 1000L, 1000) {
+                override fun onTick(millisUntilFinished: Long) {}
+                override fun onFinish() { btnResend.isEnabled = true }
+            }.start()
+        } else {
+            btnResend.isEnabled = true
+        }
     }
 
     private fun verifyOTP() {
@@ -346,22 +361,22 @@ class VerifyOtpFragment : Fragment(R.layout.fragment_verify_otp) {
                     }
                 }
             } catch (e: Exception) {
-                btnVerify.isEnabled = true
-                btnVerify.text = getString(R.string.verify)
-                android.util.Log.e("VerifyOtpFragment", "Exception during verification", e)
+                 btnVerify.isEnabled = true
+                 btnVerify.text = getString(R.string.verify)
+                 android.util.Log.e("VerifyOtpFragment", "Exception during verification", e)
 
-                val errorMessage = when {
-                    e.message?.contains("timeout", ignoreCase = true) == true ->
-                        getString(R.string.network_timeout)
-                    e.message?.contains("unable to resolve host", ignoreCase = true) == true ->
-                        getString(R.string.network_unreachable)
-                    else -> getString(R.string.generic_error, e.message ?: "")
-                }
+                 val errorMessage = when {
+                     e.message?.contains("timeout", ignoreCase = true) == true ->
+                         getString(R.string.network_timeout)
+                     e.message?.contains("unable to resolve host", ignoreCase = true) == true ->
+                         getString(R.string.network_unreachable)
+                     else -> getString(R.string.generic_error, e.message ?: "")
+                 }
 
-                Toast.makeText(requireContext(), errorMessage, Toast.LENGTH_LONG).show()
-            }
-        }
-    }
+                 Toast.makeText(requireContext(), errorMessage, Toast.LENGTH_LONG).show()
+             }
+         }
+     }
 
     private fun clearOtpInputs() {
         etOtp1.text?.clear()
@@ -401,6 +416,11 @@ class VerifyOtpFragment : Fragment(R.layout.fragment_verify_otp) {
 
                     // Clear OTP inputs
                     clearOtpInputs()
+
+                    // Update TTLs from server response (seconds)
+                    val respBody = response.body()
+                    respBody?.expiresIn?.let { initialExpiresInSeconds = it }
+                    respBody?.resendAvailableIn?.let { resendAvailableInSeconds = it }
 
                     // Restart timer
                     startTimer()
