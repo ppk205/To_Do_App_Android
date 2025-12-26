@@ -9,7 +9,7 @@ import java.util.concurrent.TimeUnit
 object RetrofitClient {
 
     // Base URL - Đang dùng IP máy tính cho device thật
-    private const val BASE_URL = "http://192.168.2.247:3001/"
+    private const val BASE_URL = "http://192.168.1.3:3001/"
 
 
     private val loggingInterceptor = HttpLoggingInterceptor().apply {

@@ -29,5 +29,3 @@ interface AuthApiService {
     @GET("api/auth/profile")
     suspend fun getProfile(@Header("Authorization") token: String): Response<User>
 }
-
-

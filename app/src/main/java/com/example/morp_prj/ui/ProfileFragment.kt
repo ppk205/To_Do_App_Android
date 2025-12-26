@@ -379,8 +379,3 @@ class ProfileFragment : Fragment() {
         Toast.makeText(requireContext(), "Bạn đang là khách. Đăng nhập để chỉnh sửa thông tin", Toast.LENGTH_SHORT).show()
     }
 }
-
-
-
-
-

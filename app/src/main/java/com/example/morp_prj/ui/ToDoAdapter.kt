@@ -6,14 +6,36 @@ import android.view.ViewGroup
 import android.widget.CheckBox
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import com.example.morp_prj.R
+import java.util.Locale
 
 class ToDoAdapter(
-    private val items: List<ToDoItem>,
+    // 1. LINH HOẠT: Thêm tham số 'items' với giá trị mặc định là rỗng.
+    // - PersonalFragment gọi 'ToDoAdapter(items = list)' -> OK (nhận list ban đầu)
+    // - HomeFragment gọi 'ToDoAdapter()' -> OK (tự động lấy list rỗng)
+    items: List<ToDoItem> = emptyList(),
+
+    // Các callback sự kiện (đều có thể null)
+    private val onItemClick: ((item: ToDoItem) -> Unit)? = null,
     private val onCheckedChanged: ((item: ToDoItem, isChecked: Boolean) -> Unit)? = null,
-    private val onMoreClicked: ((item: ToDoItem) -> Unit)? = null,
+    private val onMoreClicked: ((item: ToDoItem) -> Unit)? = null
 ) : RecyclerView.Adapter<ToDoAdapter.ToDoViewHolder>() {
+
+    // List dữ liệu nội bộ được khởi tạo từ tham số constructor
+    private val items: MutableList<ToDoItem> = items.toMutableList()
+
+    // 2. HỖ TRỢ submitList: Để cập nhật dữ liệu về sau (cho HomeFragment load API/Mock)
+    fun submitList(newList: List<ToDoItem>) {
+        val diffCallback = ToDoDiffCallback(this.items, newList)
+        val diffResult = DiffUtil.calculateDiff(diffCallback)
+
+        this.items.clear()
+        this.items.addAll(newList)
+
+        diffResult.dispatchUpdatesTo(this)
+    }
 
     inner class ToDoViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val checkDone: CheckBox = itemView.findViewById(R.id.checkDone)
@@ -37,9 +59,11 @@ class ToDoAdapter(
 
         holder.txtTitle.text = item.title
         holder.txtTime.text = item.timeLabel
-        holder.txtPriority.text = item.priority.name
 
-        // Tags: map up to 2 chips for now
+        val priorityText = item.priority.name.lowercase(Locale.getDefault())
+            .replaceFirstChar { it.uppercase(Locale.getDefault()) }
+        holder.txtPriority.text = priorityText
+
         val tag1 = item.tags.getOrNull(0)
         val tag2 = item.tags.getOrNull(1)
 
@@ -58,11 +82,32 @@ class ToDoAdapter(
         }
 
         holder.checkDone.setOnCheckedChangeListener(null)
-        holder.checkDone.isChecked = item.status == TaskStatus.DONE
+        holder.checkDone.isChecked = (item.status == TaskStatus.DONE)
         holder.checkDone.setOnCheckedChangeListener { _, isChecked ->
+            item.status = if (isChecked) TaskStatus.DONE else TaskStatus.TODO
             onCheckedChanged?.invoke(item, isChecked)
         }
 
-        holder.ivMore.setOnClickListener { onMoreClicked?.invoke(item) }
+        holder.itemView.setOnClickListener {
+            onItemClick?.invoke(item)
+        }
+
+        holder.ivMore.setOnClickListener {
+            onMoreClicked?.invoke(item)
+        }
+    }
+}
+
+class ToDoDiffCallback(
+    private val oldList: List<ToDoItem>,
+    private val newList: List<ToDoItem>
+) : DiffUtil.Callback() {
+    override fun getOldListSize(): Int = oldList.size
+    override fun getNewListSize(): Int = newList.size
+    override fun areItemsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
+        return oldList[oldItemPosition].id == newList[newItemPosition].id
+    }
+    override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
+        return oldList[oldItemPosition] == newList[newItemPosition]
     }
 }

@@ -9,10 +9,11 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.setupWithNavController
 import com.example.morp_prj.R
-import com.example.morp_prj.utils.PreferenceManager
 import com.google.android.material.bottomnavigation.BottomNavigationView
 
 class MainActivity : AppCompatActivity() {
+
+    private lateinit var bottomNav: BottomNavigationView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -28,31 +29,23 @@ class MainActivity : AppCompatActivity() {
             .findFragmentById(R.id.nav_host_fragment) as NavHostFragment
         val navController = navHostFragment.navController
 
-        val bottomNav = findViewById<BottomNavigationView>(R.id.bottom_nav_view)
+        bottomNav = findViewById(R.id.bottom_nav_view)
         bottomNav.setupWithNavController(navController)
 
-        val prefs = PreferenceManager(this)
-
-        // intercept bottom navigation selections to block guest users from restricted tabs
-        bottomNav.setOnItemSelectedListener { item ->
-            val restricted = when (item.itemId) {
-                R.id.menu_team, R.id.menu_profile -> true
-                else -> false
-            }
-            if (restricted && prefs.isGuest()) {
-                // redirect to guest prompt instead of navigating
-                navController.navigate(R.id.guest_prompt_fragment)
-                return@setOnItemSelectedListener true
-            }
-            // fallback to default behavior
-            navController.navigate(item.itemId)
-            true
-        }
-
-        // Hide bottom navigation on destinations that shouldn't show it (e.g. onboarding, login, register)
+        // Hide bottom nav on screens that shouldn't show it (e.g., Create Task)
         navController.addOnDestinationChangedListener { _, destination, _ ->
+            bottomNav.visibility = when (destination.id) {
+                R.id.taskFragment -> View.GONE
+                else -> View.VISIBLE
+            }
             when (destination.id) {
-                R.id.onboarding_fragment, R.id.login_fragment, R.id.register_fragment -> bottomNav.visibility = View.GONE
+                R.id.onboarding_fragment,
+                R.id.login_fragment,
+                R.id.register_fragment,
+                R.id.verify_otp_fragment,
+                R.id.otp_resend_required_fragment,
+                R.id.register_success_fragment -> bottomNav.visibility = View.GONE
+
                 else -> bottomNav.visibility = View.VISIBLE
             }
         }
