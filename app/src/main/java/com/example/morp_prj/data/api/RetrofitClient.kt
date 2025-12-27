@@ -8,6 +8,7 @@ import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
+import com.google.gson.GsonBuilder
 
 /**
  * ========================================
@@ -28,6 +29,12 @@ object RetrofitClient {
     // Replace with your actual domain when deploying to production
     private const val PRODUCTION_DOMAIN = "yourdomain.com"
 
+    // Build a Gson instance that tolerates numeric 0/1 for booleans
+    private val gson = GsonBuilder()
+        .registerTypeAdapter(Boolean::class.java, LenientBooleanDeserializer())
+        .registerTypeAdapter(Boolean::class.javaPrimitiveType, LenientBooleanDeserializer())
+        .create()
+
     /**
      * Check if app is in debug mode
      */
@@ -37,7 +44,7 @@ object RetrofitClient {
             Class.forName("com.example.morp_prj.BuildConfig")
                 .getDeclaredField("DEBUG")
                 .getBoolean(null)
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             // Fallback: assume debug if we can't determine
             true
         }
@@ -94,7 +101,7 @@ object RetrofitClient {
         return Retrofit.Builder()
             .baseUrl(BASE_URL)
             .client(client)
-            .addConverterFactory(GsonConverterFactory.create())
+            .addConverterFactory(GsonConverterFactory.create(gson))
             .build()
     }
 
@@ -108,7 +115,7 @@ object RetrofitClient {
             val authApiServiceWithoutInterceptor = Retrofit.Builder()
                 .baseUrl(BASE_URL)
                 .client(OkHttpClient.Builder().build())
-                .addConverterFactory(GsonConverterFactory.create())
+                .addConverterFactory(GsonConverterFactory.create(gson))
                 .build()
                 .create(AuthApiService::class.java)
 
