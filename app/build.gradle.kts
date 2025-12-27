@@ -22,6 +22,7 @@ android {
 
     buildFeatures {
         dataBinding = true
+        buildConfig = true // ✅ Enable BuildConfig generation
     }
 
     buildTypes {
@@ -70,4 +71,7 @@ dependencies {
 
     // Security - Encrypted SharedPreferences
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
+
+    // Biometric Authentication
+    implementation("androidx.biometric:biometric:1.1.0")
 }

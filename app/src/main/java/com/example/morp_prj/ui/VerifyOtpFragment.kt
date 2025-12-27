@@ -310,6 +310,24 @@ class VerifyOtpFragment : Fragment(R.layout.fragment_verify_otp) {
                             token = savedToken
                         )
 
+                        // Also save tokens securely (if provided) so session persists across app restarts
+                        try {
+                            val tokenStorage = com.example.morp_prj.security.SecureTokenStorage(requireContext())
+                            // Prefer accessToken/refreshToken fields if present
+                            authResponse.accessToken?.let { at ->
+                                tokenStorage.saveAccessToken(at, authResponse.accessTTL ?: 1800)
+                            }
+                            authResponse.refreshToken?.let { rt ->
+                                tokenStorage.saveRefreshToken(rt, authResponse.refreshTTL ?: 2592000)
+                            }
+                            // Save session metadata when available
+                            if (!authResponse.sessionId.isNullOrEmpty()) {
+                                tokenStorage.saveSessionMetadata(authResponse.sessionId!!, savedUserId)
+                            }
+                        } catch (e: Exception) {
+                            android.util.Log.e("VerifyOtpFragment", "Failed to save secure tokens", e)
+                        }
+
                         // Navigate to register success fragment
                         try {
                             val bundle = bundleOf(

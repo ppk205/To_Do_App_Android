@@ -21,7 +21,7 @@ class RegisterFragment : Fragment(R.layout.fragment_register) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        authRepository = AuthRepository()
+        authRepository = AuthRepository(requireContext())
         preferenceManager = PreferenceManager(requireContext())
 
         val inputFirstName = view.findViewById<TextInputEditText>(R.id.input_first_name)
