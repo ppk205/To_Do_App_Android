@@ -3,14 +3,15 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_margin="12dp"
-    app:cardCornerRadius="12dp"
-    app:cardElevation="3dp">
+    android:layout_marginHorizontal="16dp"
+    android:layout_marginVertical="8dp"
+    app:cardCornerRadius="16dp"
+    app:cardElevation="4dp">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="12dp">
+        android:padding="16dp">
 
         <CheckBox
             android:id="@+id/checkDone"
@@ -23,22 +24,20 @@
             android:id="@+id/txtTitle"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:text="Title"
-            android:textStyle="bold"
-            android:textSize="16sp"
+            android:layout_marginStart="12dp"
             android:textColor="#111"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            app:layout_constraintEnd_toStartOf="@id/ivMore"
             app:layout_constraintStart_toEndOf="@id/checkDone"
-            app:layout_constraintTop_toTopOf="@id/checkDone"
-            app:layout_constraintEnd_toStartOf="@id/ivMore" />
+            app:layout_constraintTop_toTopOf="@id/checkDone" />
 
         <ImageView
             android:id="@+id/ivMore"
-            android:layout_width="20dp"
-            android:layout_height="20dp"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
             android:contentDescription="More"
-            android:src="@android:drawable/ic_menu_more"
-            app:tint="#888"
+            android:src="@drawable/ic_menu_handle_custom"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
@@ -46,9 +45,9 @@
             android:id="@+id/rowMeta"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
             android:gravity="center_vertical"
             android:orientation="horizontal"
+            android:layout_marginTop="8dp"
             app:layout_constraintStart_toStartOf="@id/txtTitle"
             app:layout_constraintTop_toBottomOf="@id/txtTitle"
             app:layout_constraintEnd_toEndOf="@id/txtTitle">
@@ -56,32 +55,32 @@
             <ImageView
                 android:layout_width="16dp"
                 android:layout_height="16dp"
-                android:src="@android:drawable/ic_menu_my_calendar"
-                app:tint="#999" />
+                android:src="@drawable/ic_calendar_custom"
+                app:tint="#999999" />
 
             <TextView
                 android:id="@+id/txtTime"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="6dp"
-                android:paddingHorizontal="10dp"
-                android:paddingVertical="4dp"
+                android:background="@drawable/bg_todo_time"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="6dp"
                 android:text="Today, 6:00 PM"
-                android:textColor="@android:color/white"
-                android:textSize="12sp"
-                android:background="@drawable/bg_todo_time" />
+                android:textColor="@color/white"
+                android:textSize="12sp" />
 
             <TextView
                 android:id="@+id/txtPriority"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
-                android:paddingHorizontal="10dp"
-                android:paddingVertical="4dp"
+                android:background="@drawable/bg_todo_priority"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="6dp"
                 android:text="MEDIUM"
-                android:textColor="@android:color/white"
-                android:textSize="12sp"
-                android:background="@drawable/bg_todo_priority" />
+                android:textColor="@color/white"
+                android:textSize="12sp" />
         </LinearLayout>
 
         <LinearLayout
@@ -96,27 +95,40 @@
 
             <TextView
                 android:id="@+id/txtTagWork"
+                style="@style/Widget.MaterialComponents.Chip.Choice"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:paddingHorizontal="10dp"
+                android:background="@drawable/bg_todo_tag"
+                android:paddingHorizontal="12dp"
                 android:paddingVertical="4dp"
                 android:text="Work"
-                android:textSize="12sp"
                 android:textColor="#111"
-                android:background="@drawable/bg_todo_tag" />
+                android:textSize="12sp" />
 
             <TextView
                 android:id="@+id/txtTagMarketing"
+                style="@style/Widget.MaterialComponents.Chip.Choice"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="6dp"
-                android:paddingHorizontal="10dp"
+                android:layout_marginStart="8dp"
+                android:background="@drawable/bg_todo_tag"
+                android:paddingHorizontal="12dp"
                 android:paddingVertical="4dp"
                 android:text="Marketing"
-                android:textSize="12sp"
                 android:textColor="#111"
-                android:background="@drawable/bg_todo_tag" />
+                android:textSize="12sp" />
         </LinearLayout>
+
+        <View
+            android:id="@+id/selectionOverlay"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:background="#8038B9FA"
+            android:visibility="gone"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
