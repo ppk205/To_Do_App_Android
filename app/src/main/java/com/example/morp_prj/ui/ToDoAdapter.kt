@@ -28,25 +28,24 @@ class ToDoAdapter(
     private val onMoreClicked: ((item: ToDoItem) -> Unit)? = null
 ) : RecyclerView.Adapter<ToDoAdapter.ToDoViewHolder>() {
 
-    private var items: MutableList<ToDoItem> = items.toMutableList()
+    private var items: List<ToDoItem> = items
     private var selectedIds: Set<Long> = emptySet()
     private var selectionEnabled: Boolean = false
 
-    fun submitData(newItems: MutableList<ToDoItem>, selection: Set<Long>, selectionMode: Boolean) {
-        items = newItems
+    fun render(newItems: List<ToDoItem>, selection: Set<Long>, selectionMode: Boolean) {
         selectedIds = selection
         selectionEnabled = selectionMode
+        submitList(newItems)
     }
 
     fun submitList(newList: List<ToDoItem>) {
         val diffCallback = ToDoDiffCallback(this.items, newList)
         val diffResult = DiffUtil.calculateDiff(diffCallback)
 
-        this.items.clear()
-        this.items.addAll(newList)
-
+        this.items = newList
         diffResult.dispatchUpdatesTo(this)
     }
+
     inner class ToDoViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val checkDone: CheckBox = itemView.findViewById(R.id.checkDone)
         val txtTitle: TextView = itemView.findViewById(R.id.txtTitle)
@@ -56,6 +55,8 @@ class ToDoAdapter(
         val txtTagTwo: TextView = itemView.findViewById(R.id.txtTagMarketing)
         val ivMore: ImageView = itemView.findViewById(R.id.ivMore)
         val selectionOverlay: View = itemView.findViewById(R.id.selectionOverlay)
+        val ivSelected: ImageView = itemView.findViewById(R.id.ivSelected)
+        val cardRoot: androidx.cardview.widget.CardView = itemView.findViewById(R.id.cardRoot)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ToDoViewHolder {
@@ -100,7 +101,19 @@ class ToDoAdapter(
         }
 
         val isSelected = selectionEnabled && selectedIds.contains(item.id)
-        holder.selectionOverlay.isVisible = isSelected
+
+        // Clear default background when not selected
+        holder.cardRoot.setCardBackgroundColor(android.graphics.Color.WHITE)
+        holder.cardRoot.background = null
+
+        if (isSelected) {
+            // Set a strong, easy-to-see selected background (stroke + fill)
+            holder.cardRoot.setBackgroundResource(R.drawable.bg_task_selected)
+        }
+
+        // Keep overlay view hidden; we now use CardView background for highlighting.
+        holder.selectionOverlay.isVisible = false
+        holder.ivSelected.isVisible = isSelected
 
         holder.itemView.setOnLongClickListener {
             onLongPressForSelection?.invoke(item)

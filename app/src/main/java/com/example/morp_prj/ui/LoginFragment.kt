@@ -9,6 +9,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import com.example.morp_prj.R
 import com.example.morp_prj.data.repository.AuthRepository
+import com.example.morp_prj.data.repository.TaskSyncRepository
 import com.example.morp_prj.utils.PreferenceManager
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputEditText
@@ -82,6 +83,15 @@ class LoginFragment : Fragment(R.layout.fragment_login) {
                         email = response.user.email,
                         token = response.token
                     )
+
+                    // Best-effort: auto sync tasks after login
+                    lifecycleScope.launch {
+                        try {
+                            TaskSyncRepository(requireContext()).syncUp()
+                        } catch (_: Exception) {
+                            // ignore; user can sync manually later
+                        }
+                    }
 
                     Toast.makeText(requireContext(), "Đăng nhập thành công!", Toast.LENGTH_SHORT).show()
                     findNavController().navigate(R.id.action_login_to_home)

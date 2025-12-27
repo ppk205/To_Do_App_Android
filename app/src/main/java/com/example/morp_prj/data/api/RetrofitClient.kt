@@ -22,7 +22,7 @@ import java.util.concurrent.TimeUnit
 object RetrofitClient {
 
     // Base URL - Use your actual domain in production
-    private const val BASE_URL = "http://192.168.100.21:3001/"
+    private const val BASE_URL = "https://strip-trend-reforms-rated.trycloudflare.com/"
 
     // ✅ Production domain for certificate pinning
     // Replace with your actual domain when deploying to production
@@ -72,6 +72,10 @@ object RetrofitClient {
     // Public API service (recreated when retrofit rebuilt)
     @Volatile
     var authApiService: AuthApiService = retrofit.create(AuthApiService::class.java)
+        private set
+
+    @Volatile
+    var taskApiService: TaskApiService = retrofit.create(TaskApiService::class.java)
         private set
 
     private fun buildRetrofit(builder: OkHttpClient.Builder?): Retrofit {
@@ -125,9 +129,10 @@ object RetrofitClient {
                 builder.certificatePinner(certificatePinner)
             }
 
-            // Rebuild retrofit and public service
+            // Rebuild retrofit and public services
             retrofit = buildRetrofit(builder)
             authApiService = retrofit.create(AuthApiService::class.java)
+            taskApiService = retrofit.create(TaskApiService::class.java)
 
         } catch (e: Exception) {
             // Fail gracefully - keep existing retrofit without auth interceptor

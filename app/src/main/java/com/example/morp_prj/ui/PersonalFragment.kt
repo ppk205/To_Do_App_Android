@@ -23,6 +23,8 @@ import com.example.morp_prj.R
 import com.example.morp_prj.data.TaskRepository
 import com.example.morp_prj.data.TaskUiMapper.toUiItem
 import com.example.morp_prj.data.db.AppDatabase
+import com.example.morp_prj.data.repository.TaskSyncRepository
+import com.example.morp_prj.utils.PreferenceManager
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -44,12 +46,19 @@ class PersonalFragment : Fragment() {
     private val repository by lazy {
         TaskRepository(AppDatabase.getInstance(requireContext()).taskDao())
     }
+    private val taskSyncRepository by lazy { TaskSyncRepository(requireContext()) }
+    private val prefs by lazy { PreferenceManager(requireContext()) }
 
     private var recyclerView: RecyclerView? = null
     private var adapter: ToDoAdapter? = null
     private var latestAllItems: List<ToDoItem> = emptyList()
     private val selectedIds = mutableSetOf<Long>()
     private var selectionMode = false
+
+    private lateinit var searchContainer: View
+    private lateinit var searchField: EditText
+
+    private var didAutoSync = false
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -77,25 +86,48 @@ class PersonalFragment : Fragment() {
             findNavController().navigate(R.id.action_personal_to_task)
         }
 
+        searchContainer = view.findViewById(R.id.searchInput)
+        searchField = view.findViewById(R.id.etSearch)
+
         setupSearch(view)
         setupTabsAndFilters(view)
         observeTasks()
+
+        // Auto-sync once per fragment lifetime when user is logged in
+        maybeAutoSync()
+    }
+
+    private fun maybeAutoSync() {
+        if (didAutoSync) return
+        if (!prefs.isLoggedIn() || prefs.isGuest()) return
+        didAutoSync = true
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            taskSyncRepository.syncUp()
+                .onSuccess { count ->
+                    if (count > 0) {
+                        Snackbar.make(requireView(), "Synced $count task(s)", Snackbar.LENGTH_SHORT).show()
+                    }
+                }
+                .onFailure {
+                    // Silent fail for auto-sync; user can trigger manual sync
+                }
+        }
     }
 
     private fun setupSearch(root: View) {
-        val header = root.findViewById<ViewGroup>(R.id.header)
-        val searchContainer = root.findViewById<View>(R.id.searchInput)
-        val searchField = root.findViewById<EditText>(R.id.etSearch)
         val ivSearch = root.findViewById<ImageView>(R.id.ivSearch)
 
         ivSearch.setOnClickListener {
-            searchContainer.isVisible = !searchContainer.isVisible
-            if (!searchContainer.isVisible) {
+            val show = searchContainer.visibility != View.VISIBLE
+            searchContainer.isVisible = show
+            if (show) {
+                searchField.requestFocus()
+            } else {
                 searchField.setText("")
                 queryText = ""
+                hideKeyboard(searchField)
                 refreshUi()
-            } else {
-                searchField.requestFocus()
             }
         }
 
@@ -273,7 +305,7 @@ class PersonalFragment : Fragment() {
 
     private fun refreshUi() {
         val filtered = applyFilters(latestAllItems)
-        adapter?.submitData(filtered, selectedIds, selectionMode)
+        adapter?.render(filtered, selectedIds, selectionMode)
     }
 
     private fun statusMatches(item: ToDoItem): Boolean {
@@ -344,8 +376,8 @@ class PersonalFragment : Fragment() {
     }
 
     private fun showItemMenu(anchor: View, item: ToDoItem) {
+        // Row-level delete stays "quick delete".
         PopupMenu(requireContext(), anchor).apply {
-            MenuInflater(requireContext()).inflate(R.menu.personal_frag_menu, menu)
             menu.add(0, R.id.personal_delete, 0, "Delete")
             setOnMenuItemClickListener {
                 when (it.itemId) {
@@ -359,56 +391,96 @@ class PersonalFragment : Fragment() {
         }.show()
     }
 
-    private fun startSelectionMode(initialId: Long) {
+    private fun startSelectionMode(initialId: Long? = null) {
         selectionMode = true
         selectedIds.clear()
-        selectedIds.add(initialId)
+        if (initialId != null) selectedIds.add(initialId)
+        refreshUi()
+    }
+
+    private fun exitSelectionMode() {
+        selectionMode = false
+        selectedIds.clear()
         refreshUi()
     }
 
     private fun toggleSelection(taskId: Long) {
         if (!selectionMode) return
         if (!selectedIds.add(taskId)) selectedIds.remove(taskId)
-        if (selectedIds.isEmpty()) selectionMode = false
+
+        // If user unselects everything, auto-exit delete mode (as requested)
+        if (selectedIds.isEmpty()) {
+            exitSelectionMode()
+            Toast.makeText(requireContext(), "Selection cleared", Toast.LENGTH_SHORT).show()
+            return
+        }
+
         refreshUi()
     }
 
     private fun confirmDeletion(ids: List<Long>) {
+        if (ids.isEmpty()) return
         AlertDialog.Builder(requireContext())
             .setTitle("Delete tasks")
             .setMessage("Delete ${ids.size} task(s)?")
             .setPositiveButton("Delete") { _, _ ->
                 viewLifecycleOwner.lifecycleScope.launch {
                     repository.deleteByIds(ids)
-                    selectionMode = false
-                    selectedIds.clear()
-                    observeTasks()
+                    exitSelectionMode()
                     Snackbar.make(requireView(), "Deleted", Snackbar.LENGTH_SHORT).show()
                 }
             }
-            .setNegativeButton("Cancel") { _, _ ->
-                selectionMode = false
-                selectedIds.clear()
-                refreshUi()
-            }
+            .setNegativeButton("Cancel", null)
             .show()
     }
 
     private fun handleMenuItem(item: MenuItem): Boolean {
         return when (item.itemId) {
             R.id.personal_sync -> {
-                Snackbar.make(requireView(), "Sync coming soon", Snackbar.LENGTH_SHORT).show()
-                true
-            }
-            R.id.personal_delete -> {
-                if (selectedIds.isEmpty()) {
-                    Toast.makeText(requireContext(), "Long press a task to select", Toast.LENGTH_SHORT).show()
-                } else {
-                    confirmDeletion(selectedIds.toList())
+                if (!prefs.isLoggedIn() || prefs.isGuest()) {
+                    Toast.makeText(requireContext(), "Please login to sync", Toast.LENGTH_SHORT).show()
+                    return true
+                }
+
+                viewLifecycleOwner.lifecycleScope.launch {
+                    Snackbar.make(requireView(), "Syncing...", Snackbar.LENGTH_SHORT).show()
+                    taskSyncRepository.syncUp()
+                        .onSuccess { count ->
+                            Snackbar.make(requireView(), "Synced $count task(s)", Snackbar.LENGTH_SHORT).show()
+                        }
+                        .onFailure { e ->
+                            Snackbar.make(requireView(), "Sync failed: ${e.message}", Snackbar.LENGTH_LONG).show()
+                        }
                 }
                 true
             }
+
+            R.id.personal_delete -> {
+                // 1) First tap: enter multi-select mode
+                if (!selectionMode) {
+                    startSelectionMode(null)
+                    Toast.makeText(requireContext(), "Tap tasks to select for deletion", Toast.LENGTH_SHORT).show()
+                    return true
+                }
+
+                // 2) If user is in delete-mode but selected nothing -> exit mode (as requested)
+                if (selectedIds.isEmpty()) {
+                    exitSelectionMode()
+                    Toast.makeText(requireContext(), "No task selected", Toast.LENGTH_SHORT).show()
+                    return true
+                }
+
+                // 3) Otherwise confirm delete
+                confirmDeletion(selectedIds.toList())
+                true
+            }
+
             else -> false
         }
+    }
+
+    private fun hideKeyboard(view: View) {
+        val imm = requireContext().getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
+        imm.hideSoftInputFromWindow(view.windowToken, 0)
     }
 }
