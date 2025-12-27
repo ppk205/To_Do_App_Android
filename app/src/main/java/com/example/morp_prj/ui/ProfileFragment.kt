@@ -1,6 +1,7 @@
 package com.example.morp_prj.ui
 
 import android.content.Intent
+import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
 import androidx.fragment.app.Fragment
@@ -129,7 +130,7 @@ class ProfileFragment : Fragment() {
         btnSave.visibility = View.VISIBLE
         btnCancel.visibility = View.VISIBLE
         btnLogout.visibility = View.GONE
-        ivEdit.setColorFilter(android.graphics.Color.parseColor("#2196F3"))
+        ivEdit.setColorFilter(Color.parseColor("#2196F3"))
         Toast.makeText(requireContext(), "Chế độ chỉnh sửa", Toast.LENGTH_SHORT).show()
     }
 
@@ -269,7 +270,10 @@ class ProfileFragment : Fragment() {
                     bio = etBio.text.toString(),
                     avatarUrl = null,
                     avatarId = null,
-                    createdAt = null
+                    createdAt = null,
+                    hashedPassword = TODO(),
+                    verified = TODO(),
+                    updatedAt = TODO(),
                 )
 
                 // TODO: Call API to update user profile
@@ -379,8 +383,3 @@ class ProfileFragment : Fragment() {
         Toast.makeText(requireContext(), "Bạn đang là khách. Đăng nhập để chỉnh sửa thông tin", Toast.LENGTH_SHORT).show()
     }
 }
-
-
-
-
-

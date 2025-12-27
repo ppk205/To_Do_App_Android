@@ -104,6 +104,10 @@ class MainActivity : AppCompatActivity() {
 
         // Hide bottom navigation on destinations that shouldn't show it (e.g. onboarding, login, register)
         navController.addOnDestinationChangedListener { _, destination, _ ->
+            bottomNav.visibility = when (destination.id) {
+                R.id.taskFragment -> View.GONE
+                else -> View.VISIBLE
+            }
             when (destination.id) {
                 R.id.onboarding_fragment,
                 R.id.login_fragment,

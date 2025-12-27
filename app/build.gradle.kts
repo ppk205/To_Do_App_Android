@@ -23,6 +23,7 @@ android {
     buildFeatures {
         dataBinding = true
         buildConfig = true // ✅ Enable BuildConfig generation
+        viewBinding = true
     }
 
     buildTypes {
