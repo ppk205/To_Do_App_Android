@@ -56,7 +56,7 @@ async function sendOTPEmail(email, otpCode, displayName = 'User') {
                             <p>Mã OTP của bạn là:</p>
                             <div class="otp-code">${otpCode}</div>
 
-                            <p><strong>Mã OTP sẽ hết hạn sau 5 phút.</strong></p>
+                            <p><strong>Mã OTP sẽ hết hạn sau 2 phút.</strong></p>
 
                             <div class="warning">
                                 ⚠️ Nếu bạn không yêu cầu đăng ký, vui lòng bỏ qua email này.
@@ -170,4 +170,3 @@ module.exports = {
     sendOTPEmail,
     sendResetPasswordEmail
 };
-

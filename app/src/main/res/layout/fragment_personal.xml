@@ -25,12 +25,13 @@
             android:text="Personal To-Dos"
             android:textSize="20sp"
             android:textStyle="bold"
-            android:gravity="center"/>
+            android:gravity="start"/>
 
         <ImageView
             android:id="@+id/ivSearch"
             android:layout_width="24dp"
             android:layout_height="24dp"
+            android:contentDescription="Search tasks"
             android:src="@android:drawable/ic_menu_search"
             android:padding="4dp"/>
 
@@ -39,17 +40,41 @@
             android:layout_width="24dp"
             android:layout_height="24dp"
             android:layout_marginStart="12dp"
-            android:src="@android:drawable/ic_menu_more"/>
+            android:src="@android:drawable/ic_menu_more"
+            android:contentDescription="More actions"/>
     </LinearLayout>
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/searchInput"
+        style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginBottom="4dp"
+        android:visibility="gone"
+        app:layout_constraintTop_toBottomOf="@id/header"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:startIconDrawable="@android:drawable/ic_menu_search">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/etSearch"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Search your tasks"
+            android:imeOptions="actionSearch"
+            android:singleLine="true" />
+    </com.google.android.material.textfield.TextInputLayout>
 
     <HorizontalScrollView
         android:id="@+id/tabScroll"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:scrollbars="none"
-        app:layout_constraintTop_toBottomOf="@id/header"
+        app:layout_constraintTop_toBottomOf="@id/searchInput"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_goneMarginTop="0dp">
 
         <LinearLayout
             android:id="@+id/tabs"
@@ -156,25 +181,22 @@
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:fadingEdge="vertical"
-        android:padding="12dp"
+        android:paddingHorizontal="12dp"
+        android:clipToPadding="false"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/filters" >
-
-    </androidx.recyclerview.widget.RecyclerView>
+        app:layout_constraintTop_toBottomOf="@id/filters"/>
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/createTask"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="336dp"
+        android:layout_margin="24dp"
         android:src="@drawable/ic_add"
         app:backgroundTint="@color/primary_500"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.9"
+        app:layout_constraintEnd_toEndOf="parent"
         app:tint="@android:color/white" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
