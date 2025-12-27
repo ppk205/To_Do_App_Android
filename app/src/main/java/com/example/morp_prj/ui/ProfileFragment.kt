@@ -1,381 +1,198 @@
 package com.example.morp_prj.ui
 
+import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
-import androidx.fragment.app.Fragment
+import android.provider.MediaStore
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.EditText
-import android.widget.ImageView
-import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.lifecycle.lifecycleScope
+import androidx.fragment.app.Fragment
 import com.bumptech.glide.Glide
 import com.example.morp_prj.R
-import androidx.navigation.fragment.findNavController
-import com.example.morp_prj.data.api.RetrofitClient
-import com.example.morp_prj.data.model.User
+import com.example.morp_prj.databinding.FragmentProfileBinding
 import com.example.morp_prj.utils.PreferenceManager
-import com.google.android.material.button.MaterialButton
-import kotlinx.coroutines.launch
+import com.example.morp_prj.data.model.User
 
 class ProfileFragment : Fragment() {
 
-    private lateinit var preferenceManager: PreferenceManager
-    private var isGuest = false
-    private var isEditMode = false
+    private var _binding: FragmentProfileBinding? = null
+    private val binding get() = _binding!!
 
-    // UI Components
-    private lateinit var tvUserName: TextView
-    private lateinit var etFullName: EditText
-    private lateinit var etPhone: EditText
-    private lateinit var etBio: EditText
-    private lateinit var etEmail: EditText
-    private lateinit var etUsername: EditText
-    private lateinit var etGithub: EditText
-    private lateinit var etLinkedin: EditText
-    private lateinit var etWebsite: EditText
-    private lateinit var ivAvatar: ImageView
-    private lateinit var ivEdit: ImageView
-    private lateinit var btnChangePassword: MaterialButton
-    private lateinit var btnChangeAvatar: MaterialButton
-    private lateinit var btnLogout: MaterialButton
-    private lateinit var btnGithub: ImageView
-    private lateinit var btnLinkedin: ImageView
-    private lateinit var btnWeb: ImageView
-    private lateinit var btnSave: MaterialButton
-    private lateinit var btnCancel: MaterialButton
+    // Biến cờ kiểm soát trạng thái
+    private var isEditing = false
+    private var currentUser: User? = null
 
-    // Image picker activity result launcher
-    private val imagePickerLauncher = registerForActivityResult(
-        ActivityResultContracts.GetContent()
-    ) { imageUri: Uri? ->
-        if (imageUri != null) {
-            handleImageSelected(imageUri)
+    // Launcher chọn ảnh
+    private val pickImageLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val imageUri: Uri? = result.data?.data
+            if (imageUri != null) {
+                // 1. Preview ảnh ngay lập tức
+                binding.ivAvatar.setImageURI(imageUri)
+
+                // 2. TODO: Gọi API Upload lên Server tại đây
+                // uploadImageToServer(imageUri)
+
+                Toast.makeText(context, "Đã chọn ảnh (Preview). Cần API để lưu.", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
-    override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View? {
-        return inflater.inflate(R.layout.fragment_profile, container, false)
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+        _binding = FragmentProfileBinding.inflate(inflater, container, false)
+        return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        preferenceManager = PreferenceManager(requireContext())
-        isGuest = preferenceManager.isGuest()
-
-        // Initialize UI components
-        initializeViews(view)
-
-        if (isGuest) {
-            // Guest không thể chỉnh sửa profile
-            disableEditFields(view)
-            showGuestMessage()
-        } else {
-            // User đã đăng nhập - lấy dữ liệu từ API
-            loadUserDataFromAPI()
-            setupEditButton()
-            setupLogoutButton()
-            setupChangePasswordButton()
-            setupChangeAvatarButton()
-            setupSaveButton()
-            setupCancelButton()
-            setupSocialLinkButtons()
-            disableAllEditFields()
-        }
+        loadUserData()
+        setupListeners()
+        updateUIState(false) // Mặc định là chế độ View
     }
 
-    private fun initializeViews(view: View) {
-        tvUserName = view.findViewById(R.id.tvUserName)
-        etFullName = view.findViewById(R.id.etFullName)
-        etPhone = view.findViewById(R.id.etPhone)
-        etBio = view.findViewById(R.id.etBio)
-        etEmail = view.findViewById(R.id.etEmail)
-        etUsername = view.findViewById(R.id.etUsername)
-        etGithub = view.findViewById(R.id.etGithub)
-        etLinkedin = view.findViewById(R.id.etLinkedin)
-        etWebsite = view.findViewById(R.id.etWebsite)
-        ivAvatar = view.findViewById(R.id.ivAvatar)
-        ivEdit = view.findViewById(R.id.ivEdit)
-        btnChangePassword = view.findViewById(R.id.btnChangePassword)
-        btnChangeAvatar = view.findViewById(R.id.btnChangeAvatar)
-        btnLogout = view.findViewById(R.id.btnLogout)
-        btnGithub = view.findViewById(R.id.btnGithub)
-        btnLinkedin = view.findViewById(R.id.btnLinkedin)
-        btnWeb = view.findViewById(R.id.btnWeb)
-        btnSave = view.findViewById(R.id.btnSave)
-        btnCancel = view.findViewById(R.id.btnCancel)
-    }
+    private fun loadUserData() {
+        currentUser = PreferenceManager.getUser(requireContext())
 
-    private fun setupEditButton() {
-        ivEdit.isClickable = true
-        ivEdit.setOnClickListener {
-            enterEditMode()
-        }
-    }
+        currentUser?.let { user ->
+            // Fill dữ liệu vào các trường
+            binding.tvUserName.text = user.displayName // Hiển thị fullName
+            binding.etFullName.setText(user.displayName) // Hiển thị fullName
+            binding.etFullName.visibility = View.VISIBLE // Hiển thị trường fullName
+            binding.etPhone.setText(user.phone ?: "")
+            binding.etEmail.setText(user.email)
+            binding.etUsername.setText(user.username)
+            binding.etBio.setText(user.bio ?: "")
+            // Các trường như avatarId, verified, createdAt, updatedAt nếu cần hiển thị thì thêm vào đây
 
-    private fun enterEditMode() {
-        isEditMode = true
-        enableAllEditFields()
-        btnChangePassword.visibility = View.VISIBLE
-        btnChangeAvatar.visibility = View.VISIBLE
-        btnSave.visibility = View.VISIBLE
-        btnCancel.visibility = View.VISIBLE
-        btnLogout.visibility = View.GONE
-        ivEdit.setColorFilter(android.graphics.Color.parseColor("#2196F3"))
-        Toast.makeText(requireContext(), "Chế độ chỉnh sửa", Toast.LENGTH_SHORT).show()
-    }
-
-    private fun exitEditMode(saveData: Boolean = false) {
-        isEditMode = false
-        disableAllEditFields()
-        btnChangePassword.visibility = View.GONE
-        btnChangeAvatar.visibility = View.GONE
-        btnSave.visibility = View.GONE
-        btnCancel.visibility = View.GONE
-        btnLogout.visibility = View.VISIBLE
-        ivEdit.clearColorFilter()
-
-        if (saveData) {
-            saveUserData()
-        }
-    }
-
-    private fun enableAllEditFields() {
-        etFullName.isEnabled = true
-        etPhone.isEnabled = true
-        etBio.isEnabled = true
-        etEmail.isEnabled = true
-        etUsername.isEnabled = true
-        etGithub.isEnabled = true
-        etLinkedin.isEnabled = true
-        etWebsite.isEnabled = true
-    }
-
-    private fun disableAllEditFields() {
-        etFullName.isEnabled = false
-        etPhone.isEnabled = false
-        etBio.isEnabled = false
-        etEmail.isEnabled = false
-        etUsername.isEnabled = false
-        etGithub.isEnabled = false
-        etLinkedin.isEnabled = false
-        etWebsite.isEnabled = false
-    }
-
-    private fun setupLogoutButton() {
-        btnLogout.setOnClickListener {
-            preferenceManager.clearLoginData()
-            Toast.makeText(requireContext(), "Đã đăng xuất", Toast.LENGTH_SHORT).show()
-            findNavController().navigate(R.id.login_fragment)
-        }
-    }
-
-    private fun setupChangePasswordButton() {
-        btnChangePassword.setOnClickListener {
-            Toast.makeText(requireContext(), "Chuyển đến trang đổi mật khẩu", Toast.LENGTH_SHORT).show()
-            // TODO: Implement change password navigation
-        }
-    }
-
-    private fun setupChangeAvatarButton() {
-        btnChangeAvatar.setOnClickListener {
-            imagePickerLauncher.launch("image/*")
-        }
-    }
-
-    private fun setupSaveButton() {
-        btnSave.setOnClickListener {
-            exitEditMode(saveData = true)
-        }
-    }
-
-    private fun setupCancelButton() {
-        btnCancel.setOnClickListener {
-            exitEditMode(saveData = false)
-        }
-    }
-
-    private fun handleImageSelected(imageUri: Uri) {
-        try {
-            Glide.with(this)
-                .load(imageUri)
-                .circleCrop()
-                .into(ivAvatar)
-
-            // TODO: Upload ảnh lên server
-            Toast.makeText(requireContext(), "Ảnh đã được chọn. Ấn Save để cập nhật", Toast.LENGTH_SHORT).show()
-        } catch (e: Exception) {
-            Toast.makeText(requireContext(), "Lỗi: ${e.message}", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    private fun setupSocialLinkButtons() {
-        btnGithub.setOnClickListener {
-            openLink(etGithub.text.toString())
-        }
-
-        btnLinkedin.setOnClickListener {
-            openLink(etLinkedin.text.toString())
-        }
-
-        btnWeb.setOnClickListener {
-            openLink(etWebsite.text.toString())
-        }
-    }
-
-    private fun openLink(url: String) {
-        if (url.isEmpty()) {
-            Toast.makeText(requireContext(), "Chưa có đường link", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        try {
-            val urlToOpen = if (url.startsWith("http://") || url.startsWith("https://")) {
-                url
-            } else {
-                "https://$url"
-            }
-
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(urlToOpen))
-            startActivity(intent)
-        } catch (e: Exception) {
-            Toast.makeText(requireContext(), "Không thể mở link: ${e.message}", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    private fun saveUserData() {
-        val token = preferenceManager.getToken()
-        if (token == null) {
-            Toast.makeText(requireContext(), "Không có token", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        lifecycleScope.launch {
-            try {
-                val updatedUser = User(
-                    id = preferenceManager.getUserId() ?: "",
-                    username = etUsername.text.toString(),
-                    displayName = etFullName.text.toString(),
-                    email = etEmail.text.toString(),
-                    phone = etPhone.text.toString(),
-                    bio = etBio.text.toString(),
-                    avatarUrl = null,
-                    avatarId = null,
-                    createdAt = null
-                )
-
-                // TODO: Call API to update user profile
-                Toast.makeText(requireContext(), "Cập nhật thông tin thành công", Toast.LENGTH_SHORT).show()
-
-                // Update local preference
-                preferenceManager.saveLoginData(
-                    userId = updatedUser.id,
-                    username = updatedUser.username,
-                    displayName = updatedUser.displayName,
-                    email = updatedUser.email
-                )
-            } catch (e: Exception) {
-                Toast.makeText(requireContext(), "Lỗi: ${e.message}", Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
-
-    private fun loadUserDataFromAPI() {
-        val token = preferenceManager.getToken()
-        if (token == null) {
-            loadUserDataFromPreference()
-            return
-        }
-
-        lifecycleScope.launch {
-            try {
-                val response = RetrofitClient.authApiService.getProfile("Bearer $token")
-                if (response.isSuccessful && response.body() != null) {
-                    val user = response.body()!!
-                    displayUserData(user)
-                    updatePreferenceWithUserData(user)
-                } else {
-                    loadUserDataFromPreference()
-                    Toast.makeText(requireContext(), "Không thể tải dữ liệu từ server", Toast.LENGTH_SHORT).show()
-                }
-            } catch (e: Exception) {
-                loadUserDataFromPreference()
-                Toast.makeText(requireContext(), "Lỗi: ${e.message}", Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
-
-    private fun loadUserDataFromPreference() {
-        val displayName = preferenceManager.getDisplayName() ?: "User"
-        val email = preferenceManager.getEmail() ?: ""
-        val username = preferenceManager.getUsername() ?: ""
-
-        tvUserName.text = displayName
-        etFullName.setText(displayName)
-        etEmail.setText(email)
-        etUsername.setText(username)
-        etPhone.setText("")
-        etBio.setText("")
-        etGithub.setText("")
-        etLinkedin.setText("")
-        etWebsite.setText("")
-    }
-
-    private fun displayUserData(user: User) {
-        tvUserName.text = user.displayName
-        etFullName.setText(user.displayName)
-        etEmail.setText(user.email)
-        etUsername.setText(user.username)
-        etPhone.setText(user.phone ?: "")
-        etBio.setText(user.bio ?: "")
-
-        // Load avatar nếu có URL
-        if (!user.avatarUrl.isNullOrEmpty()) {
-            try {
+            // Load Avatar
+            if (!user.avatarUrl.isNullOrEmpty()) {
                 Glide.with(this)
                     .load(user.avatarUrl)
-                    .circleCrop()
-                    .into(ivAvatar)
-            } catch (e: Exception) {
-                // Nếu lỗi load ảnh, giữ ảnh mặc định
+                    .placeholder(R.drawable.ic_profile_unselected)
+                    .error(R.drawable.ic_profile_unselected)
+                    .into(binding.ivAvatar)
             }
         }
     }
 
-    private fun updatePreferenceWithUserData(user: User) {
-        preferenceManager.saveLoginData(
-            userId = user.id,
-            username = user.username,
-            displayName = user.displayName,
-            email = user.email
+    private fun setupListeners() {
+        // 1. Nút Bút Chì (Góc phải) -> Bật chế độ sửa
+        binding.ivEdit.setOnClickListener {
+            updateUIState(true)
+        }
+
+        // 2. Nút Cancel -> Hủy sửa, quay về chế độ xem
+        binding.btnCancel.setOnClickListener {
+            loadUserData() // Reset lại dữ liệu cũ
+            updateUIState(false)
+        }
+
+        // 3. Nút Save -> Lưu và quay về chế độ xem
+        binding.btnSave.setOnClickListener {
+            saveChanges()
+        }
+
+        // 4. Nút Đổi Avatar (Chỉ hiện khi đang sửa)
+        binding.btnChangeAvatar.setOnClickListener {
+            openGallery()
+        }
+
+        // 5. Logout
+        binding.btnLogout.setOnClickListener {
+            performLogout()
+        }
+
+        // 6. Change Password (Optional)
+        binding.btnChangePassword.setOnClickListener {
+            Toast.makeText(context, "Tính năng đang phát triển", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun updateUIState(enableEdit: Boolean) {
+        isEditing = enableEdit
+
+        // Logic Ẩn/Hiện nút dựa trên trạng thái
+        if (enableEdit) {
+            // Đang sửa: Ẩn nút Edit, Hiện bộ nút Save/Cancel
+            binding.ivEdit.visibility = View.GONE
+            binding.btnSave.visibility = View.VISIBLE
+            binding.btnCancel.visibility = View.VISIBLE
+            binding.btnChangeAvatar.visibility = View.VISIBLE
+            binding.btnChangePassword.visibility = View.VISIBLE
+            binding.socialIconsContainer.visibility = View.GONE // Ẩn icon MXH cho đỡ rối (tùy chọn)
+        } else {
+            // Đang xem: Hiện nút Edit, Ẩn bộ nút Save/Cancel
+            binding.ivEdit.visibility = View.VISIBLE
+            binding.btnSave.visibility = View.GONE
+            binding.btnCancel.visibility = View.GONE
+            binding.btnChangeAvatar.visibility = View.GONE
+            binding.btnChangePassword.visibility = View.GONE
+            binding.socialIconsContainer.visibility = View.VISIBLE
+        }
+
+        // Enable/Disable các ô nhập liệu
+        // Email & Username luôn luôn bị khóa (theo yêu cầu)
+        binding.etEmail.isEnabled = false
+        binding.etUsername.isEnabled = false
+
+        // Các trường khác cho phép sửa khi enableEdit = true
+        binding.etFullName.isEnabled = enableEdit // Corrected from etDisplayName
+        binding.etPhone.isEnabled = enableEdit
+        binding.etBio.isEnabled = enableEdit
+        binding.etGithub.isEnabled = enableEdit
+        binding.etLinkedin.isEnabled = enableEdit
+        binding.etWebsite.isEnabled = enableEdit
+    }
+
+    private fun openGallery() {
+        val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
+        pickImageLauncher.launch(intent)
+    }
+
+    private fun saveChanges() {
+        val newDisplayName = binding.etFullName.text.toString()
+        val newPhone = binding.etPhone.text.toString()
+        val newBio = binding.etBio.text.toString()
+        // Các trường khác nếu cần
+
+        if (newDisplayName.isBlank()) {
+            Toast.makeText(context, "Tên hiển thị không được để trống", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        // Cập nhật User Object immutably using copy()
+        currentUser = currentUser?.copy(
+            displayName = newDisplayName,
+            phone = if (newPhone.isBlank()) null else newPhone,
+            bio = if (newBio.isBlank()) null else newBio
         )
+
+        // Lưu Local
+        currentUser?.let { PreferenceManager.saveUser(requireContext(), it) }
+
+        // Cập nhật UI Header
+        binding.tvUserName.text = newDisplayName
+
+        // Tắt chế độ Edit
+        updateUIState(false)
+        Toast.makeText(context, "Lưu thành công (Local)", Toast.LENGTH_SHORT).show()
     }
 
-    private fun disableEditFields(view: View) {
-        disableViewRecursive(view)
+    private fun performLogout() {
+        PreferenceManager.clear(requireContext())
+        val intent = Intent(requireActivity(), com.example.morp_prj.ui.MainActivity::class.java)
+        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        startActivity(intent)
+        activity?.finish()
     }
 
-    private fun disableViewRecursive(view: View) {
-        if (view is EditText) {
-            view.isEnabled = false
-            view.alpha = 0.6f
-        }
-        if (view is ViewGroup) {
-            for (i in 0 until view.childCount) {
-                disableViewRecursive(view.getChildAt(i))
-            }
-        }
-    }
-
-    private fun showGuestMessage() {
-        Toast.makeText(requireContext(), "Bạn đang là khách. Đăng nhập để chỉnh sửa thông tin", Toast.LENGTH_SHORT).show()
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
     }
 }

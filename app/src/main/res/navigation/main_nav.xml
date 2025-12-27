@@ -16,6 +16,9 @@
         <action
             android:id="@+id/action_onboarding_to_home"
             app:destination="@id/menu_home" />
+        <action
+            android:id="@+id/action_onboarding_to_register"
+            app:destination="@id/register_fragment" />
     </fragment>
 
     <fragment
@@ -119,6 +122,11 @@
         <action
             android:id="@+id/action_guestPrompt_to_register"
             app:destination="@id/register_fragment" />
+        <action
+            android:id="@+id/action_guestPrompt_to_home"
+            app:destination="@id/menu_home"
+            app:popUpTo="@id/menu_home"
+            app:popUpToInclusive="true" />
     </fragment>
 
     <fragment

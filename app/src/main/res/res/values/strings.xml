@@ -1,0 +1,146 @@
+<resources>
+    <string name="app_name">MORP-PRJ</string>
+
+    <!-- Onboarding content strings -->
+    <string name="cd_logo_taskflow">TaskFlow logo</string>
+    <string name="cd_onboarding_illustration">Onboarding illustration</string>
+    <string name="cd_dot_1">Dot 1</string>
+    <string name="cd_dot_2">Dot 2</string>
+    <string name="cd_dot_3">Dot 3</string>
+
+    <!-- Localized UI strings used in onboarding layout -->
+    <string name="taskflow_name">TaskFlow</string>
+    <string name="onboarding_title">Organize Your Personal World</string>
+    <string name="onboarding_description">Manage your daily tasks, set priorities, and track progress effortlessly to boost your individual productivity.</string>
+    <string name="get_started">Get Started</string>
+    <string name="try_offline">Try Offline (Guest Mode)</string>
+
+    <!-- Register screen strings -->
+    <string name="register_title">Register</string>
+    <string name="register_subtitle">Create Your Account</string>
+    <string name="register_tagline">Join TaskFlow to organize your life and collaborate effortlessly.</string>
+
+    <string name="hint_first_name">First Name</string>
+    <string name="hint_last_name">Last Name</string>
+    <string name="hint_username">Username</string>
+    <string name="hint_email">Email</string>
+    <string name="email_note">A verification link will be sent to this email.</string>
+    <string name="hint_password">Password</string>
+    <string name="hint_phone">Phone Number (Optional)</string>
+    <string name="security_note">Your password will be encrypted using industry-standard protocols. We utilize JWT tokens for secure session management.</string>
+    <string name="privacy_note">TaskFlow prioritizes your data privacy and security.</string>
+    <string name="register_button">Register Account</string>
+
+    <!-- Login strings -->
+    <string name="cd_back">Back</string>
+    <string name="login_title">Login</string>
+    <string name="login_welcome">Welcome Back!</string>
+    <string name="login_email_label">Email or Username</string>
+    <string name="login_email_hint">Enter your email or username</string>
+    <string name="login_password_label">Password</string>
+    <string name="login_password_hint">Enter your password</string>
+    <string name="login_button">Login</string>
+    <string name="login_forgot_password">Forgot Password?</string>
+    <string name="login_no_account">No account?</string>
+    <string name="login_register_now">Register Now</string>
+
+    <!-- Guest prompt strings -->
+    <string name="guest_prompt_title">Register to sync and access Team features!</string>
+    <string name="guest_register_now">Register Now</string>
+
+    <!-- OTP Verification Strings -->
+    <string name="verify_otp_title">Xác Thực OTP</string>
+    <string name="verify_otp_message">Nhập Mã OTP</string>
+    <string name="otp_sent_to">OTP đã gửi đến</string>
+    <string name="otp_expire_in">Hết hạn trong</string>
+    <string name="otp_description">Vui lòng nhập mã OTP 6 chữ số được gửi đến email của bạn. Mã này sẽ hết hạn sau 5 phút.</string>
+    <string name="otp_not_received">Không nhận được OTP?</string>
+    <string name="resend_otp">Gửi lại</string>
+    <string name="verify_button">Xác Thực</string>
+    <string name="back_button">Quay Lại</string>
+
+    <!-- Register Success Strings -->
+    <string name="register_success_title">Đăng Ký Thành Công!</string>
+    <string name="register_success_message">Tài khoản của bạn đã được kích hoạt thành công. Bây giờ bạn có thể đăng nhập.</string>
+    <string name="username_label">Username:</string>
+    <string name="email_label">Email:</string>
+    <string name="continue_button">Tiếp Tục</string>
+
+    <!-- Error Strings -->
+    <string name="error_title">Lỗi</string>
+    <string name="error_message">Đã xảy ra lỗi. Vui lòng thử lại.</string>
+    <string name="wrong_otp_title">OTP Không Chính Xác</string>
+    <string name="wrong_otp_message">Mã OTP bạn nhập không đúng. Vui lòng kiểm tra lại và thử lại.</string>
+    <string name="wrong_otp_description">Nếu bạn còn lại 1 lần thử, vui lòng cẩn thận. Nếu quá 5 lần sai, vui lòng gửi lại OTP.</string>
+    <string name="otp_expired_title">OTP Hết Hạn</string>
+    <string name="otp_expired_message">Mã OTP của bạn đã hết hạn. Vui lòng gửi lại OTP mới.</string>
+    <string name="otp_expired_info">Mã OTP chỉ có hiệu lực trong 5 phút. Nếu bạn không nhận được mã, hãy kiểm tra email spam hoặc gửi lại.</string>
+
+    <!-- Button Strings -->
+    <string name="cancel_button">Hủy</string>
+    <string name="retry_button">Thử Lại</string>
+    <string name="resend_otp_button">Gửi Lại OTP</string>
+    <string name="try_again_button">Thử Lại</string>
+
+    <!-- Labels & Common -->
+    <string name="attempts_label">Số lần nhập:</string>
+    <string name="attempts_format">Số lần nhập: %1$d/5</string>
+    <string name="success">Thành công</string>
+    <string name="error">Lỗi</string>
+    <string name="warning">Cảnh báo</string>
+    <string name="info">Thông tin</string>
+    <string name="otp_verification">Xác thực OTP</string>
+
+    <!-- OTP small strings -->
+    <string name="otp_digit_hint">*</string>
+    <string name="paste_clipboard">Dán từ clipboard</string>
+    <string name="otp_timer_placeholder">Mã sẽ hết hạn trong 05:00</string>
+
+    <!-- Verify OTP messages -->
+    <string name="otp_incomplete">Vui lòng nhập đầy đủ mã OTP</string>
+    <string name="verifying">Đang xác thực...</string>
+    <string name="verify">Xác thực</string>
+    <string name="verify_success_welcome">Xác thực thành công! Chào mừng %1$s!</string>
+    <string name="clipboard_empty">Clipboard rỗng</string>
+    <string name="clipboard_invalid">Clipboard không chứa 6 chữ số OTP</string>
+    <string name="otp_expired">OTP đã hết hạn. Vui lòng gửi lại.</string>
+    <string name="attempts_limit_message">Bạn đã nhập sai 5 lần. Vui lòng gửi lại OTP.</string>
+    <string name="resend_success">OTP mới đã được gửi đến email của bạn!</string>
+    <string name="resend_failed_default">Không thể gửi lại OTP. Vui lòng thử lại.</string>
+
+    <!-- Network / generic errors -->
+    <string name="network_timeout">Kết nối timeout. Vui lòng kiểm tra mạng.</string>
+    <string name="network_unreachable">Không thể kết nối server. Kiểm tra kết nối mạng.</string>
+    <string name="generic_error">Lỗi: %1$s</string>
+
+    <!-- Missing user info & init error -->
+    <string name="missing_user_info">Lỗi: Thiếu thông tin userId hoặc email</string>
+    <string name="init_error_format">Lỗi khởi tạo: %1$s</string>
+
+    <!-- Register Success Fragment -->
+    <string name="continue_to_login">Đăng Nhập Ngay</string>
+
+    <!-- OTP Resend Required Fragment -->
+    <string name="otp_attempts_exceeded_title">Vượt Quá Số Lần Thử</string>
+    <string name="otp_attempts_exceeded_message">Bạn đã nhập sai mã OTP quá 5 lần. Vui lòng yêu cầu gửi lại mã OTP mới.</string>
+    <string name="otp_attempts_exceeded_info">Vì lý do bảo mật, mã OTP cũ đã bị vô hiệu hóa. Hãy nhấn nút bên dưới để nhận mã mới qua email.</string>
+    <string name="cancel_and_back">Hủy và Quay Lại</string>
+
+    <!-- OTP resend cooldown -->
+    <string name="resend_countdown_format">Vui lòng đợi %1$d giây để gửi lại mã</string>
+    <string name="resend_ready">Bạn có thể gửi lại OTP</string>
+    <string name="to_do_tasks">Prepare presentation for Q3 review meeting with marketing team and stakeholders</string>
+
+    <!-- Home Fragment Strings -->
+    <string name="personal_todos">Personal Todos</string>
+    <string name="search_desc">Search tasks</string>
+    <string name="more_desc">More options</string>
+    <string name="tab_all">All</string>
+    <string name="tab_todo">Todo</string>
+    <string name="tab_in_progress">In Progress</string>
+    <string name="tab_done">Done</string>
+    <string name="filter_date">Date</string>
+    <string name="filter_priority">Priority</string>
+    <string name="filter_tag">Tag</string>
+    <string name="add_task_desc">Add new task</string>
+</resources>

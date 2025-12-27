@@ -1,11 +1,6 @@
 package com.example.morp_prj.data.api
 
-import com.example.morp_prj.data.model.AuthResponse
-import com.example.morp_prj.data.model.LoginRequest
-import com.example.morp_prj.data.model.RegisterRequest
-import com.example.morp_prj.data.model.VerifyOTPRequest
-import com.example.morp_prj.data.model.ResendOTPRequest
-import com.example.morp_prj.data.model.User
+import com.example.morp_prj.data.model.*
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
@@ -26,6 +21,18 @@ interface AuthApiService {
     @POST("api/auth/resend-otp")
     suspend fun resendOTP(@Body request: ResendOTPRequest): Response<AuthResponse>
 
+    @POST("api/auth/refresh")
+    suspend fun refreshToken(@Body request: RefreshTokenRequest): Response<AuthResponse>
+
     @GET("api/auth/profile")
     suspend fun getProfile(@Header("Authorization") token: String): Response<User>
+
+    @POST("api/auth/logout")
+    suspend fun logout(@Body request: LogoutRequest): Response<AuthResponse>
+
+    @GET("api/auth/sessions")
+    suspend fun getSessions(): Response<SessionsResponse>
+
+    @POST("api/auth/sessions/revoke")
+    suspend fun revokeSession(@Body request: RevokeSessionRequest): Response<AuthResponse>
 }

@@ -146,9 +146,10 @@
                         android:textColor="@color/white"
                         android:textSize="14sp"/>
                     <TextView
+                        android:id="@+id/tvTodoCount"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="5 Tasks"
+                        android:text="0 Tasks"
                         android:textColor="@color/white"
                         android:textSize="20sp"
                         android:textStyle="bold"
@@ -170,9 +171,10 @@
                         android:textColor="#333333"
                         android:textSize="14sp"/>
                     <TextView
+                        android:id="@+id/tvInProgressCount"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="2 Tasks"
+                        android:text="0 Tasks"
                         android:textColor="#333333"
                         android:textSize="20sp"
                         android:textStyle="bold"
@@ -194,9 +196,10 @@
                         android:textColor="#333333"
                         android:textSize="14sp"/>
                     <TextView
+                        android:id="@+id/tvCompletedCount"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="18 Tasks"
+                        android:text="0 Tasks"
                         android:textColor="#333333"
                         android:textSize="20sp"
                         android:textStyle="bold"

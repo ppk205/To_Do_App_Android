@@ -9,6 +9,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.setupWithNavController
 import com.example.morp_prj.R
+import com.example.morp_prj.utils.PreferenceManager
 import com.google.android.material.bottomnavigation.BottomNavigationView
 
 class MainActivity : AppCompatActivity() {
@@ -32,6 +33,23 @@ class MainActivity : AppCompatActivity() {
         bottomNav = findViewById(R.id.bottom_nav_view)
         bottomNav.setupWithNavController(navController)
 
+        // Intercept tab selections to enforce guest-mode behavior
+        bottomNav.setOnItemSelectedListener { item ->
+            val isGuest = PreferenceManager.isGuest(this)
+            when (item.itemId) {
+                R.id.menu_team, R.id.menu_profile -> {
+                    if (isGuest) {
+                        // Navigate to guest prompt fragment for guests
+                        navController.navigate(R.id.guest_prompt_fragment)
+                        return@setOnItemSelectedListener true
+                    }
+                }
+            }
+            // Default behavior: let NavController handle selection
+            navController.navigate(item.itemId)
+            true
+        }
+
         // Hide bottom nav on screens that shouldn't show it (e.g., Create Task)
         navController.addOnDestinationChangedListener { _, destination, _ ->
             bottomNav.visibility = when (destination.id) {
@@ -44,7 +62,8 @@ class MainActivity : AppCompatActivity() {
                 R.id.register_fragment,
                 R.id.verify_otp_fragment,
                 R.id.otp_resend_required_fragment,
-                R.id.register_success_fragment -> bottomNav.visibility = View.GONE
+                R.id.register_success_fragment,
+                R.id.guest_prompt_fragment -> bottomNav.visibility = View.GONE
 
                 else -> bottomNav.visibility = View.VISIBLE
             }

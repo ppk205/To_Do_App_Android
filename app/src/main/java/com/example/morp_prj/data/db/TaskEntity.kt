@@ -3,6 +3,7 @@ package com.example.morp_prj.data.db
 import androidx.room.Entity
 import androidx.room.Ignore
 import androidx.room.PrimaryKey
+import com.example.morp_prj.data.db.SyncState
 
 /**
  * Room entity backing the local SQLite table `tasks`.
@@ -15,6 +16,12 @@ import androidx.room.PrimaryKey
 data class TaskEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0L,
+
+    /** Remote id on MySQL (UUID string). Null if not synced yet. */
+    val serverId: String? = null,
+
+    /** Sync state for offline-first. */
+    val syncState: SyncState = SyncState.PENDING,
 
     val title: String,
     val description: String = "",
