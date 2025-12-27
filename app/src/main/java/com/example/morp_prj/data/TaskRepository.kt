@@ -8,6 +8,9 @@ class TaskRepository(private val dao: TaskDao) {
 
     fun observeAll(): Flow<List<TaskEntity>> = dao.observeAll()
 
+    fun observeByDateRange(startOfDay: Long, endOfDay: Long): Flow<List<TaskEntity>> =
+        dao.observeByDateRange(startOfDay, endOfDay)
+
     fun observeByStatus(status: String): Flow<List<TaskEntity>> = dao.observeByStatus(status)
 
     fun observeCountByStatus(status: String): Flow<Int> = dao.observeCountByStatus(status)

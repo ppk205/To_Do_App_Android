@@ -22,6 +22,7 @@ import com.example.morp_prj.utils.PreferenceManager
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import java.util.Calendar
 
 class HomeFragment : Fragment() {
 
@@ -42,6 +43,8 @@ class HomeFragment : Fragment() {
         TaskRepository(AppDatabase.getInstance(requireContext()).taskDao())
     }
 
+    private lateinit var tvWelcome: TextView
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -52,6 +55,9 @@ class HomeFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        tvWelcome = view.findViewById(R.id.tvWelcome)
+        updateGreeting()
 
         // 1. Lấy thông tin user hiện tại
         val user = PreferenceManager.getUser(requireContext())
@@ -70,6 +76,24 @@ class HomeFragment : Fragment() {
         loadTasksFromDatabase() // Thực hiện load dữ liệu từ Database
         loadOverviewCounts() // Load số lượng task theo status
         setupListeners(view)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        updateGreeting()
+    }
+
+    private fun updateGreeting() {
+        val prefs = PreferenceManager(requireContext())
+        val user = PreferenceManager.getUser(requireContext())
+        val name = when {
+            prefs.isGuest() -> getString(R.string.guest_user_name)
+            user?.displayName?.isNotBlank() == true -> user.displayName
+            user?.username?.isNotBlank() == true -> user.username
+            user?.email?.isNotBlank() == true -> user.email
+            else -> getString(R.string.default_user_name)
+        }
+        tvWelcome.text = getString(R.string.home_greeting_format, name)
     }
 
     private fun setupSearch(root: View) {
@@ -94,7 +118,7 @@ class HomeFragment : Fragment() {
                 repository.observeCountByStatus("TODO")
                     .distinctUntilChanged()
                     .collect { count ->
-                        tvTodoCount.text = "$count Tasks"
+                        tvTodoCount.text = resources.getQuantityString(R.plurals.tasks_count, count, count)
                     }
             }
 
@@ -103,7 +127,7 @@ class HomeFragment : Fragment() {
                 repository.observeCountByStatus("IN_PROGRESS")
                     .distinctUntilChanged()
                     .collect { count ->
-                        tvInProgressCount.text = "$count Tasks"
+                        tvInProgressCount.text = resources.getQuantityString(R.plurals.tasks_count, count, count)
                     }
             }
 
@@ -112,7 +136,7 @@ class HomeFragment : Fragment() {
                 repository.observeCountByStatus("DONE")
                     .distinctUntilChanged()
                     .collect { count ->
-                        tvCompletedCount.text = "$count Tasks"
+                        tvCompletedCount.text = resources.getQuantityString(R.plurals.tasks_count, count, count)
                     }
             }
         }
@@ -126,7 +150,7 @@ class HomeFragment : Fragment() {
                     repository.updateStatus(todo.id, newStatus)
                 }
             },
-            onRowClicked = { anchor, item ->
+            onRowClicked = { _, item ->
                 Toast.makeText(context, "Clicked: ${item.title}", Toast.LENGTH_SHORT).show()
             }
         )
@@ -139,16 +163,26 @@ class HomeFragment : Fragment() {
     }
 
     private fun loadTasksFromDatabase() {
-        // Lắng nghe sự thay đổi dữ liệu từ Database theo thời gian thực (Real-time)
-        // Dữ liệu tạo ở PersonalFragment sẽ tự động hiển thị ở đây
+        // Get today's start and end time
+        val calendar = Calendar.getInstance()
+        calendar.set(Calendar.HOUR_OF_DAY, 0)
+        calendar.set(Calendar.MINUTE, 0)
+        calendar.set(Calendar.SECOND, 0)
+        calendar.set(Calendar.MILLISECOND, 0)
+        val startOfDay = calendar.timeInMillis
+
+        calendar.add(Calendar.DAY_OF_MONTH, 1)
+        val endOfDay = calendar.timeInMillis
+
+        // Load tasks with deadline today
         viewLifecycleOwner.lifecycleScope.launch {
-            repository.observeAll()
+            repository.observeByDateRange(startOfDay, endOfDay)
                 .map { list ->
-                    Log.d("HomeFragment", "Loaded ${list.size} tasks from database")
+                    Log.d("HomeFragment", "Loaded ${list.size} today's tasks from database")
                     list.map { it.toUiItem() }
                 }
                 .collect { tasks ->
-                    Log.d("HomeFragment", "Mapped ${tasks.size} tasks to UI items")
+                    Log.d("HomeFragment", "Mapped ${tasks.size} today's tasks to UI items")
                     latestAllItems = tasks
                     refreshUi()
                 }

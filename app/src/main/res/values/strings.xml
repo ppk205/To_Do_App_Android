@@ -48,6 +48,7 @@
     <!-- Guest prompt strings -->
     <string name="guest_prompt_title">Register to sync and access Team features!</string>
     <string name="guest_register_now">Register Now</string>
+    <string name="back_home">Quay lại</string>
 
     <!-- OTP Verification Strings -->
     <string name="verify_otp_title">Xác Thực OTP</string>
@@ -99,7 +100,7 @@
 
     <!-- Verify OTP messages -->
     <string name="otp_incomplete">Vui lòng nhập đầy đủ mã OTP</string>
-    <string name="verifying">Đang xác thực...</string>
+    <string name="verifying">Đang xác thực…</string>
     <string name="verify">Xác thực</string>
     <string name="verify_success_welcome">Xác thực thành công! Chào mừng %1$s!</string>
     <string name="clipboard_empty">Clipboard rỗng</string>
@@ -144,4 +145,15 @@
     <string name="filter_priority">Priority</string>
     <string name="filter_tag">Tag</string>
     <string name="add_task_desc">Add new task</string>
+
+    <!-- Home greeting strings -->
+    <string name="home_greeting_format">Hi, %1$s</string>
+    <string name="guest_user_name">Guest</string>
+    <string name="default_user_name">User</string>
+
+    <!-- Tasks count plurals -->
+    <plurals name="tasks_count">
+        <item quantity="one">%d Task</item>
+        <item quantity="other">%d Tasks</item>
+    </plurals>
 </resources>

@@ -43,17 +43,16 @@
             android:text="@string/guest_register_now"
             android:textAllCaps="false"
             android:textColor="@android:color/white"
+            android:layout_marginBottom="12dp"
             app:cornerRadius="12dp"
             app:backgroundTint="@color/brand_blue" />
-            app:backgroundTint="@color/brand_blue"
-            android:layout_marginBottom="12dp" />
 
         <!-- Nút quay lại -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_back_home"
             android:layout_width="match_parent"
             android:layout_height="48dp"
-            android:text="Quay lại"
+            android:text="@string/back_home"
             android:textAllCaps="false"
             android:textColor="@color/brand_blue"
             style="@style/Widget.MaterialComponents.Button.OutlinedButton"

@@ -13,6 +13,9 @@ interface TaskDao {
     @Query("SELECT * FROM tasks ORDER BY createdAt DESC")
     fun observeAll(): Flow<List<TaskEntity>>
 
+    @Query("SELECT * FROM tasks WHERE deadlineAt >= :startOfDay AND deadlineAt < :endOfDay ORDER BY deadlineAt ASC")
+    fun observeByDateRange(startOfDay: Long, endOfDay: Long): Flow<List<TaskEntity>>
+
     @Query("SELECT * FROM tasks WHERE status = :status ORDER BY createdAt DESC")
     fun observeByStatus(status: String): Flow<List<TaskEntity>>
 

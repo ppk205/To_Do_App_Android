@@ -23,7 +23,7 @@ import com.google.gson.GsonBuilder
 object RetrofitClient {
 
     // Base URL - Use your actual domain in production
-    private const val BASE_URL = "https://strip-trend-reforms-rated.trycloudflare.com/"
+    private const val BASE_URL = "http://192.168.1.3:3001/"
 
     // ✅ Production domain for certificate pinning
     // Replace with your actual domain when deploying to production
