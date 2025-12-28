@@ -6,7 +6,9 @@ import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.EditText
 import android.widget.TextView
+
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.navigation.fragment.findNavController
@@ -14,6 +16,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.morp_prj.R
 import com.example.morp_prj.data.api.RetrofitClient
+import com.example.morp_prj.data.model.JoinTeamRequest
 import com.example.morp_prj.data.model.PinTeamRequest
 import com.example.morp_prj.data.model.Team
 import com.example.morp_prj.utils.PreferenceManager
@@ -30,7 +33,6 @@ class TeamFragment : Fragment() {
 
     private var allTeams = mutableListOf<Team>()
 
-    // Thêm tham chiếu đến TextViews
     private lateinit var tvPinnedTitle: TextView
     private lateinit var tvMyTeamsTitle: TextView
 
@@ -55,7 +57,6 @@ class TeamFragment : Fragment() {
     }
 
     private fun setupUI(view: View) {
-        // Khởi tạo TextViews
         tvPinnedTitle = view.findViewById(R.id.tvPinnedTitle)
         tvMyTeamsTitle = view.findViewById(R.id.tvMyTeamsTitle)
 
@@ -78,7 +79,7 @@ class TeamFragment : Fragment() {
         
         // Buttons
         view.findViewById<View>(R.id.btnCreateTeam).setOnClickListener { findNavController().navigate(R.id.create_new_team_fragment) }
-        view.findViewById<View>(R.id.fabAdd).setOnClickListener { findNavController().navigate(R.id.create_new_team_fragment) }
+        view.findViewById<View>(R.id.btnJoinTeam).setOnClickListener { showJoinTeamDialog() }
         
         // Listener
         parentFragmentManager.setFragmentResultListener("team_created", viewLifecycleOwner) { _, _ ->
@@ -101,9 +102,48 @@ class TeamFragment : Fragment() {
         }
     }
 
+    private fun showJoinTeamDialog() {
+        val dialogView = LayoutInflater.from(context).inflate(R.layout.dialog_join_team, null)
+        val etInviteCode = dialogView.findViewById<EditText>(R.id.etInviteCode)
+
+        AlertDialog.Builder(requireContext())
+            .setTitle("Join a Team")
+            .setView(dialogView)
+            .setPositiveButton("Join") { _, _ ->
+                val code = etInviteCode.text.toString().trim()
+                if (code.isNotEmpty()) {
+                    performJoinTeam(code)
+                } else {
+                    Toast.makeText(context, "Please enter a code", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun performJoinTeam(inviteCode: String) {
+        val userId = preferenceManager.getUserId() ?: return
+        val request = JoinTeamRequest(userId, inviteCode)
+
+        RetrofitClient.teamApiService.joinTeam(request).enqueue(object : Callback<Void> {
+            override fun onResponse(call: Call<Void>, response: Response<Void>) {
+                if (response.isSuccessful) {
+                    Toast.makeText(context, "Successfully joined team!", Toast.LENGTH_SHORT).show()
+                    loadMyTeams() // Refresh list
+                } else {
+                    // Cố gắng parse lỗi từ server
+                    val errorMsg = response.errorBody()?.string() ?: "Failed to join team"
+                    Toast.makeText(context, "Error: $errorMsg", Toast.LENGTH_LONG).show()
+                }
+            }
+            override fun onFailure(call: Call<Void>, t: Throwable) {
+                Toast.makeText(context, "Connection Error: ${t.message}", Toast.LENGTH_SHORT).show()
+            }
+        })
+    }
+
     private fun loadMyTeams() {
         val userId = preferenceManager.getUserId() ?: return
-
         RetrofitClient.teamApiService.getMyTeams(userId).enqueue(object : Callback<List<Team>> {
             override fun onResponse(call: Call<List<Team>>, response: Response<List<Team>>) {
                 if (response.isSuccessful) {
@@ -121,11 +161,8 @@ class TeamFragment : Fragment() {
 
     private fun updateTeamLists() {
         val pinned = allTeams.filter { it.isPinned }
-
-        // Cập nhật tiêu đề với số lượng team
         tvPinnedTitle.text = "Pinned Teams (${pinned.size})"
         tvMyTeamsTitle.text = "My Teams (${allTeams.size})"
-
         pinnedTeamAdapter.updateData(pinned)
         myTeamAdapter.updateData(allTeams)
     }
@@ -167,6 +204,7 @@ class TeamFragment : Fragment() {
             putString("teamId", team.id)
             putString("teamName", team.name)
             putString("role", team.role ?: "member")
+            putString("inviteCode", team.inviteCode ?: "") // Thêm inviteCode vào đây
         }
         findNavController().navigate(R.id.action_team_to_detail, bundle)
     }

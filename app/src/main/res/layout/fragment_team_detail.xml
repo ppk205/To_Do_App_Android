@@ -5,63 +5,14 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <LinearLayout
+    <!-- Nội dung chính là một NavHostFragment -->
+    <androidx.fragment.app.FragmentContainerView
+        android:id="@+id/team_nav_host_fragment"
+        android:name="androidx.navigation.fragment.NavHostFragment"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:orientation="vertical">
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:padding="16dp"
-            android:background="@android:color/white"
-            android:elevation="4dp">
-
-            <ImageButton
-                android:id="@+id/btnBack"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:src="@drawable/ic_back"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:padding="8dp"/>
-
-            <TextView
-                android:id="@+id/tvTeamName"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginStart="16dp"
-                android:text="Team Name"
-                android:textSize="20sp"
-                android:textStyle="bold"
-                android:textColor="@android:color/black"/>
-                
-            <ImageView
-                android:id="@+id/imgSettings"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@drawable/ic_more_vert"/> <!-- Đã thay đổi icon -->
-        </LinearLayout>
-
-        <!-- TabLayout và ViewPager2 -->
-        <com.google.android.material.tabs.TabLayout
-            android:id="@+id/tabLayout"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="@android:color/white"
-            app:tabIndicatorColor="#42BEF4"
-            app:tabSelectedTextColor="#42BEF4"
-            app:tabTextColor="#757575"
-            app:tabMode="fixed"/>
-
-        <androidx.viewpager2.widget.ViewPager2
-            android:id="@+id/viewPager"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"/>
-
-    </LinearLayout>
+        app:defaultNavHost="true"
+        app:navGraph="@navigation/team_nav_graph" />
 
     <!-- Sidebar (NavigationView) -->
     <com.google.android.material.navigation.NavigationView

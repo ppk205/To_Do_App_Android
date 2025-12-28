@@ -7,25 +7,26 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.core.os.bundleOf
 import androidx.core.view.GravityCompat
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.fragment.app.Fragment
+import androidx.navigation.NavController
 import androidx.navigation.fragment.findNavController
-import androidx.viewpager2.adapter.FragmentStateAdapter
-import androidx.viewpager2.widget.ViewPager2
+import androidx.navigation.fragment.NavHostFragment
 import com.example.morp_prj.R
 import com.google.android.material.navigation.NavigationView
-import com.google.android.material.tabs.TabLayout
-import com.google.android.material.tabs.TabLayoutMediator
 
 class TeamDetailFragment : Fragment(R.layout.fragment_team_detail), NavigationView.OnNavigationItemSelectedListener {
 
     private var teamId: String = ""
     private var teamName: String = ""
     private var userRole: String = "member"
+    private var inviteCode: String = ""
 
     private lateinit var drawerLayout: DrawerLayout
     private lateinit var navView: NavigationView
+    private lateinit var teamNavController: NavController
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -33,6 +34,7 @@ class TeamDetailFragment : Fragment(R.layout.fragment_team_detail), NavigationVi
             teamId = it.getString("teamId", "")
             teamName = it.getString("teamName", "Team Detail")
             userRole = it.getString("role", "member")
+            inviteCode = it.getString("inviteCode", "")
         }
     }
 
@@ -42,78 +44,73 @@ class TeamDetailFragment : Fragment(R.layout.fragment_team_detail), NavigationVi
         drawerLayout = view.findViewById(R.id.drawer_layout)
         navView = view.findViewById(R.id.nav_view)
 
-        // Setup Header
-        view.findViewById<TextView>(R.id.tvTeamName).text = teamName
-        view.findViewById<ImageButton>(R.id.btnBack).setOnClickListener {
+        // Setup Nested NavHost
+        val navHostFragment = childFragmentManager.findFragmentById(R.id.team_nav_host_fragment) as NavHostFragment
+        teamNavController = navHostFragment.navController
+
+        // Truyền arguments vào graph con
+        val startDestinationArgs = bundleOf(
+            "teamId" to teamId,
+            "teamName" to teamName,
+            "role" to userRole,
+            "inviteCode" to inviteCode
+        )
+        teamNavController.setGraph(R.navigation.team_nav_graph, startDestinationArgs)
+
+        // Lắng nghe sự kiện chuyển màn hình trong nested graph để setup Toolbar
+        teamNavController.addOnDestinationChangedListener { _, destination, _ ->
+            // Hơi delay một chút để view của fragment con được tạo xong
+            view.post { setupToolbarForDestination(destination.id) }
+        }
+
+        // Phân quyền cho sidebar
+        if (userRole.equals("manager", ignoreCase = true)) {
+            navView.setNavigationItemSelectedListener(this)
+        } else {
+            drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED)
+        }
+    }
+
+    private fun setupToolbarForDestination(destinationId: Int) {
+        val currentFragmentView = childFragmentManager.fragments.firstOrNull()?.view ?: return
+
+        // Nút Back - Nút này luôn quay về màn hình trước đó trong Nav Graph cha
+        currentFragmentView.findViewById<ImageButton>(R.id.btnBack)?.setOnClickListener {
             findNavController().popBackStack()
         }
 
-        // Phân quyền cho nút Settings và sidebar
-        val btnSettings = view.findViewById<ImageView>(R.id.imgSettings)
+        // Nút Menu (mở sidebar)
+        val btnMenu = currentFragmentView.findViewById<ImageView>(R.id.btnMenu)
         if (userRole.equals("manager", ignoreCase = true)) {
-            btnSettings.setOnClickListener {
-                drawerLayout.openDrawer(GravityCompat.END)
-            }
-            navView.setNavigationItemSelectedListener(this)
+            btnMenu?.visibility = View.VISIBLE
+            btnMenu?.setOnClickListener { drawerLayout.openDrawer(GravityCompat.END) }
         } else {
-            btnSettings.visibility = View.GONE // Ẩn nút settings cho member
-            drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED) // Khóa sidebar
+            btnMenu?.visibility = View.GONE
         }
-
-        // Setup ViewPager & Tabs
-        val tabLayout = view.findViewById<TabLayout>(R.id.tabLayout)
-        val viewPager = view.findViewById<ViewPager2>(R.id.viewPager)
-        val adapter = TeamPagerAdapter(this, teamId, userRole)
-        viewPager.adapter = adapter
-
-        TabLayoutMediator(tabLayout, viewPager) { tab, position ->
-            when (position) {
-                0 -> tab.text = "Tasks"
-                1 -> tab.text = "Members"
-            }
-        }.attach()
+        
+        // Cập nhật tiêu đề
+        val toolbarTitle = currentFragmentView.findViewById<TextView>(R.id.toolbar_title)
+        toolbarTitle?.text = when(destinationId) {
+            R.id.memberManagementFragment -> "Member Management"
+            else -> "Team Dashboard" // Mặc định
+        }
     }
 
     override fun onNavigationItemSelected(item: MenuItem): Boolean {
-        // Xử lý khi một mục trong sidebar được chọn
+        val args = bundleOf(
+            "teamId" to teamId,
+            "teamName" to teamName,
+            "role" to userRole,
+            "inviteCode" to inviteCode
+        )
+
         when (item.itemId) {
-            R.id.nav_member_management -> toast("Member Management selected")
-            R.id.nav_join_requests -> toast("Join Requests selected")
-            R.id.nav_create_task -> toast("Create Team Task selected")
-            R.id.nav_assigned_tasks -> toast("Assigned Tasks selected")
-            R.id.nav_task_management -> toast("Team Task Management selected")
-            R.id.nav_manager_dashboard -> toast("Dashboard selected")
+            R.id.nav_member_management -> teamNavController.navigate(R.id.memberManagementFragment, args)
+            R.id.nav_manager_dashboard -> teamNavController.navigate(R.id.teamDashboardFragment, args)
+            else -> Toast.makeText(context, "Feature coming soon!", Toast.LENGTH_SHORT).show()
         }
 
-        // Đóng sidebar sau khi chọn
         drawerLayout.closeDrawer(GravityCompat.END)
         return true
-    }
-
-    private fun toast(message: String) {
-        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-    }
-
-    class TeamPagerAdapter(
-        fragment: Fragment, 
-        private val teamId: String,
-        private val role: String
-    ) : FragmentStateAdapter(fragment) {
-        override fun getItemCount(): Int = 2
-
-        override fun createFragment(position: Int): Fragment {
-            val args = Bundle().apply { 
-                putString("teamId", teamId)
-                putString("role", role)
-            }
-            
-            val fragment = when (position) {
-                0 -> TeamTasksFragment()
-                1 -> TeamMembersFragment()
-                else -> TeamTasksFragment()
-            }
-            fragment.arguments = args
-            return fragment
-        }
     }
 }
