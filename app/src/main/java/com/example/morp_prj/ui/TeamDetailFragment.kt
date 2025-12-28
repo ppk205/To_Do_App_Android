@@ -48,7 +48,6 @@ class TeamDetailFragment : Fragment(R.layout.fragment_team_detail), NavigationVi
         val navHostFragment = childFragmentManager.findFragmentById(R.id.team_nav_host_fragment) as NavHostFragment
         teamNavController = navHostFragment.navController
 
-        // Truyền arguments vào graph con
         val startDestinationArgs = bundleOf(
             "teamId" to teamId,
             "teamName" to teamName,
@@ -57,13 +56,10 @@ class TeamDetailFragment : Fragment(R.layout.fragment_team_detail), NavigationVi
         )
         teamNavController.setGraph(R.navigation.team_nav_graph, startDestinationArgs)
 
-        // Lắng nghe sự kiện chuyển màn hình trong nested graph để setup Toolbar
         teamNavController.addOnDestinationChangedListener { _, destination, _ ->
-            // Hơi delay một chút để view của fragment con được tạo xong
             view.post { setupToolbarForDestination(destination.id) }
         }
 
-        // Phân quyền cho sidebar
         if (userRole.equals("manager", ignoreCase = true)) {
             navView.setNavigationItemSelectedListener(this)
         } else {
@@ -74,12 +70,15 @@ class TeamDetailFragment : Fragment(R.layout.fragment_team_detail), NavigationVi
     private fun setupToolbarForDestination(destinationId: Int) {
         val currentFragmentView = childFragmentManager.fragments.firstOrNull()?.view ?: return
 
-        // Nút Back - Nút này luôn quay về màn hình trước đó trong Nav Graph cha
+        // SỬA LỖI: Xử lý nút Back cho nested navigation
         currentFragmentView.findViewById<ImageButton>(R.id.btnBack)?.setOnClickListener {
-            findNavController().popBackStack()
+            // Ưu tiên pop back stack của NavController con trước
+            if (!teamNavController.popBackStack()) {
+                // Nếu không pop được nữa, mới pop NavController cha (thoát khỏi TeamDetailFragment)
+                findNavController().popBackStack()
+            }
         }
 
-        // Nút Menu (mở sidebar)
         val btnMenu = currentFragmentView.findViewById<ImageView>(R.id.btnMenu)
         if (userRole.equals("manager", ignoreCase = true)) {
             btnMenu?.visibility = View.VISIBLE
@@ -88,11 +87,10 @@ class TeamDetailFragment : Fragment(R.layout.fragment_team_detail), NavigationVi
             btnMenu?.visibility = View.GONE
         }
         
-        // Cập nhật tiêu đề
         val toolbarTitle = currentFragmentView.findViewById<TextView>(R.id.toolbar_title)
         toolbarTitle?.text = when(destinationId) {
             R.id.memberManagementFragment -> "Member Management"
-            else -> "Team Dashboard" // Mặc định
+            else -> "Team Dashboard"
         }
     }
 
