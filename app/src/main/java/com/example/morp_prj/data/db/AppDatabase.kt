@@ -6,13 +6,14 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 
 @Database(
-    entities = [TaskEntity::class],
-    version = 1,
+    entities = [TaskEntity::class, TeamEntity::class],
+    version = 2,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun taskDao(): TaskDao
+    abstract fun teamDao(): TeamDao
 
     companion object {
         @Volatile
@@ -32,4 +33,3 @@ abstract class AppDatabase : RoomDatabase() {
         }
     }
 }
-

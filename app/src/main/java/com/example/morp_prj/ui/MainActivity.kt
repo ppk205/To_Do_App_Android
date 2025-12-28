@@ -32,19 +32,17 @@ class MainActivity : AppCompatActivity() {
         bottomNav = findViewById(R.id.bottom_nav_view)
         bottomNav.setupWithNavController(navController)
 
-        // Hide bottom nav on screens that shouldn't show it (e.g., Create Task)
+        // Hide bottom nav on screens that shouldn't show it
         navController.addOnDestinationChangedListener { _, destination, _ ->
-            bottomNav.visibility = when (destination.id) {
-                R.id.taskFragment -> View.GONE
-                else -> View.VISIBLE
-            }
             when (destination.id) {
                 R.id.onboarding_fragment,
                 R.id.login_fragment,
                 R.id.register_fragment,
                 R.id.verify_otp_fragment,
                 R.id.otp_resend_required_fragment,
-                R.id.register_success_fragment -> bottomNav.visibility = View.GONE
+                R.id.register_success_fragment,
+                R.id.taskFragment,
+                R.id.create_new_team_fragment -> bottomNav.visibility = View.GONE
 
                 else -> bottomNav.visibility = View.VISIBLE
             }

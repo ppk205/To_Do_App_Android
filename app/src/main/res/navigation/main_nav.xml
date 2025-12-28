@@ -148,5 +148,9 @@
         android:name="com.example.morp_prj.ui.TaskFragment"
         android:label="fragment_task"
         tools:layout="@layout/fragment_task" />
-
+    <fragment
+        android:id="@+id/create_new_team_fragment"
+        android:name="com.example.morp_prj.ui.CreateNewTeamFragment"
+        android:label="Create New Team"
+        tools:layout="@layout/fragment_create_new_team" />
 </navigation>
