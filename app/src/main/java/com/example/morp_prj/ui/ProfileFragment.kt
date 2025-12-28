@@ -11,6 +11,7 @@ import android.view.ViewGroup
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
+import androidx.navigation.fragment.findNavController
 import com.bumptech.glide.Glide
 import com.example.morp_prj.R
 import com.example.morp_prj.databinding.FragmentProfileBinding
@@ -49,6 +50,14 @@ class ProfileFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        // Check if user is in guest mode
+        val prefs = PreferenceManager(requireContext())
+        if (prefs.isGuest()) {
+            // Navigate to guest prompt instead of showing profile content
+            findNavController().navigate(R.id.action_profile_to_guestPrompt)
+            return
+        }
 
         loadUserData()
         setupListeners()

@@ -120,6 +120,9 @@
         android:label="fragment_guest_prompt"
         tools:layout="@layout/fragment_guest_prompt">
         <action
+            android:id="@+id/action_guestPrompt_to_login"
+            app:destination="@id/login_fragment" />
+        <action
             android:id="@+id/action_guestPrompt_to_register"
             app:destination="@id/register_fragment" />
         <action
@@ -145,7 +148,11 @@
         android:id="@+id/menu_team"
         android:name="com.example.morp_prj.ui.TeamFragment"
         android:label="fragment_team"
-        tools:layout="@layout/fragment_team" />
+        tools:layout="@layout/fragment_team">
+        <action
+            android:id="@+id/action_team_to_guestPrompt"
+            app:destination="@id/guest_prompt_fragment" />
+    </fragment>
     <fragment
         android:id="@+id/menu_home"
         android:name="com.example.morp_prj.ui.HomeFragment"
@@ -160,7 +167,11 @@
         android:id="@+id/menu_profile"
         android:name="com.example.morp_prj.ui.ProfileFragment"
         android:label="fragment_profile"
-        tools:layout="@layout/fragment_profile" />
+        tools:layout="@layout/fragment_profile">
+        <action
+            android:id="@+id/action_profile_to_guestPrompt"
+            app:destination="@id/guest_prompt_fragment" />
+    </fragment>
     <fragment
         android:id="@+id/taskFragment"
         android:name="com.example.morp_prj.ui.TaskFragment"

@@ -48,6 +48,7 @@
     <!-- Guest prompt strings -->
     <string name="guest_prompt_title">Register to sync and access Team features!</string>
     <string name="guest_register_now">Register Now</string>
+    <string name="login">Login</string>
     <string name="back_home">Quay lại</string>
 
     <!-- OTP Verification Strings -->

@@ -20,6 +20,13 @@ class OnboardingFragment : Fragment(R.layout.fragment_onboarding) {
         super.onViewCreated(view, savedInstanceState)
 
         val viewPager = view.findViewById<ViewPager2>(R.id.view_pager)
+
+        // Check if viewPager exists
+        if (viewPager == null) {
+            android.util.Log.e("OnboardingFragment", "ViewPager2 not found in layout!")
+            return
+        }
+
         val images = listOf(
             R.drawable.img_onboarding_work,
             R.drawable.img_onboarding_work_2,

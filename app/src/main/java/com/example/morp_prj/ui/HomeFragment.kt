@@ -25,6 +25,9 @@ import kotlinx.coroutines.launch
 import java.util.Calendar
 
 class HomeFragment : Fragment() {
+    companion object {
+        private const val GUEST_USER_ID = PreferenceManager.GUEST_USER_ID
+    }
 
     private lateinit var toDoAdapter: ToDoAdapter
 
@@ -42,6 +45,12 @@ class HomeFragment : Fragment() {
     private val repository by lazy {
         TaskRepository(AppDatabase.getInstance(requireContext()).taskDao())
     }
+
+    private val prefs by lazy { PreferenceManager(requireContext()) }
+
+    // Current user ID for filtering tasks (guest uses deterministic local id)
+    private val currentUserId: String
+        get() = if (prefs.isGuest()) GUEST_USER_ID else prefs.getUserId() ?: GUEST_USER_ID
 
     private lateinit var tvWelcome: TextView
 
@@ -84,7 +93,6 @@ class HomeFragment : Fragment() {
     }
 
     private fun updateGreeting() {
-        val prefs = PreferenceManager(requireContext())
         val user = PreferenceManager.getUser(requireContext())
         val name = when {
             prefs.isGuest() -> getString(R.string.guest_user_name)
@@ -112,28 +120,29 @@ class HomeFragment : Fragment() {
     }
 
     private fun loadOverviewCounts() {
+        val userId = currentUserId
         viewLifecycleOwner.lifecycleScope.launch {
-            // Observe TODO count
+            // Observe TODO count for current user
             launch {
-                repository.observeCountByStatus("TODO")
+                repository.observeCountByStatusForUser(userId, "TODO")
                     .distinctUntilChanged()
                     .collect { count ->
                         tvTodoCount.text = resources.getQuantityString(R.plurals.tasks_count, count, count)
                     }
             }
 
-            // Observe IN_PROGRESS count
+            // Observe IN_PROGRESS count for current user
             launch {
-                repository.observeCountByStatus("IN_PROGRESS")
+                repository.observeCountByStatusForUser(userId, "IN_PROGRESS")
                     .distinctUntilChanged()
                     .collect { count ->
                         tvInProgressCount.text = resources.getQuantityString(R.plurals.tasks_count, count, count)
                     }
             }
 
-            // Observe DONE count
+            // Observe DONE count for current user
             launch {
-                repository.observeCountByStatus("DONE")
+                repository.observeCountByStatusForUser(userId, "DONE")
                     .distinctUntilChanged()
                     .collect { count ->
                         tvCompletedCount.text = resources.getQuantityString(R.plurals.tasks_count, count, count)
@@ -163,6 +172,9 @@ class HomeFragment : Fragment() {
     }
 
     private fun loadTasksFromDatabase() {
+        val userId = currentUserId
+
+
         // Get today's start and end time
         val calendar = Calendar.getInstance()
         calendar.set(Calendar.HOUR_OF_DAY, 0)
@@ -174,11 +186,11 @@ class HomeFragment : Fragment() {
         calendar.add(Calendar.DAY_OF_MONTH, 1)
         val endOfDay = calendar.timeInMillis
 
-        // Load tasks with deadline today
+        // Load tasks with deadline today for current user
         viewLifecycleOwner.lifecycleScope.launch {
-            repository.observeByDateRange(startOfDay, endOfDay)
+            repository.observeByDateRangeForUser(userId, startOfDay, endOfDay)
                 .map { list ->
-                    Log.d("HomeFragment", "Loaded ${list.size} today's tasks from database")
+                    Log.d("HomeFragment", "Loaded ${list.size} today's tasks for user $userId")
                     list.map { it.toUiItem() }
                 }
                 .collect { tasks ->

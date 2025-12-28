@@ -19,6 +19,8 @@ class PreferenceManager(context: Context) {
         private const val KEY_IS_LOGGED_IN = "is_logged_in"
         private const val KEY_IS_GUEST = "is_guest"
 
+        const val GUEST_USER_ID = "guest_local"
+
         // Helper that constructs a User from stored preferences.
         // Returns null when no user id is stored (not logged in / guest).
         fun getUser(context: Context): User? {
@@ -94,9 +96,14 @@ class PreferenceManager(context: Context) {
         sharedPreferences.edit().apply {
             putBoolean(KEY_IS_GUEST, true)
             putBoolean(KEY_IS_LOGGED_IN, false)
+            // assign deterministic guest user id so offline tasks can be stored
+            putString(KEY_USER_ID, GUEST_USER_ID)
             apply()
         }
     }
+
+    // Convenience to always return an id (guest when not logged in)
+    fun getCurrentUserIdOrGuest(): String = getUserId() ?: GUEST_USER_ID
 
     fun isLoggedIn(): Boolean {
         return sharedPreferences.getBoolean(KEY_IS_LOGGED_IN, false)

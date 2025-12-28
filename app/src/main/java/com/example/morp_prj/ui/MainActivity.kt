@@ -30,6 +30,15 @@ class MainActivity : AppCompatActivity() {
             .findFragmentById(R.id.nav_host_fragment) as NavHostFragment
         val navController = navHostFragment.navController
 
+        // Check login state and navigate to appropriate screen
+        val prefs = PreferenceManager(this)
+        if (prefs.isLoggedIn() || prefs.isGuest()) {
+            // Skip onboarding, go directly to home
+            val navGraph = navController.navInflater.inflate(R.navigation.main_nav)
+            navGraph.setStartDestination(R.id.menu_home)
+            navController.graph = navGraph
+        }
+
         bottomNav = findViewById(R.id.bottom_nav_view)
         bottomNav.setupWithNavController(navController)
 

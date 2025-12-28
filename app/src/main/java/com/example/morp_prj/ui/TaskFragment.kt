@@ -14,6 +14,7 @@ import com.example.morp_prj.R
 import com.example.morp_prj.data.TaskRepository
 import com.example.morp_prj.data.db.AppDatabase
 import com.example.morp_prj.data.db.TaskEntity
+import com.example.morp_prj.utils.PreferenceManager
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.button.MaterialButtonToggleGroup
 import com.google.android.material.textfield.TextInputEditText
@@ -34,6 +35,8 @@ class TaskFragment : Fragment() {
     private val repository by lazy {
         TaskRepository(AppDatabase.getInstance(requireContext()).taskDao())
     }
+
+    private val prefs by lazy { PreferenceManager(requireContext()) }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -82,6 +85,8 @@ class TaskFragment : Fragment() {
             // Format supported: #work #marketing OR "work, marketing".
             val tagsCsv = extractTagsCsv(description)
 
+            val userId = prefs.getCurrentUserIdOrGuest()
+
             val entity = TaskEntity(
                 title = title,
                 description = description,
@@ -89,6 +94,7 @@ class TaskFragment : Fragment() {
                 priority = selectedPriority.name,
                 status = "TODO",
                 tagsCsv = tagsCsv,
+                userId = userId,
             )
 
             viewLifecycleOwner.lifecycleScope.launch {

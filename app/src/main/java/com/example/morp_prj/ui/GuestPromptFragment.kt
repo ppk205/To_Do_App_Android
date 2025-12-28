@@ -11,6 +11,11 @@ class GuestPromptFragment : Fragment(R.layout.fragment_guest_prompt) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        view.findViewById<MaterialButton>(R.id.btn_login_now)?.setOnClickListener {
+            // Chuyển đến trang đăng nhập
+            findNavController().navigate(R.id.action_guestPrompt_to_login)
+        }
+
         view.findViewById<MaterialButton>(R.id.btn_register_now)?.setOnClickListener {
             // Chuyển đến trang đăng ký
             findNavController().navigate(R.id.action_guestPrompt_to_register)
