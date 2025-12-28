@@ -61,7 +61,7 @@ class OnboardingFragment : Fragment(R.layout.fragment_onboarding) {
             // Lưu phiên làm việc Guest Mode
             // Hàm này sẽ xóa dữ liệu cũ (clearLoginData) trước khi set guest
             val preferenceManager = PreferenceManager(requireContext())
-            preferenceManager.saveGuestSession()
+            preferenceManager.saveGuestMode()
 
             findNavController().navigate(R.id.action_onboarding_to_home)
         }
