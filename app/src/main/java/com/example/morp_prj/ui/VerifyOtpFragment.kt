@@ -36,6 +36,8 @@ class VerifyOtpFragment : Fragment(R.layout.fragment_verify_otp) {
     private var email: String? = null
     private var username: String? = null
     private var countDownTimer: CountDownTimer? = null
+    private var initialExpiresInSeconds: Int = 120
+    private var resendAvailableInSeconds: Int = 60
     private var otpAttempts = 0
 
     private lateinit var btnBack: ImageView
@@ -61,8 +63,11 @@ class VerifyOtpFragment : Fragment(R.layout.fragment_verify_otp) {
         userId = arguments?.getString("userId")
         email = arguments?.getString("email")
         username = arguments?.getString("username")
+        // Read TTL values passed from register response (seconds)
+        initialExpiresInSeconds = arguments?.getInt("expiresIn") ?: initialExpiresInSeconds
+        resendAvailableInSeconds = arguments?.getInt("resendAvailableIn") ?: resendAvailableInSeconds
 
-        android.util.Log.d("VerifyOtpFragment", "userId: $userId, email: $email, username: $username")
+        android.util.Log.d("VerifyOtpFragment", "userId: $userId, email: $email, username: $username, expiresIn=$initialExpiresInSeconds, resendIn=$resendAvailableInSeconds")
 
         if (userId == null || email == null) {
             Toast.makeText(requireContext(), getString(R.string.missing_user_info), Toast.LENGTH_LONG).show()
@@ -213,7 +218,8 @@ class VerifyOtpFragment : Fragment(R.layout.fragment_verify_otp) {
         btnResend.isEnabled = false
         countDownTimer?.cancel()
 
-        countDownTimer = object : CountDownTimer(300000, 1000) { // 5 minutes
+        val millis = initialExpiresInSeconds * 1000L
+        countDownTimer = object : CountDownTimer(millis, 1000) {
             override fun onTick(millisUntilFinished: Long) {
                 val minutes = millisUntilFinished / 1000 / 60
                 val seconds = millisUntilFinished / 1000 % 60
@@ -221,12 +227,23 @@ class VerifyOtpFragment : Fragment(R.layout.fragment_verify_otp) {
             }
 
             override fun onFinish() {
-                tvTimer.text = getString(R.string.otp_timer_placeholder).replace("05:00", "00:00")
+                tvTimer.text = "00:00"
                 tvTimer.setTextColor(ContextCompat.getColor(requireContext(), R.color.error))
                 btnResend.isEnabled = true
                 Toast.makeText(requireContext(), getString(R.string.otp_expired), Toast.LENGTH_SHORT).show()
             }
         }.start()
+
+        // Disable resend for resendAvailableInSeconds
+        btnResend.isEnabled = false
+        if (resendAvailableInSeconds > 0) {
+            object : CountDownTimer(resendAvailableInSeconds * 1000L, 1000) {
+                override fun onTick(millisUntilFinished: Long) {}
+                override fun onFinish() { btnResend.isEnabled = true }
+            }.start()
+        } else {
+            btnResend.isEnabled = true
+        }
     }
 
     private fun verifyOTP() {
@@ -292,6 +309,24 @@ class VerifyOtpFragment : Fragment(R.layout.fragment_verify_otp) {
                             email = savedEmail,
                             token = savedToken
                         )
+
+                        // Also save tokens securely (if provided) so session persists across app restarts
+                        try {
+                            val tokenStorage = com.example.morp_prj.security.SecureTokenStorage(requireContext())
+                            // Prefer accessToken/refreshToken fields if present
+                            authResponse.accessToken?.let { at ->
+                                tokenStorage.saveAccessToken(at, authResponse.accessTTL ?: 1800)
+                            }
+                            authResponse.refreshToken?.let { rt ->
+                                tokenStorage.saveRefreshToken(rt, authResponse.refreshTTL ?: 2592000)
+                            }
+                            // Save session metadata when available
+                            if (!authResponse.sessionId.isNullOrEmpty()) {
+                                tokenStorage.saveSessionMetadata(authResponse.sessionId!!, savedUserId)
+                            }
+                        } catch (e: Exception) {
+                            android.util.Log.e("VerifyOtpFragment", "Failed to save secure tokens", e)
+                        }
 
                         // Navigate to register success fragment
                         try {
@@ -401,6 +436,11 @@ class VerifyOtpFragment : Fragment(R.layout.fragment_verify_otp) {
 
                     // Clear OTP inputs
                     clearOtpInputs()
+
+                    // Update TTLs from server response (seconds)
+                    val respBody = response.body()
+                    respBody?.expiresIn?.let { initialExpiresInSeconds = it }
+                    respBody?.resendAvailableIn?.let { resendAvailableInSeconds = it }
 
                     // Restart timer
                     startTimer()

@@ -22,6 +22,8 @@ android {
 
     buildFeatures {
         dataBinding = true
+        buildConfig = true // ✅ Enable BuildConfig generation
+        viewBinding = true
     }
 
     buildTypes {
@@ -54,9 +56,12 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 
+    // Networking
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
     implementation("com.squareup.okhttp3:logging-interceptor:3.12.0")
+
+    // Image loading
     implementation("com.github.bumptech.glide:glide:4.14.2")
     annotationProcessor("com.github.bumptech.glide:compiler:4.14.2")
 
@@ -64,4 +69,10 @@ dependencies {
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
+
+    // Security - Encrypted SharedPreferences
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
+
+    // Biometric Authentication
+    implementation("androidx.biometric:biometric:1.1.0")
 }

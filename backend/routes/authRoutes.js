@@ -1,16 +1,25 @@
 const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/authController');
+const { authenticateToken } = require('../middleware/authMiddleware');
 const {
     registerValidation,
     loginValidation,
     verifyOTPValidation,
     resendOTPValidation,
+    registerInitValidation,
     validate
 } = require('../middleware/validation');
 
+// ============================================
+// PUBLIC ROUTES (No authentication required)
+// ============================================
+
 // Register route - Step 1: Create user + Send OTP
 router.post('/register', registerValidation, validate, authController.register);
+
+// Register-init (email only)
+router.post('/register-init', registerInitValidation, validate, authController.register);
 
 // Verify OTP route - Step 3: Verify OTP + Activate account
 router.post('/verify-otp', verifyOTPValidation, validate, authController.verifyOTP);
@@ -21,7 +30,23 @@ router.post('/resend-otp', resendOTPValidation, validate, authController.resendO
 // Debug: Get OTP status (TTL, attempts, cooldowns)
 router.post('/otp-status', authController.getOTPStatus);
 
-// Login route
+// Login route - Issue access + refresh tokens
 router.post('/login', loginValidation, validate, authController.login);
+
+// Refresh token route - Rotate tokens
+router.post('/refresh', authController.refreshToken);
+
+// Logout route - Revoke session
+router.post('/logout', authController.logout);
+
+// ============================================
+// PROTECTED ROUTES (Authentication required)
+// ============================================
+
+// Get user's active sessions
+router.get('/sessions', authenticateToken, authController.getUserSessions);
+
+// Revoke specific session by ID
+router.post('/sessions/revoke', authenticateToken, authController.revokeSessionById);
 
 module.exports = router;

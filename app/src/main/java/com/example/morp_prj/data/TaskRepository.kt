@@ -17,5 +17,6 @@ class TaskRepository(private val dao: TaskDao) {
     suspend fun updateStatus(id: Long, status: String): Int = dao.updateStatus(id, status)
 
     suspend fun deleteById(id: Long): Int = dao.deleteById(id)
-}
 
+    suspend fun deleteByIds(ids: List<Long>): Int = dao.deleteByIds(ids)
+}

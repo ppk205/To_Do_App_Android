@@ -33,32 +33,26 @@ class PreferenceManager(context: Context) {
             putString(KEY_EMAIL, email)
             putString(KEY_TOKEN, token)
             putBoolean(KEY_IS_LOGGED_IN, true)
-            putBoolean(KEY_IS_GUEST, false) // Đảm bảo không phải là guest
+            // clear guest flag when a real user logs in
+            putBoolean(KEY_IS_GUEST, false)
             apply()
         }
     }
-    
-    fun saveGuestSession() {
-        // Xóa dữ liệu cũ trước để tránh conflict
-        clearLoginData()
-        
+
+    fun saveGuestMode() {
         sharedPreferences.edit().apply {
-            putString(KEY_USER_ID, "GUEST")
-            putString(KEY_USERNAME, "Guest")
-            putString(KEY_DISPLAY_NAME, "Guest User")
-            putString(KEY_EMAIL, "")
-            putBoolean(KEY_IS_LOGGED_IN, true)
             putBoolean(KEY_IS_GUEST, true)
+            putBoolean(KEY_IS_LOGGED_IN, false)
             apply()
         }
-    }
-    
-    fun isGuest(): Boolean {
-        return sharedPreferences.getBoolean(KEY_IS_GUEST, false)
     }
 
     fun isLoggedIn(): Boolean {
         return sharedPreferences.getBoolean(KEY_IS_LOGGED_IN, false)
+    }
+
+    fun isGuest(): Boolean {
+        return sharedPreferences.getBoolean(KEY_IS_GUEST, false)
     }
 
     fun getUserId(): String? {

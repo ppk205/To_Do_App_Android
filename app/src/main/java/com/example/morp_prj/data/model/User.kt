@@ -9,6 +9,10 @@ data class User(
     @SerializedName("username")
     val username: String,
 
+    // added hashedPassword (DB: varchar(255) NOT NULL)
+    @SerializedName("hashedPassword")
+    val hashedPassword: String,
+
     @SerializedName("displayName")
     val displayName: String,
 
@@ -27,11 +31,13 @@ data class User(
     @SerializedName("phone")
     val phone: String? = null,
 
+    // added verified (DB: tinyint(1) NOT NULL default 0)
+    @SerializedName("verified")
+    val verified: Boolean = false,
+
     @SerializedName("createdAt")
     val createdAt: String? = null,
 
     @SerializedName("updatedAt")
     val updatedAt: String? = null
 )
-
-

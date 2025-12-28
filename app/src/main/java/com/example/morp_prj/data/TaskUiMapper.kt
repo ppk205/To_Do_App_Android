@@ -31,8 +31,10 @@ object TaskUiMapper {
         return ToDoItem(
             id = id,
             title = title,
+            description = description,
             timeLabel = timeLabel,
             dueCategory = dueCategory,
+            deadlineAt = deadlineAt,
             priority = priorityLevel,
             tags = tags(),
             status = statusEnum,
@@ -83,4 +85,3 @@ object TaskUiMapper {
         return "$prefix, $time"
     }
 }
-

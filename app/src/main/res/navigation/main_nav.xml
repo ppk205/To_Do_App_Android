@@ -112,7 +112,17 @@
     </fragment>
 
     <fragment
-        android:id="@id/menu_personal"
+        android:id="@+id/guest_prompt_fragment"
+        android:name="com.example.morp_prj.ui.GuestPromptFragment"
+        android:label="fragment_guest_prompt"
+        tools:layout="@layout/fragment_guest_prompt">
+        <action
+            android:id="@+id/action_guestPrompt_to_register"
+            app:destination="@id/register_fragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/menu_personal"
         android:name="com.example.morp_prj.ui.PersonalFragment"
         android:label="fragment_personal"
         tools:layout="@layout/fragment_personal">
@@ -124,7 +134,7 @@
             app:exitAnim="@anim/slide_out_left"/>
     </fragment>
     <fragment
-        android:id="@id/menu_team"
+        android:id="@+id/menu_team"
         android:name="com.example.morp_prj.ui.TeamFragment"
         android:label="fragment_team"
         tools:layout="@layout/fragment_team">
@@ -133,22 +143,22 @@
             app:destination="@id/teamDetailFragment" />
     </fragment>
     <fragment
-        android:id="@id/menu_home"
+        android:id="@+id/menu_home"
         android:name="com.example.morp_prj.ui.HomeFragment"
         android:label="fragment_home"
         tools:layout="@layout/fragment_home" />
     <fragment
-        android:id="@id/menu_notifications"
+        android:id="@+id/menu_notifications"
         android:name="com.example.morp_prj.ui.NotificationsFragment"
         android:label="fragment_notifications"
         tools:layout="@layout/fragment_notifications" />
     <fragment
-        android:id="@id/menu_profile"
+        android:id="@+id/menu_profile"
         android:name="com.example.morp_prj.ui.ProfileFragment"
         android:label="fragment_profile"
         tools:layout="@layout/fragment_profile" />
     <fragment
-        android:id="@id/taskFragment"
+        android:id="@+id/taskFragment"
         android:name="com.example.morp_prj.ui.TaskFragment"
         android:label="fragment_task"
         tools:layout="@layout/fragment_task" />

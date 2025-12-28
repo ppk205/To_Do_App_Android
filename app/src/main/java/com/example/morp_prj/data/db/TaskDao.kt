@@ -30,5 +30,16 @@ interface TaskDao {
 
     @Query("DELETE FROM tasks WHERE id = :id")
     suspend fun deleteById(id: Long): Int
-}
 
+    @Query("DELETE FROM tasks WHERE id IN (:ids)")
+    suspend fun deleteByIds(ids: List<Long>): Int
+
+    @Query("SELECT * FROM tasks WHERE syncState != :syncedState ORDER BY updatedAt DESC")
+    suspend fun getNeedSync(syncedState: String = "SYNCED"): List<TaskEntity>
+
+    @Query("UPDATE tasks SET serverId = :serverId, syncState = :syncState, updatedAt = :updatedAt WHERE id = :localId")
+    suspend fun markSynced(localId: Long, serverId: String, syncState: String = "SYNCED", updatedAt: Long = System.currentTimeMillis()): Int
+
+    @Query("UPDATE tasks SET syncState = :syncState WHERE id IN (:localIds)")
+    suspend fun markSyncState(localIds: List<Long>, syncState: String): Int
+}
