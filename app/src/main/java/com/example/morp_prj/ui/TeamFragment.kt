@@ -30,6 +30,10 @@ class TeamFragment : Fragment() {
 
     private var allTeams = mutableListOf<Team>()
 
+    // Thêm tham chiếu đến TextViews
+    private lateinit var tvPinnedTitle: TextView
+    private lateinit var tvMyTeamsTitle: TextView
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -51,6 +55,10 @@ class TeamFragment : Fragment() {
     }
 
     private fun setupUI(view: View) {
+        // Khởi tạo TextViews
+        tvPinnedTitle = view.findViewById(R.id.tvPinnedTitle)
+        tvMyTeamsTitle = view.findViewById(R.id.tvMyTeamsTitle)
+
         // User Info
         val tvUserName = view.findViewById<TextView>(R.id.tvUserName)
         val tvUserEmail = view.findViewById<TextView>(R.id.tvUserEmail)
@@ -112,7 +120,12 @@ class TeamFragment : Fragment() {
     }
 
     private fun updateTeamLists() {
-        val (pinned, unpinned) = allTeams.partition { it.isPinned }
+        val pinned = allTeams.filter { it.isPinned }
+
+        // Cập nhật tiêu đề với số lượng team
+        tvPinnedTitle.text = "Pinned Teams (${pinned.size})"
+        tvMyTeamsTitle.text = "My Teams (${allTeams.size})"
+
         pinnedTeamAdapter.updateData(pinned)
         myTeamAdapter.updateData(allTeams)
     }
