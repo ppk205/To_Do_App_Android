@@ -13,7 +13,9 @@ import java.util.Locale
 
 class TeamAdapter(
     private var teamList: List<Team>,
-    private val layoutResId: Int
+    private val layoutResId: Int,
+    private val onItemClick: ((Team) -> Unit)? = null,
+    private val onItemLongClick: ((Team) -> Unit)? = null
 ) : RecyclerView.Adapter<TeamAdapter.TeamViewHolder>() {
 
     class TeamViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
@@ -31,24 +33,28 @@ class TeamAdapter(
     override fun onBindViewHolder(holder: TeamViewHolder, position: Int) {
         val team = teamList[position]
         
-        // Tên Team
         holder.tvTeamName.text = team.name
         
-        // Avatar Team
         Glide.with(holder.itemView.context)
             .load(team.avatarUrl)
             .placeholder(android.R.drawable.btn_star) 
             .error(android.R.drawable.btn_star)
             .into(holder.imgTeamLogo)
 
-        // Hiển thị số lượng thành viên
         val count = team.memberCount
         holder.tvMemberCount?.text = "$count member${if (count > 1) "s" else ""}"
         
-        // Hiển thị Role thực sự (lấy từ DB)
-        // Viết hoa chữ cái đầu (manager -> Manager)
         val roleText = team.role?.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() } ?: "Member"
         holder.tvRole?.text = roleText
+
+        holder.itemView.setOnClickListener {
+            onItemClick?.invoke(team)
+        }
+
+        holder.itemView.setOnLongClickListener {
+            onItemLongClick?.invoke(team)
+            true
+        }
     }
 
     override fun getItemCount(): Int {

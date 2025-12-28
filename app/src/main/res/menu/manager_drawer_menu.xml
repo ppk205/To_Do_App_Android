@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <group android:checkableBehavior="single">
+        <item
+            android:id="@+id/nav_member_management"
+            android:icon="@drawable/ic_manage_accounts" 
+            android:title="Member Management" />
+        <item
+            android:id="@+id/nav_join_requests"
+            android:icon="@drawable/ic_person_add"
+            android:title="Join Requests" />
+        <item
+            android:id="@+id/nav_create_task"
+            android:icon="@drawable/ic_add_task"
+            android:title="Create Team Task" />
+        <item
+            android:id="@+id/nav_assigned_tasks"
+            android:icon="@drawable/ic_assignment"
+            android:title="Assigned Tasks" />
+        <item
+            android:id="@+id/nav_task_management"
+            android:icon="@drawable/ic_task_alt"
+            android:title="Team Task Management" />
+        <item
+            android:id="@+id/nav_manager_dashboard"
+            android:icon="@drawable/ic_dashboard"
+            android:title="Team Manager Dashboard" />
+    </group>
+</menu>

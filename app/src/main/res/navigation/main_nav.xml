@@ -127,7 +127,11 @@
         android:id="@id/menu_team"
         android:name="com.example.morp_prj.ui.TeamFragment"
         android:label="fragment_team"
-        tools:layout="@layout/fragment_team" />
+        tools:layout="@layout/fragment_team">
+        <action
+            android:id="@+id/action_team_to_detail"
+            app:destination="@id/teamDetailFragment" />
+    </fragment>
     <fragment
         android:id="@id/menu_home"
         android:name="com.example.morp_prj.ui.HomeFragment"
@@ -153,4 +157,18 @@
         android:name="com.example.morp_prj.ui.CreateNewTeamFragment"
         android:label="Create New Team"
         tools:layout="@layout/fragment_create_new_team" />
+
+    <fragment
+        android:id="@+id/teamDetailFragment"
+        android:name="com.example.morp_prj.ui.TeamDetailFragment"
+        android:label="fragment_team_detail"
+        tools:layout="@layout/fragment_team_detail">
+        <argument
+            android:name="teamId"
+            app:argType="string" />
+        <argument
+            android:name="teamName"
+            app:argType="string"
+            android:defaultValue="Team Detail" />
+    </fragment>
 </navigation>

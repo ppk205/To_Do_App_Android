@@ -10,6 +10,7 @@ import androidx.recyclerview.widget.RecyclerView
 import androidx.viewpager2.widget.ViewPager2
 import androidx.navigation.fragment.findNavController
 import com.example.morp_prj.R
+import com.example.morp_prj.utils.PreferenceManager
 import com.google.android.material.button.MaterialButton
 
 class OnboardingFragment : Fragment(R.layout.fragment_onboarding) {
@@ -57,6 +58,11 @@ class OnboardingFragment : Fragment(R.layout.fragment_onboarding) {
         }
 
         view.findViewById<View>(R.id.btn_guest_mode)?.setOnClickListener {
+            // Lưu phiên làm việc Guest Mode
+            // Hàm này sẽ xóa dữ liệu cũ (clearLoginData) trước khi set guest
+            val preferenceManager = PreferenceManager(requireContext())
+            preferenceManager.saveGuestSession()
+
             findNavController().navigate(R.id.action_onboarding_to_home)
         }
     }

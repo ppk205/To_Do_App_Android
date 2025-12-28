@@ -20,5 +20,7 @@ data class Team(
     @SerializedName("memberCount")
     val memberCount: Long = 1,
     @SerializedName("role")
-    val role: String? = "member"
+    val role: String? = "member",
+    @SerializedName("isPinned")
+    var isPinned: Boolean = false // Thêm trường isPinned
 )

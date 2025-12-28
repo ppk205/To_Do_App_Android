@@ -16,6 +16,7 @@ class PreferenceManager(context: Context) {
         private const val KEY_EMAIL = "email"
         private const val KEY_TOKEN = "auth_token"
         private const val KEY_IS_LOGGED_IN = "is_logged_in"
+        private const val KEY_IS_GUEST = "is_guest"
     }
 
     fun saveLoginData(
@@ -32,8 +33,28 @@ class PreferenceManager(context: Context) {
             putString(KEY_EMAIL, email)
             putString(KEY_TOKEN, token)
             putBoolean(KEY_IS_LOGGED_IN, true)
+            putBoolean(KEY_IS_GUEST, false) // Đảm bảo không phải là guest
             apply()
         }
+    }
+    
+    fun saveGuestSession() {
+        // Xóa dữ liệu cũ trước để tránh conflict
+        clearLoginData()
+        
+        sharedPreferences.edit().apply {
+            putString(KEY_USER_ID, "GUEST")
+            putString(KEY_USERNAME, "Guest")
+            putString(KEY_DISPLAY_NAME, "Guest User")
+            putString(KEY_EMAIL, "")
+            putBoolean(KEY_IS_LOGGED_IN, true)
+            putBoolean(KEY_IS_GUEST, true)
+            apply()
+        }
+    }
+    
+    fun isGuest(): Boolean {
+        return sharedPreferences.getBoolean(KEY_IS_GUEST, false)
     }
 
     fun isLoggedIn(): Boolean {
@@ -64,4 +85,3 @@ class PreferenceManager(context: Context) {
         sharedPreferences.edit().clear().apply()
     }
 }
-

@@ -14,6 +14,22 @@ exports.getTeamsByUserId = (req, res) => {
     });
 };
 
+exports.togglePinTeam = (req, res) => {
+    const { userId, teamId, isPinned } = req.body;
+
+    if (!userId || !teamId || isPinned === undefined) {
+        return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    teamModel.updatePinStatus(userId, teamId, isPinned, (err, result) => {
+        if (err) {
+            console.error(err);
+            return res.status(500).json({ error: 'Database error' });
+        }
+        res.json({ success: true, message: 'Pin status updated' });
+    });
+};
+
 exports.createTeam = (req, res) => {
     const { name, description, createdBy } = req.body;
 

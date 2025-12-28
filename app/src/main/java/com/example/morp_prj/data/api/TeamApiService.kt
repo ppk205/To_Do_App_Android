@@ -1,6 +1,7 @@
 package com.example.morp_prj.data.api
 
 import com.example.morp_prj.data.model.CreateTeamRequest
+import com.example.morp_prj.data.model.PinTeamRequest
 import com.example.morp_prj.data.model.Team
 import retrofit2.Call
 import retrofit2.http.Body
@@ -17,4 +18,7 @@ interface TeamApiService {
 
     @POST("team/create")
     fun createTeam(@Body request: CreateTeamRequest): Call<Team>
+
+    @POST("team/pin")
+    fun togglePinTeam(@Body request: PinTeamRequest): Call<Void> // Không cần body trả về
 }

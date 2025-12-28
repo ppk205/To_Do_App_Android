@@ -3,26 +3,30 @@ const db = require('../config/database');
 const Team = {
   findTeamsByUserId: async (userId, callback) => {
     try {
-      // Sử dụng Subquery trong SELECT (Correlated Subquery) - Cách an toàn nhất
       const query = `
-        SELECT 
-            t.*, 
-            tm.role, 
-            (SELECT COUNT(*) FROM teammember WHERE teamId = t.id) as memberCount
-        FROM team t
-        JOIN teammember tm ON t.id = tm.teamId
-        WHERE tm.userId = ?
+        SELECT
+            t.*,
+            tm.role,
+            tm.isPinned,
+            sub.memberCount
+        FROM
+            team t
+        JOIN
+            teammember tm ON t.id = tm.teamId
+        LEFT JOIN
+            (SELECT teamId, COUNT(*) AS memberCount FROM teammember GROUP BY teamId) AS sub
+        ON
+            t.id = sub.teamId
+        WHERE
+            tm.userId = ?
       `;
       
       const [rows] = await db.query(query, [userId]);
       
-      // DEBUG: In ra kết quả để kiểm tra
-      console.log(`[DEBUG] findTeamsByUserId result for ${userId}:`, rows);
-
-      // Xử lý dữ liệu: Đảm bảo memberCount là số (Number)
+      // Chuyển đổi isPinned (số 1/0) thành boolean (true/false)
       const processedRows = rows.map(row => ({
           ...row,
-          memberCount: Number(row.memberCount) || 0 // Ép kiểu sang Number
+          isPinned: Boolean(row.isPinned)
       }));
 
       callback(null, processedRows);
@@ -30,6 +34,18 @@ const Team = {
     } catch (err) {
       console.error("Database error in findTeamsByUserId:", err);
       callback(err, null);
+    }
+  },
+
+  updatePinStatus: async (userId, teamId, isPinned, callback) => {
+    try {
+        const pinValue = isPinned ? 1 : 0;
+        const query = 'UPDATE teammember SET isPinned = ? WHERE userId = ? AND teamId = ?';
+        const [result] = await db.query(query, [pinValue, userId, teamId]);
+        callback(null, result);
+    } catch (err) {
+        console.error("Database error in updatePinStatus:", err);
+        callback(err, null);
     }
   },
 
@@ -48,7 +64,7 @@ const Team = {
   addMember: async (memberData, callback) => {
     try {
       const { id, teamId, userId, role } = memberData;
-      const query = 'INSERT INTO teammember (id, teamId, userId, role) VALUES (?, ?, ?, ?)';
+      const query = 'INSERT INTO teammember (id, teamId, userId, role, isPinned) VALUES (?, ?, ?, ?, 0)';
       const [result] = await db.query(query, [id, teamId, userId, role]);
       callback(null, result);
     } catch (err) {
