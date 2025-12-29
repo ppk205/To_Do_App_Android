@@ -89,6 +89,8 @@ object RetrofitClient {
     var teamApiService: TeamApiService = retrofit.create(TeamApiService::class.java)
         private set
 
+    var teamTaskApiService: TeamTaskApiService = retrofit.create(TeamTaskApiService::class.java)
+        private set
     private fun buildRetrofit(builder: OkHttpClient.Builder?): Retrofit {
         val clientBuilder = builder ?: OkHttpClient.Builder()
             .addInterceptor(loggingInterceptor)
@@ -145,7 +147,7 @@ object RetrofitClient {
             authApiService = retrofit.create(AuthApiService::class.java)
             taskApiService = retrofit.create(TaskApiService::class.java)
             teamApiService = retrofit.create(TeamApiService::class.java)
-
+            teamTaskApiService = retrofit.create(TeamTaskApiService::class.java)
         } catch (e: Exception) {
             // Fail gracefully - keep existing retrofit without auth interceptor
             if (isDebugBuild()) android.util.Log.e("RetrofitClient", "Failed to set auth interceptor", e)

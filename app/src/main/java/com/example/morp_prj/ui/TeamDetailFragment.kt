@@ -87,12 +87,12 @@ class TeamDetailFragment : Fragment(R.layout.fragment_team_detail), NavigationVi
         toolbarTitle?.text = when(destinationId) {
             R.id.memberManagementFragment -> "Member Management"
             R.id.joinRequestFragment -> "Join Requests"
+            R.id.createTeamTaskFragment -> "Create New Task"
             else -> "Team Dashboard"
         }
     }
 
     override fun onNavigationItemSelected(item: MenuItem): Boolean {
-        // SỬA LỖI: Thêm `role` vào bundle khi điều hướng
         val args = bundleOf(
             "teamId" to teamId,
             "teamName" to teamName,
@@ -104,6 +104,7 @@ class TeamDetailFragment : Fragment(R.layout.fragment_team_detail), NavigationVi
             R.id.nav_member_management -> teamNavController.navigate(R.id.memberManagementFragment, args)
             R.id.nav_join_requests -> teamNavController.navigate(R.id.joinRequestFragment, args)
             R.id.nav_manager_dashboard -> teamNavController.navigate(R.id.teamDashboardFragment, args)
+            R.id.nav_create_task -> teamNavController.navigate(R.id.createTeamTaskFragment, args)
             else -> Toast.makeText(context, "Feature coming soon!", Toast.LENGTH_SHORT).show()
         }
 
