@@ -33,6 +33,9 @@ import kotlinx.coroutines.launch
 import java.util.Calendar
 
 class PersonalFragment : Fragment() {
+    companion object {
+        private const val GUEST_USER_ID = PreferenceManager.GUEST_USER_ID
+    }
 
     private enum class StatusTab { ALL, TODO, IN_PROGRESS, DONE }
     private enum class DateFilter { ANY, TODAY, TOMORROW, THIS_WEEK, NO_DEADLINE }
@@ -48,6 +51,10 @@ class PersonalFragment : Fragment() {
     }
     private val taskSyncRepository by lazy { TaskSyncRepository(requireContext()) }
     private val prefs by lazy { PreferenceManager(requireContext()) }
+
+    // Current user ID for filtering tasks
+    private val currentUserId: String
+        get() = if (prefs.isGuest()) GUEST_USER_ID else prefs.getUserId() ?: GUEST_USER_ID
 
     private var recyclerView: RecyclerView? = null
     private var adapter: ToDoAdapter? = null
@@ -281,7 +288,10 @@ class PersonalFragment : Fragment() {
     }
 
     private fun observeTasks() {
-        val allItemsFlow: Flow<List<ToDoItem>> = repository.observeAll()
+        val userId = currentUserId
+
+
+        val allItemsFlow: Flow<List<ToDoItem>> = repository.observeAllByUser(userId)
             .map { list -> list.map { it.toUiItem() } }
             .distinctUntilChanged()
 

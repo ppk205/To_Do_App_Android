@@ -75,4 +75,7 @@ dependencies {
 
     // Biometric Authentication
     implementation("androidx.biometric:biometric:1.1.0")
+
+    // Donut Chart
+    implementation("com.github.PhilJay:MPAndroidChart:3.1.0")
 }

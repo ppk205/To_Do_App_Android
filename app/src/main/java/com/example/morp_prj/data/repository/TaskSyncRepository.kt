@@ -6,12 +6,14 @@ import com.example.morp_prj.data.db.AppDatabase
 import com.example.morp_prj.data.db.SyncState
 import com.example.morp_prj.data.model.TaskSyncItem
 import com.example.morp_prj.data.model.TaskSyncRequest
+import com.example.morp_prj.utils.PreferenceManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 class TaskSyncRepository(context: Context) {
 
     private val taskDao = AppDatabase.getInstance(context).taskDao()
+    private val prefs = PreferenceManager(context)
 
     /**
      * Upload local tasks needing sync to backend.
@@ -19,7 +21,13 @@ class TaskSyncRepository(context: Context) {
      */
     suspend fun syncUp(): Result<Int> = withContext(Dispatchers.IO) {
         try {
-            val needSync = taskDao.getNeedSync()
+            if (!prefs.isLoggedIn() || prefs.isGuest()) {
+                // Guests don't sync
+                return@withContext Result.success(0)
+            }
+            val userId = prefs.getUserId() ?: return@withContext Result.success(0)
+
+            val needSync = taskDao.getNeedSyncForUser(userId)
             if (needSync.isEmpty()) return@withContext Result.success(0)
 
             val request = TaskSyncRequest(
@@ -58,4 +66,3 @@ class TaskSyncRepository(context: Context) {
         }
     }
 }
-

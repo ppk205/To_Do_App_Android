@@ -5,6 +5,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
+import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.RecyclerView
 import androidx.viewpager2.widget.ViewPager2
@@ -19,6 +20,13 @@ class OnboardingFragment : Fragment(R.layout.fragment_onboarding) {
         super.onViewCreated(view, savedInstanceState)
 
         val viewPager = view.findViewById<ViewPager2>(R.id.view_pager)
+
+        // Check if viewPager exists
+        if (viewPager == null) {
+            android.util.Log.e("OnboardingFragment", "ViewPager2 not found in layout!")
+            return
+        }
+
         val images = listOf(
             R.drawable.img_onboarding_work,
             R.drawable.img_onboarding_work_2,
@@ -53,17 +61,30 @@ class OnboardingFragment : Fragment(R.layout.fragment_onboarding) {
             }
         })
 
+        val btnGuestMode = view.findViewById<TextView>(R.id.btn_guest_mode)
+        val isGuest = PreferenceManager.isGuest(requireContext())
+        val preferenceManager = PreferenceManager(requireContext())
+
+        // Nút "Get Started" chuyển đến Login
         view.findViewById<MaterialButton>(R.id.btn_get_started)?.setOnClickListener {
+            // Đánh dấu đã xem onboarding
+            preferenceManager.setHasSeenOnboarding(true)
             findNavController().navigate(R.id.action_onboarding_to_login)
         }
 
-        view.findViewById<View>(R.id.btn_guest_mode)?.setOnClickListener {
-            // Lưu phiên làm việc Guest Mode
-            // Hàm này sẽ xóa dữ liệu cũ (clearLoginData) trước khi set guest
-            val preferenceManager = PreferenceManager(requireContext())
-            preferenceManager.saveGuestMode()
-
-            findNavController().navigate(R.id.action_onboarding_to_home)
+        // Nếu đã là guest thì ẩn nút "Try Offline" và hiện nút quay lại Home
+        if (isGuest) {
+            btnGuestMode?.text = getString(R.string.try_offline)
+            btnGuestMode?.setOnClickListener {
+                findNavController().navigate(R.id.menu_home)
+            }
+        } else {
+            btnGuestMode?.setOnClickListener {
+                // Đánh dấu đã xem onboarding và lưu guest mode
+                preferenceManager.setHasSeenOnboarding(true)
+                preferenceManager.saveGuestMode()
+                findNavController().navigate(R.id.action_onboarding_to_home)
+            }
         }
     }
 

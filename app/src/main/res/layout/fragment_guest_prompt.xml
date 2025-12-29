@@ -35,6 +35,18 @@
             android:gravity="center"
             android:layout_marginBottom="16dp" />
 
+        <!-- Nút đăng nhập -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_login_now"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:text="@string/login"
+            android:textAllCaps="false"
+            android:textColor="@android:color/white"
+            android:layout_marginBottom="12dp"
+            app:cornerRadius="12dp"
+            app:backgroundTint="@color/brand_blue" />
+
         <!-- Nút đăng ký -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_register_now"
@@ -42,23 +54,22 @@
             android:layout_height="48dp"
             android:text="@string/guest_register_now"
             android:textAllCaps="false"
-            android:textColor="@android:color/white"
+            android:textColor="@color/brand_blue"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_marginBottom="12dp"
             app:cornerRadius="12dp"
-            app:backgroundTint="@color/brand_blue" />
-            app:backgroundTint="@color/brand_blue"
-            android:layout_marginBottom="12dp" />
+            app:strokeColor="@color/brand_blue" />
 
         <!-- Nút quay lại -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_back_home"
             android:layout_width="match_parent"
             android:layout_height="48dp"
-            android:text="Quay lại"
+            android:text="@string/back_home"
             android:textAllCaps="false"
-            android:textColor="@color/brand_blue"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-            app:cornerRadius="12dp"
-            app:strokeColor="@color/brand_blue" />
+            android:textColor="@color/dark_gray"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            app:cornerRadius="12dp" />
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -13,8 +13,26 @@ interface TaskDao {
     @Query("SELECT * FROM tasks ORDER BY createdAt DESC")
     fun observeAll(): Flow<List<TaskEntity>>
 
+    @Query("SELECT * FROM tasks WHERE userId = :userId ORDER BY createdAt DESC")
+    fun observeAllByUser(userId: String): Flow<List<TaskEntity>>
+
+    @Query("SELECT * FROM tasks WHERE deadlineAt >= :startOfDay AND deadlineAt < :endOfDay ORDER BY deadlineAt ASC")
+    fun observeByDateRange(startOfDay: Long, endOfDay: Long): Flow<List<TaskEntity>>
+
+    @Query("SELECT * FROM tasks WHERE userId = :userId AND deadlineAt >= :startOfDay AND deadlineAt < :endOfDay ORDER BY deadlineAt ASC")
+    fun observeByDateRangeForUser(userId: String, startOfDay: Long, endOfDay: Long): Flow<List<TaskEntity>>
+
     @Query("SELECT * FROM tasks WHERE status = :status ORDER BY createdAt DESC")
     fun observeByStatus(status: String): Flow<List<TaskEntity>>
+
+    @Query("SELECT * FROM tasks WHERE userId = :userId AND status = :status ORDER BY createdAt DESC")
+    fun observeByStatusForUser(userId: String, status: String): Flow<List<TaskEntity>>
+
+    @Query("SELECT COUNT(*) FROM tasks WHERE status = :status")
+    fun observeCountByStatus(status: String): Flow<Int>
+
+    @Query("SELECT COUNT(*) FROM tasks WHERE userId = :userId AND status = :status")
+    fun observeCountByStatusForUser(userId: String, status: String): Flow<Int>
 
     @Query("SELECT * FROM tasks WHERE id = :id LIMIT 1")
     suspend fun getById(id: Long): TaskEntity?
@@ -37,9 +55,18 @@ interface TaskDao {
     @Query("SELECT * FROM tasks WHERE syncState != :syncedState ORDER BY updatedAt DESC")
     suspend fun getNeedSync(syncedState: String = "SYNCED"): List<TaskEntity>
 
+    @Query("SELECT * FROM tasks WHERE userId = :userId AND syncState != :syncedState ORDER BY updatedAt DESC")
+    suspend fun getNeedSyncForUser(userId: String, syncedState: String = "SYNCED"): List<TaskEntity>
+
     @Query("UPDATE tasks SET serverId = :serverId, syncState = :syncState, updatedAt = :updatedAt WHERE id = :localId")
     suspend fun markSynced(localId: Long, serverId: String, syncState: String = "SYNCED", updatedAt: Long = System.currentTimeMillis()): Int
 
     @Query("UPDATE tasks SET syncState = :syncState WHERE id IN (:localIds)")
     suspend fun markSyncState(localIds: List<Long>, syncState: String): Int
+
+    @Query("DELETE FROM tasks WHERE userId = :userId")
+    suspend fun deleteByUserId(userId: String): Int
+
+    @Query("DELETE FROM tasks")
+    suspend fun deleteAll(): Int
 }

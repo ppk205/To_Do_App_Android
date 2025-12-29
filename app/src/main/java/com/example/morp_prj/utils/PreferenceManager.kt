@@ -2,6 +2,7 @@ package com.example.morp_prj.utils
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.example.morp_prj.data.model.User
 
 class PreferenceManager(context: Context) {
 
@@ -17,6 +18,59 @@ class PreferenceManager(context: Context) {
         private const val KEY_TOKEN = "auth_token"
         private const val KEY_IS_LOGGED_IN = "is_logged_in"
         private const val KEY_IS_GUEST = "is_guest"
+        private const val KEY_HAS_SEEN_ONBOARDING = "has_seen_onboarding"
+
+        const val GUEST_USER_ID = "guest_local"
+
+        // Helper that constructs a User from stored preferences.
+        // Returns null when no user id is stored (not logged in / guest).
+        fun getUser(context: Context): User? {
+            val prefs = PreferenceManager(context)
+            val id = prefs.getUserId() ?: return null
+            val username = prefs.getUsername() ?: ""
+            val displayName = prefs.getDisplayName() ?: ""
+            val email = prefs.getEmail() ?: ""
+
+            // The User data class requires several non-null fields like hashedPassword.
+            // We don't persist all fields in preferences, so fill missing values with sensible defaults.
+            return User(
+                id = id,
+                username = username,
+                hashedPassword = "",
+                displayName = displayName,
+                email = email,
+                avatarUrl = null,
+                avatarId = null,
+                bio = null,
+                phone = null,
+                verified = false,
+                createdAt = null,
+                updatedAt = null
+            )
+        }
+
+        // Persist the minimal user info to preferences used by the app
+        fun saveUser(context: Context, user: User) {
+            val prefs = PreferenceManager(context)
+            prefs.saveLoginData(
+                userId = user.id,
+                username = user.username,
+                displayName = user.displayName,
+                email = user.email,
+                token = null
+            )
+        }
+
+        // Clear stored login/user data
+        fun clear(context: Context) {
+            val prefs = PreferenceManager(context)
+            prefs.clearLoginData()
+        }
+
+        // Convenience static check for guest mode
+        fun isGuest(context: Context): Boolean {
+            return PreferenceManager(context).isGuest()
+        }
     }
 
     fun saveLoginData(
@@ -43,9 +97,14 @@ class PreferenceManager(context: Context) {
         sharedPreferences.edit().apply {
             putBoolean(KEY_IS_GUEST, true)
             putBoolean(KEY_IS_LOGGED_IN, false)
+            // assign deterministic guest user id so offline tasks can be stored
+            putString(KEY_USER_ID, GUEST_USER_ID)
             apply()
         }
     }
+
+    // Convenience to always return an id (guest when not logged in)
+    fun getCurrentUserIdOrGuest(): String = getUserId() ?: GUEST_USER_ID
 
     fun isLoggedIn(): Boolean {
         return sharedPreferences.getBoolean(KEY_IS_LOGGED_IN, false)
@@ -53,6 +112,14 @@ class PreferenceManager(context: Context) {
 
     fun isGuest(): Boolean {
         return sharedPreferences.getBoolean(KEY_IS_GUEST, false)
+    }
+
+    fun hasSeenOnboarding(): Boolean {
+        return sharedPreferences.getBoolean(KEY_HAS_SEEN_ONBOARDING, false)
+    }
+
+    fun setHasSeenOnboarding(seen: Boolean = true) {
+        sharedPreferences.edit().putBoolean(KEY_HAS_SEEN_ONBOARDING, seen).apply()
     }
 
     fun getUserId(): String? {
@@ -76,6 +143,11 @@ class PreferenceManager(context: Context) {
     }
 
     fun clearLoginData() {
+        // Giữ lại cờ hasSeenOnboarding khi logout
+        val hasSeenOnboarding = sharedPreferences.getBoolean(KEY_HAS_SEEN_ONBOARDING, false)
         sharedPreferences.edit().clear().apply()
+        if (hasSeenOnboarding) {
+            sharedPreferences.edit().putBoolean(KEY_HAS_SEEN_ONBOARDING, true).apply()
+        }
     }
 }

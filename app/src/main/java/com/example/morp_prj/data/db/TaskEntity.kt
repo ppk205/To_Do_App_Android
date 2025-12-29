@@ -20,6 +20,9 @@ data class TaskEntity(
     /** Remote id on MySQL (UUID string). Null if not synced yet. */
     val serverId: String? = null,
 
+    /** User ID who owns this task. Required for multi-user support. */
+    val userId: String = "",
+
     /** Sync state for offline-first. */
     val syncState: SyncState = SyncState.PENDING,
 

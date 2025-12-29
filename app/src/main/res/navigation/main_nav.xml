@@ -16,6 +16,9 @@
         <action
             android:id="@+id/action_onboarding_to_home"
             app:destination="@id/menu_home" />
+        <action
+            android:id="@+id/action_onboarding_to_register"
+            app:destination="@id/register_fragment" />
     </fragment>
 
     <fragment
@@ -29,6 +32,11 @@
         <action
             android:id="@+id/action_login_to_home"
             app:destination="@id/menu_home" />
+        <action
+            android:id="@+id/action_login_to_onboarding"
+            app:destination="@id/onboarding_fragment"
+            app:popUpTo="@id/onboarding_fragment"
+            app:popUpToInclusive="true" />
     </fragment>
 
     <fragment
@@ -119,6 +127,14 @@
         <action
             android:id="@+id/action_guestPrompt_to_register"
             app:destination="@id/register_fragment" />
+        <action
+            android:id="@+id/action_guestPrompt_to_login"
+            app:destination="@id/login_fragment" />
+        <action
+            android:id="@+id/action_guestPrompt_to_home"
+            app:destination="@id/menu_home"
+            app:popUpTo="@id/menu_home"
+            app:popUpToInclusive="true" />
     </fragment>
 
     <fragment
@@ -146,7 +162,20 @@
         android:id="@+id/menu_home"
         android:name="com.example.morp_prj.ui.HomeFragment"
         android:label="fragment_home"
-        tools:layout="@layout/fragment_home" />
+        tools:layout="@layout/fragment_home">
+        <action
+            android:id="@+id/action_home_to_dashboardDetail"
+            app:destination="@id/dashboard_detail_fragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
+    </fragment>
+    <fragment
+        android:id="@+id/dashboard_detail_fragment"
+        android:name="com.example.morp_prj.ui.DashboardDetailFragment"
+        android:label="fragment_dashboard_detail"
+        tools:layout="@layout/fragment_dashboard_detail" />
     <fragment
         android:id="@+id/menu_notifications"
         android:name="com.example.morp_prj.ui.NotificationsFragment"
@@ -156,7 +185,11 @@
         android:id="@+id/menu_profile"
         android:name="com.example.morp_prj.ui.ProfileFragment"
         android:label="fragment_profile"
-        tools:layout="@layout/fragment_profile" />
+        tools:layout="@layout/fragment_profile">
+        <action
+            android:id="@+id/action_profile_to_guestPrompt"
+            app:destination="@id/guest_prompt_fragment" />
+    </fragment>
     <fragment
         android:id="@+id/taskFragment"
         android:name="com.example.morp_prj.ui.TaskFragment"

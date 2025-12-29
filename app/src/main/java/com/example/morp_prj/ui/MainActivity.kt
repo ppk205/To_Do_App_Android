@@ -68,18 +68,32 @@ class MainActivity : AppCompatActivity() {
             registerReceiver(sessionExpiredReceiver, filter)
         }
 
-        // If user already logged in (saved state) or has valid refresh token, navigate directly to home
+        // Navigation logic:
+        // 1. If user has NOT seen onboarding -> stay on onboarding (start destination)
+        // 2. If user has seen onboarding AND (logged in OR guest) -> go to home
+        // 3. If user has seen onboarding but NOT logged in/guest -> go to login
         try {
             val preferenceManager = PreferenceManager(this)
             val tokenStorage = SecureTokenStorage(this)
-            val shouldGoHome = preferenceManager.isLoggedIn() || tokenStorage.hasValidRefreshToken()
-            if (shouldGoHome) {
-                // Navigate to home and clear start destination from backstack so user can't navigate back to onboarding/login
-                val navOptions = NavOptions.Builder()
-                    .setPopUpTo(navController.graph.startDestinationId, true)
-                    .build()
-                navController.navigate(R.id.menu_home, null, navOptions)
+            val hasSeenOnboarding = preferenceManager.hasSeenOnboarding()
+            val isLoggedInOrGuest = preferenceManager.isLoggedIn() || tokenStorage.hasValidRefreshToken() || preferenceManager.isGuest()
+
+            if (hasSeenOnboarding) {
+                if (isLoggedInOrGuest) {
+                    // Navigate to home and clear start destination from backstack so user can't navigate back to onboarding/login
+                    val navOptions = NavOptions.Builder()
+                        .setPopUpTo(navController.graph.startDestinationId, true)
+                        .build()
+                    navController.navigate(R.id.menu_home, null, navOptions)
+                } else {
+                    // User has seen onboarding but not logged in -> go to login
+                    val navOptions = NavOptions.Builder()
+                        .setPopUpTo(navController.graph.startDestinationId, true)
+                        .build()
+                    navController.navigate(R.id.login_fragment, null, navOptions)
+                }
             }
+            // If !hasSeenOnboarding, stay on onboarding (the start destination)
         } catch (e: Exception) {
             android.util.Log.e("MainActivity", "Error checking login state", e)
         }

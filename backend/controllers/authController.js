@@ -55,7 +55,20 @@ async function register(req, res) {
             });
         }
 
-        // Trả response ngay — để client (mobile) có thể chuyển sang màn hình verify
+        // ✅ CRITICAL: Wait for email to be sent (Option 1: Synchronous)
+        // This ensures user only gets success response if email was actually sent
+        const emailResult = await sendOTPEmail(email, otpData.otpCode, displayName);
+
+        if (!emailResult.success) {
+            // Rollback: Clear OTP from Redis since email failed
+            await RedisOTPService.invalidateOTP(email, 'REGISTER');
+            return res.status(500).json({
+                success: false,
+                message: 'Không thể gửi email. Vui lòng thử lại sau.'
+            });
+        }
+
+        // Trả response khi email đã được gửi thành công
         const responsePayload = {
             success: true,
             message: 'OTP đã được gửi đến email của bạn',
@@ -67,10 +80,6 @@ async function register(req, res) {
 
         res.status(201).json(responsePayload);
 
-        // Gửi OTP qua email bất đồng bộ (fire-and-forget). Trong production, không log OTP.
-        sendOTPEmail(email, otpData.otpCode, displayName)
-            .then(info => console.log('Email send result:', info))
-            .catch(err => console.error('Failed to send OTP email (async):', err));
 
     } catch (error) {
         console.error('Register error:', error);

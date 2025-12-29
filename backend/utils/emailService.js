@@ -1,6 +1,21 @@
 const nodemailer = require('nodemailer');
 require('dotenv').config();
 
+/**
+ * ✅ Mask email for logging (security best practice)
+ */
+function maskEmail(email) {
+    if (!email || typeof email !== 'string') return '***';
+    const parts = email.split('@');
+    if (parts.length !== 2) return '***';
+    const localPart = parts[0];
+    const domain = parts[1];
+    const masked = localPart.length > 2
+        ? localPart.substring(0, 2) + '***'
+        : '***';
+    return `${masked}@${domain}`;
+}
+
 // Cấu hình SMTP Gmail
 const transporter = nodemailer.createTransport({
     service: 'gmail',
@@ -74,13 +89,15 @@ async function sendOTPEmail(email, otpCode, displayName = 'User') {
         };
 
         const info = await transporter.sendMail(mailOptions);
-        console.log('✅ Email sent successfully:', info.messageId);
+        // ✅ SECURITY: Don't log OTP or full email
+        console.log('✅ Email sent successfully to:', maskEmail(email));
         return {
             success: true,
             messageId: info.messageId
         };
     } catch (error) {
-        console.error('❌ Error sending email:', error.message);
+        // ✅ SECURITY: Don't log full error which may contain sensitive data
+        console.error('❌ Error sending email to:', maskEmail(email), 'Error:', error.message);
         return {
             success: false,
             error: error.message
@@ -152,13 +169,14 @@ async function sendResetPasswordEmail(email, otpCode, displayName = 'User') {
         };
 
         const info = await transporter.sendMail(mailOptions);
-        console.log('✅ Reset password email sent successfully:', info.messageId);
+        // ✅ SECURITY: Don't log OTP or full email
+        console.log('✅ Reset password email sent successfully to:', maskEmail(email));
         return {
             success: true,
             messageId: info.messageId
         };
     } catch (error) {
-        console.error('❌ Error sending reset password email:', error.message);
+        console.error('❌ Error sending reset password email to:', maskEmail(email), 'Error:', error.message);
         return {
             success: false,
             error: error.message
@@ -168,5 +186,6 @@ async function sendResetPasswordEmail(email, otpCode, displayName = 'User') {
 
 module.exports = {
     sendOTPEmail,
-    sendResetPasswordEmail
+    sendResetPasswordEmail,
+    maskEmail
 };
