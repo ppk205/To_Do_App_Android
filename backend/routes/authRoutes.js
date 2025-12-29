@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/authController');
 const { authenticateToken } = require('../middleware/authMiddleware');
+const { loginRateLimiter, createRateLimiter } = require('../middleware/rateLimiter');
 const {
     registerValidation,
     loginValidation,
@@ -30,8 +31,8 @@ router.post('/resend-otp', resendOTPValidation, validate, authController.resendO
 // Debug: Get OTP status (TTL, attempts, cooldowns)
 router.post('/otp-status', authController.getOTPStatus);
 
-// Login route - Issue access + refresh tokens
-router.post('/login', loginValidation, validate, authController.login);
+// ✅ Login route with rate limiting - Issue access + refresh tokens
+router.post('/login', loginRateLimiter, loginValidation, validate, authController.login);
 
 // Refresh token route - Rotate tokens
 router.post('/refresh', authController.refreshToken);

@@ -16,6 +16,14 @@ const pool = require('../config/database');
  * - Server-side session as source of truth
  */
 
+// ✅ CRITICAL: Validate JWT secrets at startup
+const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_REFRESH_SECRET = process.env.REFRESH_TOKEN_SECRET || process.env.JWT_SECRET;
+
+if (!JWT_SECRET || !JWT_REFRESH_SECRET) {
+    throw new Error('🔴 CRITICAL: JWT_SECRET and REFRESH_TOKEN_SECRET must be defined in environment variables');
+}
+
 const ACCESS_TTL_SECONDS = parseInt(process.env.ACCESS_TOKEN_TTL_SECONDS || String(30 * 60), 10); // 30min
 const REFRESH_TTL_SECONDS = parseInt(process.env.REFRESH_TOKEN_TTL_SECONDS || String(30 * 24 * 60 * 60), 10); // 30d
 const TOKEN_PEPPER = process.env.REFRESH_TOKEN_PEPPER || process.env.OTP_HMAC_SECRET || 'default-pepper-change-in-prod';
@@ -34,6 +42,29 @@ function hashRefreshToken(refreshToken) {
     return crypto.createHmac('sha256', TOKEN_PEPPER)
         .update(refreshToken)
         .digest('hex');
+}
+
+/**
+ * ✅ Create session fingerprint from server-side data
+ * Binds session to client characteristics to detect token theft
+ */
+function createSessionFingerprint(req) {
+    const components = [
+        req.headers['user-agent'] || '',
+        req.headers['accept-language'] || '',
+        req.ip || req.connection?.remoteAddress || ''
+    ].join('|');
+
+    return crypto.createHash('sha256').update(components).digest('hex');
+}
+
+/**
+ * ✅ Validate session fingerprint
+ */
+function validateFingerprint(req, storedFingerprint) {
+    if (!storedFingerprint) return true; // Backward compatibility
+    const currentFingerprint = createSessionFingerprint(req);
+    return currentFingerprint === storedFingerprint;
 }
 
 /**
@@ -71,8 +102,8 @@ async function issueTokens(user, deviceInfo = {}) {
         exp: refreshExpiry
     };
 
-    const accessToken = jwt.sign(accessPayload, process.env.JWT_SECRET, { noTimestamp: true });
-    const refreshToken = jwt.sign(refreshPayload, process.env.REFRESH_TOKEN_SECRET || process.env.JWT_SECRET, { noTimestamp: true });
+    const accessToken = jwt.sign(accessPayload, JWT_SECRET, { noTimestamp: true });
+    const refreshToken = jwt.sign(refreshPayload, JWT_REFRESH_SECRET, { noTimestamp: true });
 
     // Hash refresh token for storage
     const refreshTokenHash = hashRefreshToken(refreshToken);
@@ -126,7 +157,7 @@ async function issueTokens(user, deviceInfo = {}) {
 async function refreshTokens(refreshToken, deviceInfo = {}) {
     let payload;
     try {
-        payload = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET || process.env.JWT_SECRET);
+        payload = jwt.verify(refreshToken, JWT_REFRESH_SECRET);
     } catch (error) {
         throw new Error('INVALID_TOKEN');
     }
@@ -200,8 +231,8 @@ async function refreshTokens(refreshToken, deviceInfo = {}) {
             exp: refreshExpiry
         };
 
-        const newAccessToken = jwt.sign(accessPayload, process.env.JWT_SECRET, { noTimestamp: true });
-        const newRefreshToken = jwt.sign(refreshPayload, process.env.REFRESH_TOKEN_SECRET || process.env.JWT_SECRET, { noTimestamp: true });
+        const newAccessToken = jwt.sign(accessPayload, JWT_SECRET, { noTimestamp: true });
+        const newRefreshToken = jwt.sign(refreshPayload, JWT_REFRESH_SECRET, { noTimestamp: true });
 
         const newRefreshHash = hashRefreshToken(newRefreshToken);
         const newRefreshExpiresAt = new Date(refreshExpiry * 1000);
@@ -212,7 +243,14 @@ async function refreshTokens(refreshToken, deviceInfo = {}) {
              SET refresh_token_hash = ?, access_token_jti = ?, refresh_expires_at = ?,
                  last_seen_at = NOW(), ip_address = ?, user_agent = ?
              WHERE id = ?`,
-            [newRefreshHash, newJti, newRefreshExpiresAt, deviceInfo.ipAddress || session.ip_address, deviceInfo.userAgent || session.user_agent, sid]
+            [
+                newRefreshHash,
+                newJti,
+                newRefreshExpiresAt,
+                deviceInfo.ipAddress || session.ip_address,
+                deviceInfo.userAgent || session.user_agent,
+                sid
+            ]
         );
 
         await conn.commit();
@@ -241,7 +279,7 @@ async function refreshTokens(refreshToken, deviceInfo = {}) {
  */
 async function revokeSession(refreshToken, reason = 'USER_LOGOUT') {
     try {
-        const payload = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET || process.env.JWT_SECRET);
+        const payload = jwt.verify(refreshToken, JWT_REFRESH_SECRET);
         const { sid } = payload;
 
         const [result] = await pool.execute(

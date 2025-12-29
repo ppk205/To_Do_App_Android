@@ -34,22 +34,44 @@ if (REDIS_URL) {
 
 const redisClient = createClient(clientOptions);
 
+// ✅ Track Redis connection state
+let isRedisConnected = false;
+
 // Logging events
 redisClient.on("error", (err) => {
   console.error("Redis Client Error:", err);
+  isRedisConnected = false;
 });
 redisClient.on("connect", () => console.log("Redis connecting..."));
-redisClient.on("ready", () => console.log("✅ Redis connected and ready"));
+redisClient.on("ready", () => {
+  console.log("✅ Redis connected and ready");
+  isRedisConnected = true;
+});
 redisClient.on("reconnecting", () => console.log("Redis reconnecting..."));
+redisClient.on("end", () => {
+  console.log("Redis connection closed");
+  isRedisConnected = false;
+});
 
 // Connect immediately when module is required
 (async () => {
   try {
     await redisClient.connect();
+    isRedisConnected = true;
   } catch (err) {
-    console.error("❌ Redis connection error:", err);
+    console.error("❌ Redis connection failed:", err);
+    isRedisConnected = false;
+    // Optional: Exit if Redis is critical for your application
+    // process.exit(1);
   }
 })();
+
+// ✅ CRITICAL: Helper to ensure Redis is connected before operations
+function ensureRedisConnected() {
+  if (!isRedisConnected || !redisClient.isReady) {
+    throw new Error('Redis is not connected. Please check Redis configuration.');
+  }
+}
 
 // Ensure safe (re)connect for callers
 async function connectRedis() {
@@ -66,6 +88,8 @@ async function connectRedis() {
 module.exports = redisClient;
 module.exports.redisClient = redisClient; // allow destructuring
 module.exports.connectRedis = connectRedis;
+module.exports.ensureRedisConnected = ensureRedisConnected; // ✅ Export helper
+module.exports.isRedisConnected = () => isRedisConnected; // ✅ Export state checker
 
 // Helper: chờ ready
 module.exports.waitForReady = async function waitForReady(timeout = 5000) {

@@ -11,6 +11,13 @@ const jwt = require('jsonwebtoken');
  * - Attaches user to request context
  */
 
+// ✅ CRITICAL: Validate JWT secret at startup
+const JWT_SECRET = process.env.JWT_SECRET;
+
+if (!JWT_SECRET) {
+    throw new Error('🔴 CRITICAL: JWT_SECRET must be defined in environment variables');
+}
+
 /**
  * Middleware to authenticate JWT access token
  */
@@ -27,16 +34,7 @@ function authenticateToken(req, res, next) {
     }
 
     try {
-        const payload = jwt.verify(token, process.env.JWT_SECRET);
-
-        // Check expiration (jwt.verify already does this, but explicit check)
-        if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) {
-            return res.status(401).json({
-                success: false,
-                message: 'Access token expired',
-                code: 'TOKEN_EXPIRED'
-            });
-        }
+        const payload = jwt.verify(token, JWT_SECRET);
 
         // Attach user info to request
         req.user = {
