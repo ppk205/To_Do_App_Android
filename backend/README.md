@@ -65,4 +65,63 @@ Troubleshooting:
 - If `npm install` fails, check Node version and network.
 - If Redis connection fails, ensure Redis server running and `REDIS_URL`/host/port correct.
 
+## Redis Connection Scenarios
+
+### Scenario 1: Running Node backend in WSL, Redis in WSL (same machine)
+```bash
+# In WSL Ubuntu:
+sudo service redis-server start
+redis-cli ping  # Should return PONG
+
+# Set REDIS_URL to localhost
+export REDIS_URL=redis://127.0.0.1:6379
+npm run dev
+```
+
+### Scenario 2: Running Node backend on Windows, Redis in WSL
+```bash
+# In WSL Ubuntu - Check your WSL IP:
+ip addr show eth0 | grep "inet "
+# Example output: inet 172.18.191.249/20
+
+# Start Redis in WSL:
+sudo service redis-server start
+
+# On Windows PowerShell - Set REDIS_URL to WSL IP:
+$env:REDIS_URL="redis://172.18.191.249:6379"
+npm run dev
+```
+
+### Scenario 3: Redis in Docker (if port 6379 is free)
+```bash
+# Windows PowerShell or WSL:
+docker run -d --name redis-mopr -p 6379:6379 redis:alpine
+export REDIS_URL=redis://127.0.0.1:6379  # or $env:REDIS_URL on PowerShell
+npm run dev
+```
+
+### Scenario 4: Redis in Docker on different port (if 6379 is in use)
+```bash
+# Map to port 6380 instead:
+docker run -d --name redis-mopr -p 6380:6379 redis:alpine
+export REDIS_URL=redis://127.0.0.1:6380  # or $env:REDIS_URL on PowerShell
+npm run dev
+```
+
+## Verifying Redis Connection
+When the backend starts successfully, you should see:
+```
+Redis connecting...
+✅ Redis connected and ready
+🚀 Server is running on port 3001
+```
+
+If Redis fails to connect, you'll see:
+```
+❌ Redis connection error: [error details]
+Redis initialization failed (non-fatal): [error message]
+🚀 Server is running on port 3001
+```
+Note: The server will still start even if Redis fails (non-fatal), but OTP features won't work.
+
 

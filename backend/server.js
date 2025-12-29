@@ -3,7 +3,7 @@ const cors = require('cors');
 require('dotenv').config();
 
 const authRoutes = require('./routes/authRoutes');
-const redisClient = require('./config/redis'); // Import Redis client
+const { redisClient, connectRedis } = require('./config/redis'); // Import Redis client and connect function
 
 const app = express();
 const DEFAULT_PORT = parseInt(process.env.PORT, 10) || 3001;
@@ -39,7 +39,14 @@ app.use((err, req, res, next) => {
 });
 
 // Start server with robust EADDRINUSE handling and fallback
-function startServer(port = DEFAULT_PORT, maxRetries = 3) {
+async function startServer(port = DEFAULT_PORT, maxRetries = 3) {
+    // Try to connect to Redis (non-fatal if it fails)
+    try {
+        await connectRedis();
+    } catch (err) {
+        console.error('Redis initialization failed (non-fatal):', err.message);
+    }
+
     const server = app.listen(port, () => {
         console.log(`🚀 Server is running on port ${port}`);
         console.log(`📍 API URL: http://localhost:${port}`);
@@ -69,3 +76,26 @@ function startServer(port = DEFAULT_PORT, maxRetries = 3) {
 }
 
 startServer();
+
+// Graceful shutdown handling
+process.on('SIGTERM', async () => {
+    console.log('SIGTERM received, closing Redis connection...');
+    try {
+        await redisClient.quit();
+        console.log('Redis connection closed.');
+    } catch (err) {
+        console.error('Error closing Redis:', err);
+    }
+    process.exit(0);
+});
+
+process.on('SIGINT', async () => {
+    console.log('SIGINT received, closing Redis connection...');
+    try {
+        await redisClient.quit();
+        console.log('Redis connection closed.');
+    } catch (err) {
+        console.error('Error closing Redis:', err);
+    }
+    process.exit(0);
+});

@@ -29,6 +29,17 @@ if (REDIS_URL) {
   if (process.env.REDIS_PASSWORD) clientOptions.password = process.env.REDIS_PASSWORD;
 }
 
+// Add connection timeout and reconnect strategy
+clientOptions.socket = clientOptions.socket || {};
+clientOptions.socket.connectTimeout = 5000; // 5 second timeout
+clientOptions.socket.reconnectStrategy = (retries) => {
+  // Limit reconnection attempts on initial connection
+  if (retries > 3) {
+    return false; // Stop reconnecting
+  }
+  return Math.min(retries * 1000, 3000); // Exponential backoff, max 3 seconds
+};
+
 const redisClient = createClient(clientOptions);
 
 // Logging events
@@ -39,17 +50,19 @@ redisClient.on('connect', () => console.log('Redis connecting...'));
 redisClient.on('ready', () => console.log('✅ Redis connected and ready'));
 redisClient.on('reconnecting', () => console.log('Redis reconnecting...'));
 
-// Connect immediately when module is required
-(async () => {
-  try {
-    await redisClient.connect();
-  } catch (err) {
-    console.error('❌ Redis connection error:', err);
+// Helper: idempotent connect function
+async function connectRedis() {
+  if (redisClient.isReady || redisClient.isOpen) {
+    return redisClient;
   }
-})();
+  await redisClient.connect();
+  return redisClient;
+}
 
 // Exports
 module.exports = redisClient;
+module.exports.redisClient = redisClient;
+module.exports.connectRedis = connectRedis;
 
 // Helper: chờ ready
 module.exports.waitForReady = async function waitForReady(timeout = 5000) {
