@@ -6,9 +6,9 @@ import kotlinx.coroutines.flow.Flow
 
 class TaskRepository(private val dao: TaskDao) {
 
-    fun observeAll(): Flow<List<TaskEntity>> = dao.observeAll()
-
     fun observeAllByUser(userId: String): Flow<List<TaskEntity>> = dao.observeAllByUser(userId)
+
+    fun observeAllLocal(guestUserId: String): Flow<List<TaskEntity>> = dao.observeAllLocal(guestUserId)
 
     fun observeByDateRange(startOfDay: Long, endOfDay: Long): Flow<List<TaskEntity>> =
         dao.observeByDateRange(startOfDay, endOfDay)

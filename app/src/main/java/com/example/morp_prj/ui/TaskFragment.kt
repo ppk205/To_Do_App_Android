@@ -36,7 +36,7 @@ class TaskFragment : Fragment() {
         TaskRepository(AppDatabase.getInstance(requireContext()).taskDao())
     }
 
-    private val prefs by lazy { PreferenceManager(requireContext()) }
+    private val prefs: PreferenceManager by lazy { PreferenceManager(requireContext()) }
 
     override fun onCreateView(
         inflater: LayoutInflater,

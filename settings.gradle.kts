@@ -20,6 +20,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "MORP-PRJ"
+rootProject.name = "MOPR-PRJ"
 include(":app")
  

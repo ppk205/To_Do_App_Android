@@ -7,10 +7,11 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.viewModelScope
 import androidx.navigation.fragment.findNavController
 import com.example.morp_prj.R
 import com.example.morp_prj.data.repository.AuthRepository
+import com.example.morp_prj.data.repository.SessionTaskManager
+import com.example.morp_prj.data.repository.TaskSyncRepository
 import com.example.morp_prj.utils.PreferenceManager
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputEditText
@@ -23,12 +24,16 @@ class LoginFragment : Fragment(R.layout.fragment_login) {
 
     private lateinit var authRepository: AuthRepository
     private lateinit var preferenceManager: PreferenceManager
+    private lateinit var sessionTaskManager: SessionTaskManager
+    private lateinit var taskSyncRepository: TaskSyncRepository
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
         authRepository = AuthRepository(requireContext())
         preferenceManager = PreferenceManager(requireContext())
+        sessionTaskManager = SessionTaskManager(requireContext())
+        taskSyncRepository = TaskSyncRepository(requireContext())
 
         val inputEmailOrUsername = view.findViewById<TextInputEditText>(R.id.input_email_or_username)
         val inputPassword = view.findViewById<TextInputEditText>(R.id.input_password)
@@ -128,14 +133,29 @@ class LoginFragment : Fragment(R.layout.fragment_login) {
                                 email = user.email,
                                 token = response.token
                             )
+
+                            // Apply session task rules (show this user's tasks; later can trigger sync-down)
+                            try {
+                                sessionTaskManager.onLoginSuccess(user.id)
+                            } catch (t: Throwable) {
+                                Log.w("LoginFragment", "SessionTaskManager.onLoginSuccess failed", t)
+                            }
+
+                            // ✅ Auto refresh đúng 1 lần sau login để hiển thị task ngay
+                            try {
+                                withContext(Dispatchers.IO) {
+                                    taskSyncRepository.syncDown()
+                                }
+                            } catch (t: Throwable) {
+                                Log.w("LoginFragment", "Auto syncDown after login failed", t)
+                            }
                         } catch (e: Exception) {
                             Log.e("LoginFragment", "Failed to save login data", e)
                         }
 
                         try {
                             Toast.makeText(requireContext(), "Đăng nhập thành công!", Toast.LENGTH_SHORT).show()
-                        } catch (e: Exception) {
-                            // ignore toast failures
+                        } catch (_: Exception) {
                         }
 
                         // Ensure fragment still added before navigating
