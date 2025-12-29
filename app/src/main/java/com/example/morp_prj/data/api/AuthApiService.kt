@@ -35,4 +35,5 @@ interface AuthApiService {
 
     @POST("api/auth/sessions/revoke")
     suspend fun revokeSession(@Body request: RevokeSessionRequest): Response<AuthResponse>
+
 }

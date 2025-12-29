@@ -26,14 +26,15 @@ class MainActivity : AppCompatActivity() {
     private lateinit var bottomNav: BottomNavigationView
     private val sessionExpiredReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            // Navigate to login and clear backstack
+            // When session expires, navigate to onboarding and clear backstack
             try {
                 val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment
                 val navController = navHostFragment.navController
                 val navOptions = NavOptions.Builder()
                     .setPopUpTo(navController.graph.startDestinationId, true)
                     .build()
-                navController.navigate(R.id.login_fragment, null, navOptions)
+                // Navigate to onboarding when session expires (NOT login)
+                navController.navigate(R.id.onboarding_fragment, null, navOptions)
                 android.widget.Toast.makeText(this@MainActivity, "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.", android.widget.Toast.LENGTH_LONG).show()
             } catch (e: Exception) {
                 android.util.Log.e("MainActivity", "Error handling session expired broadcast", e)
@@ -62,38 +63,65 @@ class MainActivity : AppCompatActivity() {
         // Register session expired receiver. Use API-guarded overload to avoid NoSuchMethodError on older devices
         val filter = IntentFilter(MyApplication.ACTION_SESSION_EXPIRED)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(sessionExpiredReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+            registerReceiver(sessionExpiredReceiver, filter, RECEIVER_NOT_EXPORTED)
         } else {
-            // Older overload (no flags)
-            registerReceiver(sessionExpiredReceiver, filter)
+            // For older devices, use ContextCompat which handles the flag correctly
+            androidx.core.content.ContextCompat.registerReceiver(
+                this,
+                sessionExpiredReceiver,
+                filter,
+                androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED
+            )
         }
 
         // Navigation logic:
-        // 1. If user has NOT seen onboarding -> stay on onboarding (start destination)
-        // 2. If user has seen onboarding AND (logged in OR guest) -> go to home
-        // 3. If user has seen onboarding but NOT logged in/guest -> go to login
+        // 1. If user has NOT seen onboarding -> stay on onboarding (fresh install or after logout)
+        // 2. If user has seen onboarding AND is actually logged in (not guest) -> go to home
+        // 3. If user is guest -> clear guest mode and stay on onboarding (guest must see onboarding each time)
+        // 4. If user has seen onboarding but NOT logged in -> go to login
         try {
             val preferenceManager = PreferenceManager(this)
             val tokenStorage = SecureTokenStorage(this)
             val hasSeenOnboarding = preferenceManager.hasSeenOnboarding()
-            val isLoggedInOrGuest = preferenceManager.isLoggedIn() || tokenStorage.hasValidRefreshToken() || preferenceManager.isGuest()
+            val isActuallyLoggedIn = preferenceManager.isLoggedIn() || tokenStorage.hasValidRefreshToken()
+            val isGuest = preferenceManager.isGuest()
 
-            if (hasSeenOnboarding) {
-                if (isLoggedInOrGuest) {
-                    // Navigate to home and clear start destination from backstack so user can't navigate back to onboarding/login
+            android.util.Log.d("MainActivity", "========== NAVIGATION DEBUG ==========")
+            android.util.Log.d("MainActivity", "hasSeenOnboarding=$hasSeenOnboarding")
+            android.util.Log.d("MainActivity", "isLoggedIn=${preferenceManager.isLoggedIn()}")
+            android.util.Log.d("MainActivity", "hasValidRefreshToken=${tokenStorage.hasValidRefreshToken()}")
+            android.util.Log.d("MainActivity", "isGuest=$isGuest")
+            android.util.Log.d("MainActivity", "isActuallyLoggedIn=$isActuallyLoggedIn")
+            android.util.Log.d("MainActivity", "=======================================")
+
+            // If user was in guest mode, clear it so they have to go through onboarding again
+            if (isGuest) {
+                android.util.Log.d("MainActivity", "Clearing guest mode - guest must see onboarding on each app launch")
+                preferenceManager.clearLoginData()
+                // Stay on onboarding (start destination) - no navigation needed
+                android.util.Log.d("MainActivity", "Staying on ONBOARDING (guest mode cleared)")
+            } else when {
+                !hasSeenOnboarding -> {
+                    // Fresh install or after logout (data cleared) -> stay on onboarding
+                    android.util.Log.d("MainActivity", "Staying on ONBOARDING (fresh install or after logout)")
+                }
+                isActuallyLoggedIn -> {
+                    // User has seen onboarding and is actually logged in -> go to home
+                    android.util.Log.d("MainActivity", "Navigating to HOME")
                     val navOptions = NavOptions.Builder()
                         .setPopUpTo(navController.graph.startDestinationId, true)
                         .build()
                     navController.navigate(R.id.menu_home, null, navOptions)
-                } else {
+                }
+                else -> {
                     // User has seen onboarding but not logged in -> go to login
+                    android.util.Log.d("MainActivity", "Navigating to LOGIN (seen onboarding but not logged in)")
                     val navOptions = NavOptions.Builder()
                         .setPopUpTo(navController.graph.startDestinationId, true)
                         .build()
                     navController.navigate(R.id.login_fragment, null, navOptions)
                 }
             }
-            // If !hasSeenOnboarding, stay on onboarding (the start destination)
         } catch (e: Exception) {
             android.util.Log.e("MainActivity", "Error checking login state", e)
         }

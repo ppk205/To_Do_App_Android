@@ -2,9 +2,12 @@ package com.example.morp_prj.ui
 
 import android.app.Activity
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Bundle
 import android.provider.MediaStore
+import android.util.Base64
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -17,6 +20,7 @@ import com.example.morp_prj.R
 import com.example.morp_prj.databinding.FragmentProfileBinding
 import com.example.morp_prj.utils.PreferenceManager
 import com.example.morp_prj.data.model.User
+import java.io.ByteArrayOutputStream
 
 class ProfileFragment : Fragment() {
 
@@ -26,6 +30,7 @@ class ProfileFragment : Fragment() {
     // Biến cờ kiểm soát trạng thái
     private var isEditing = false
     private var currentUser: User? = null
+    private var selectedAvatarBase64: String? = null // Store selected avatar as Base64
 
     // Launcher chọn ảnh
     private val pickImageLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -35,10 +40,26 @@ class ProfileFragment : Fragment() {
                 // 1. Preview ảnh ngay lập tức
                 binding.ivAvatar.setImageURI(imageUri)
 
-                // 2. TODO: Gọi API Upload lên Server tại đây
-                // uploadImageToServer(imageUri)
+                // 2. Convert image to Base64 and store
+                try {
+                    val inputStream = requireContext().contentResolver.openInputStream(imageUri)
+                    val bitmap = BitmapFactory.decodeStream(inputStream)
+                    inputStream?.close()
 
-                Toast.makeText(context, "Đã chọn ảnh (Preview). Cần API để lưu.", Toast.LENGTH_SHORT).show()
+                    // Resize bitmap to reduce storage size (max 300x300)
+                    val resizedBitmap = resizeBitmap(bitmap, 300, 300)
+
+                    // Convert to Base64
+                    val outputStream = ByteArrayOutputStream()
+                    resizedBitmap.compress(Bitmap.CompressFormat.JPEG, 80, outputStream)
+                    val byteArray = outputStream.toByteArray()
+                    selectedAvatarBase64 = "data:image/jpeg;base64," + Base64.encodeToString(byteArray, Base64.NO_WRAP)
+
+                    Toast.makeText(context, "Ảnh đã được chọn. Nhấn Save để lưu.", Toast.LENGTH_SHORT).show()
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    Toast.makeText(context, "Lỗi khi xử lý ảnh: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }
@@ -78,13 +99,29 @@ class ProfileFragment : Fragment() {
             binding.etBio.setText(user.bio ?: "")
             // Các trường như avatarId, verified, createdAt, updatedAt nếu cần hiển thị thì thêm vào đây
 
-            // Load Avatar
+            // Load Avatar (hỗ trợ cả Base64 và URL)
             if (!user.avatarUrl.isNullOrEmpty()) {
-                Glide.with(this)
-                    .load(user.avatarUrl)
-                    .placeholder(R.drawable.ic_profile_unselected)
-                    .error(R.drawable.ic_profile_unselected)
-                    .into(binding.ivAvatar)
+                if (user.avatarUrl.startsWith("data:image")) {
+                    // Decode Base64 image
+                    try {
+                        val base64String = user.avatarUrl.substringAfter("base64,")
+                        val decodedBytes = Base64.decode(base64String, Base64.DEFAULT)
+                        val bitmap = BitmapFactory.decodeByteArray(decodedBytes, 0, decodedBytes.size)
+                        binding.ivAvatar.setImageBitmap(bitmap)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        binding.ivAvatar.setImageResource(R.drawable.ic_profile_unselected)
+                    }
+                } else {
+                    // Load from URL using Glide
+                    Glide.with(this)
+                        .load(user.avatarUrl)
+                        .placeholder(R.drawable.ic_profile_unselected)
+                        .error(R.drawable.ic_profile_unselected)
+                        .into(binding.ivAvatar)
+                }
+            } else {
+                binding.ivAvatar.setImageResource(R.drawable.ic_profile_unselected)
             }
         }
     }
@@ -174,11 +211,15 @@ class ProfileFragment : Fragment() {
             return
         }
 
+        // Xác định avatarUrl - nếu có ảnh mới được chọn thì dùng Base64, không thì giữ nguyên
+        val newAvatarUrl = selectedAvatarBase64 ?: currentUser?.avatarUrl
+
         // Cập nhật User Object immutably using copy()
         currentUser = currentUser?.copy(
             displayName = newDisplayName,
             phone = if (newPhone.isBlank()) null else newPhone,
-            bio = if (newBio.isBlank()) null else newBio
+            bio = if (newBio.isBlank()) null else newBio,
+            avatarUrl = newAvatarUrl
         )
 
         // Lưu Local
@@ -187,14 +228,38 @@ class ProfileFragment : Fragment() {
         // Cập nhật UI Header
         binding.tvUserName.text = newDisplayName
 
+        // Reset selected avatar
+        selectedAvatarBase64 = null
+
         // Tắt chế độ Edit
         updateUIState(false)
         Toast.makeText(context, "Lưu thành công (Local)", Toast.LENGTH_SHORT).show()
     }
 
+    // Helper function to resize bitmap
+    private fun resizeBitmap(bitmap: Bitmap, maxWidth: Int, maxHeight: Int): Bitmap {
+        val width = bitmap.width
+        val height = bitmap.height
+
+        val ratioBitmap = width.toFloat() / height.toFloat()
+        val ratioMax = maxWidth.toFloat() / maxHeight.toFloat()
+
+        var finalWidth = maxWidth
+        var finalHeight = maxHeight
+
+        if (ratioMax > ratioBitmap) {
+            finalWidth = (maxHeight.toFloat() * ratioBitmap).toInt()
+        } else {
+            finalHeight = (maxWidth.toFloat() / ratioBitmap).toInt()
+        }
+
+        return Bitmap.createScaledBitmap(bitmap, finalWidth, finalHeight, true)
+    }
+
     private fun performLogout() {
-        // Xóa dữ liệu preferences
+        // Xóa dữ liệu preferences (clearLoginData sẽ reset hasSeenOnboarding về false)
         PreferenceManager.clear(requireContext())
+
 
         // Xóa tokens trong SecureTokenStorage
         com.example.morp_prj.security.SecureTokenStorage(requireContext()).clearAll()
