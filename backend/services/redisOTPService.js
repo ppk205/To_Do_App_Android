@@ -1,4 +1,5 @@
 const redisClient = require('../config/redis');
+const { ensureRedisConnected } = require('../config/redis');
 const crypto = require('crypto');
 
 /**
@@ -72,7 +73,8 @@ class RedisOTPService {
      */
     static async createOTP(email, purpose = 'REGISTER', ttlMinutes = null, pendingData = null) {
         try {
-            ttlMinutes = ttlMinutes || this.config.OTP_TTL_MINUTES;
+            ensureRedisConnected();
+             ttlMinutes = ttlMinutes || this.config.OTP_TTL_MINUTES;
 
             // 1. Kiểm tra fail cooldown (sau khi nhập sai ≥5 lần)
             const failCooldownKey = this.getFailCooldownKey(email, purpose);
@@ -149,7 +151,8 @@ class RedisOTPService {
      */
     static async verifyOTP(email, otpCode, purpose = 'REGISTER') {
         try {
-            const otpKey = this.getOTPKey(email, purpose);
+            ensureRedisConnected();
+             const otpKey = this.getOTPKey(email, purpose);
             const attemptsKey = this.getAttemptsKey(email, purpose);
             const failCooldownKey = this.getFailCooldownKey(email, purpose);
 
@@ -266,7 +269,8 @@ class RedisOTPService {
      */
     static async invalidateOTP(email, purpose) {
         try {
-            const pipeline = redisClient.multi();
+            ensureRedisConnected();
+             const pipeline = redisClient.multi();
             pipeline.del(this.getOTPKey(email, purpose));
             pipeline.del(this.getAttemptsKey(email, purpose));
             pipeline.del(this.getResendCooldownKey(email, purpose));
@@ -286,7 +290,8 @@ class RedisOTPService {
      */
     static async resendOTP(email, purpose = 'REGISTER', ttlMinutes = null, pendingData = null) {
         try {
-            // 1. Kiểm tra fail cooldown
+            ensureRedisConnected();
+             // 1. Kiểm tra fail cooldown
             const failCooldownKey = this.getFailCooldownKey(email, purpose);
             const failCooldownTTL = await redisClient.ttl(failCooldownKey);
 
@@ -322,7 +327,8 @@ class RedisOTPService {
      */
     static async getOTPStatus(email, purpose) {
         try {
-            const otpKey = this.getOTPKey(email, purpose);
+            ensureRedisConnected();
+             const otpKey = this.getOTPKey(email, purpose);
             const attemptsKey = this.getAttemptsKey(email, purpose);
             const failCooldownKey = this.getFailCooldownKey(email, purpose);
             const resendCooldownKey = this.getResendCooldownKey(email, purpose);
@@ -361,7 +367,8 @@ class RedisOTPService {
      */
     static async getPendingRegistration(email) {
         try {
-            const pendingKey = this.getPendingRegKey(email);
+            ensureRedisConnected();
+             const pendingKey = this.getPendingRegKey(email);
             const raw = await redisClient.get(pendingKey);
             if (!raw) return null;
             try {
@@ -380,7 +387,8 @@ class RedisOTPService {
      */
     static async clearPendingRegistration(email) {
         try {
-            const pendingKey = this.getPendingRegKey(email);
+            ensureRedisConnected();
+             const pendingKey = this.getPendingRegKey(email);
             await redisClient.del(pendingKey);
         } catch (error) {
             console.error('❌ Error clearing pending registration:', error);
@@ -392,7 +400,8 @@ class RedisOTPService {
      */
     static async clearAll(email, purpose) {
         try {
-            const pipeline = redisClient.multi();
+            ensureRedisConnected();
+             const pipeline = redisClient.multi();
             pipeline.del(this.getOTPKey(email, purpose));
             pipeline.del(this.getAttemptsKey(email, purpose));
             pipeline.del(this.getFailCooldownKey(email, purpose));

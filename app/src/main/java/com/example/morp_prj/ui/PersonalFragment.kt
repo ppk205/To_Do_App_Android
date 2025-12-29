@@ -33,9 +33,6 @@ import kotlinx.coroutines.launch
 import java.util.Calendar
 
 class PersonalFragment : Fragment() {
-    companion object {
-        private const val GUEST_USER_ID = PreferenceManager.GUEST_USER_ID
-    }
 
     private enum class StatusTab { ALL, TODO, IN_PROGRESS, DONE }
     private enum class DateFilter { ANY, TODAY, TOMORROW, THIS_WEEK, NO_DEADLINE }
@@ -51,10 +48,7 @@ class PersonalFragment : Fragment() {
     }
     private val taskSyncRepository by lazy { TaskSyncRepository(requireContext()) }
     private val prefs by lazy { PreferenceManager(requireContext()) }
-
-    // Current user ID for filtering tasks
-    private val currentUserId: String
-        get() = if (prefs.isGuest()) GUEST_USER_ID else prefs.getUserId() ?: GUEST_USER_ID
+    private val mutationRepository by lazy { com.example.morp_prj.data.repository.TaskMutationRepository(requireContext()) }
 
     private var recyclerView: RecyclerView? = null
     private var adapter: ToDoAdapter? = null
@@ -288,10 +282,14 @@ class PersonalFragment : Fragment() {
     }
 
     private fun observeTasks() {
-        val userId = currentUserId
+        // Contract: guest tasks live under PreferenceManager.GUEST_USER_ID
+        // personal screen should show tasks for the current identity only.
+        val currentUserId = prefs.getCurrentUserIdOrGuest()
 
+        val allEntitiesFlow: Flow<List<com.example.morp_prj.data.db.TaskEntity>> =
+            repository.observeAllByUser(currentUserId)
 
-        val allItemsFlow: Flow<List<ToDoItem>> = repository.observeAllByUser(userId)
+        val allItemsFlow: Flow<List<ToDoItem>> = allEntitiesFlow
             .map { list -> list.map { it.toUiItem() } }
             .distinctUntilChanged()
 
@@ -435,9 +433,14 @@ class PersonalFragment : Fragment() {
             .setMessage("Delete ${ids.size} task(s)?")
             .setPositiveButton("Delete") { _, _ ->
                 viewLifecycleOwner.lifecycleScope.launch {
-                    repository.deleteByIds(ids)
+                    mutationRepository.deleteTasks(ids)
                     exitSelectionMode()
                     Snackbar.make(requireView(), "Deleted", Snackbar.LENGTH_SHORT).show()
+
+                    // Continuous sync while logged in
+                    if (prefs.isLoggedIn() && !prefs.isGuest()) {
+                        taskSyncRepository.syncUp()
+                    }
                 }
             }
             .setNegativeButton("Cancel", null)
@@ -445,6 +448,9 @@ class PersonalFragment : Fragment() {
     }
 
     private fun handleMenuItem(item: MenuItem): Boolean {
+        // Workaround for occasional stale R generation in IDE: resolve refresh id dynamically.
+        val refreshId = resources.getIdentifier("personal_refresh", "id", requireContext().packageName)
+
         return when (item.itemId) {
             R.id.personal_sync -> {
                 if (!prefs.isLoggedIn() || prefs.isGuest()) {
@@ -460,6 +466,25 @@ class PersonalFragment : Fragment() {
                         }
                         .onFailure { e ->
                             Snackbar.make(requireView(), "Sync failed: ${e.message}", Snackbar.LENGTH_LONG).show()
+                        }
+                }
+                true
+            }
+
+            refreshId -> {
+                if (!prefs.isLoggedIn() || prefs.isGuest()) {
+                    Toast.makeText(requireContext(), "Please login to refresh", Toast.LENGTH_SHORT).show()
+                    return true
+                }
+
+                viewLifecycleOwner.lifecycleScope.launch {
+                    Snackbar.make(requireView(), "Refreshing...", Snackbar.LENGTH_SHORT).show()
+                    taskSyncRepository.syncDown()
+                        .onSuccess { downCount ->
+                            Snackbar.make(requireView(), "Refreshed $downCount task(s)", Snackbar.LENGTH_SHORT).show()
+                        }
+                        .onFailure { e ->
+                            Snackbar.make(requireView(), "Refresh failed: ${e.message}", Snackbar.LENGTH_LONG).show()
                         }
                 }
                 true

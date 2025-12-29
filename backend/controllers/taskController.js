@@ -28,9 +28,12 @@ async function syncTasks(req, res) {
         }
 
         const tasks = Array.isArray(req.body?.tasks) ? req.body.tasks : [];
+        const deletedServerIds = Array.isArray(req.body?.deletedServerIds)
+            ? req.body.deletedServerIds.map(String).map(s => s.trim()).filter(Boolean)
+            : [];
 
-        // Nothing to sync
-        if (tasks.length === 0) {
+        // If nothing to sync (no upserts and no deletions)
+        if (tasks.length === 0 && deletedServerIds.length === 0) {
             return res.status(200).json({
                 success: true,
                 message: 'No tasks to sync',
@@ -59,6 +62,20 @@ async function syncTasks(req, res) {
                     UNIQUE KEY uniq_user_title_created (userId, title, createdAt)
                 );
             `);
+
+            // Apply deletions first
+            if (deletedServerIds.length > 0) {
+                // chunk to avoid too large IN lists
+                const chunkSize = 200;
+                for (let i = 0; i < deletedServerIds.length; i += chunkSize) {
+                    const chunk = deletedServerIds.slice(i, i + chunkSize);
+                    const placeholders = chunk.map(() => '?').join(',');
+                    await conn.query(
+                        `DELETE FROM Task WHERE userId = ? AND id IN (${placeholders})`,
+                        [userId, ...chunk]
+                    );
+                }
+            }
 
             const idMap = [];
 
@@ -163,7 +180,58 @@ async function syncTasks(req, res) {
     }
 }
 
-module.exports = {
-    syncTasks
-};
+/**
+ * GET /api/tasks
+ * Returns all tasks for current user.
+ */
+async function listTasks(req, res) {
+    try {
+        const userId = req.user?.id;
+        if (!userId) {
+            return res.status(401).json({ success: false, message: 'Unauthorized' });
+        }
 
+        const conn = await pool.getConnection();
+        try {
+            // Ensure table exists (safe for dev)
+            await conn.query(`
+                CREATE TABLE IF NOT EXISTS Task (
+                    id CHAR(36) PRIMARY KEY,
+                    userId VARCHAR(100) NOT NULL,
+                    title VARCHAR(255) NOT NULL,
+                    description TEXT,
+                    deadlineAt BIGINT NULL,
+                    priority VARCHAR(20) NOT NULL,
+                    status VARCHAR(30) NOT NULL,
+                    tagsCsv TEXT,
+                    createdAt BIGINT NOT NULL,
+                    updatedAt BIGINT NOT NULL,
+                    UNIQUE KEY uniq_user_title_created (userId, title, createdAt)
+                );
+            `);
+
+            const [rows] = await conn.query(
+                `SELECT id, userId, title, description, deadlineAt, priority, status, tagsCsv, createdAt, updatedAt
+                 FROM Task
+                 WHERE userId = ?
+                 ORDER BY updatedAt DESC`,
+                [userId]
+            );
+
+            return res.status(200).json({
+                success: true,
+                tasks: rows || [],
+            });
+        } finally {
+            conn.release();
+        }
+    } catch (error) {
+        console.error('listTasks error:', error);
+        return res.status(500).json({ success: false, message: 'Server error', error: error.message });
+    }
+}
+
+module.exports = {
+    syncTasks,
+    listTasks,
+};

@@ -1,9 +1,22 @@
 const { body, validationResult } = require('express-validator');
+const sanitizeHtml = require('sanitize-html');
+
+/**
+ * ✅ Sanitize user input to prevent XSS attacks
+ */
+const sanitizeInput = (value) => {
+    if (typeof value !== 'string') return value;
+    return sanitizeHtml(value, {
+        allowedTags: [], // Strip all HTML tags
+        allowedAttributes: {}
+    });
+};
 
 // Validation middleware cho register
 const registerValidation = [
     body('username')
         .trim()
+        .customSanitizer(sanitizeInput)
         .isLength({ min: 3, max: 100 })
         .withMessage('Username phải có từ 3-100 ký tự')
         .matches(/^[a-zA-Z0-9_]+$/)
@@ -15,6 +28,7 @@ const registerValidation = [
 
     body('displayName')
         .trim()
+        .customSanitizer(sanitizeInput)
         .notEmpty()
         .withMessage('Display name không được để trống')
         .isLength({ max: 150 })
@@ -29,6 +43,7 @@ const registerValidation = [
     body('phone')
         .optional({ nullable: true, checkFalsy: true })
         .trim()
+        .customSanitizer(sanitizeInput)
         .matches(/^[0-9+\-\s()]+$/)
         .withMessage('Số điện thoại không hợp lệ')
 ];
@@ -37,6 +52,7 @@ const registerValidation = [
 const loginValidation = [
     body('usernameOrEmail')
         .trim()
+        .customSanitizer(sanitizeInput)
         .notEmpty()
         .withMessage('Username hoặc email không được để trống'),
 
@@ -104,12 +120,14 @@ const registerInitValidation = [
     body('displayName')
         .optional({ nullable: true })
         .trim()
+        .customSanitizer(sanitizeInput)
         .isLength({ max: 150 })
         .withMessage('Display name không được vượt quá 150 ký tự'),
 
     body('phone')
         .optional({ nullable: true })
         .trim()
+        .customSanitizer(sanitizeInput)
         .matches(/^[0-9+\-\s()]+$/)
         .withMessage('Số điện thoại không hợp lệ')
 ];
