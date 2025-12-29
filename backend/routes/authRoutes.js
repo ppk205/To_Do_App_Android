@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/authController');
 const { authenticateToken } = require('../middleware/authMiddleware');
+const upload = require('../middleware/upload');
 const { loginRateLimiter, createRateLimiter } = require('../middleware/rateLimiter');
 const {
     registerValidation,

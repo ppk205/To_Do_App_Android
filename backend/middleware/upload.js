@@ -24,13 +24,24 @@ const storage = multer.diskStorage({
 
 // File filter - only images
 const fileFilter = (req, file, cb) => {
+    // Debug: Log incoming file info
+    console.log('📁 File upload attempt:', {
+        fieldname: file.fieldname,
+        originalname: file.originalname,
+        mimetype: file.mimetype,
+        encoding: file.encoding
+    });
+
     const allowedTypes = /jpeg|jpg|png|gif|webp/;
     const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
     const mimetype = allowedTypes.test(file.mimetype);
 
-    if (mimetype && extname) {
+    // Accept if EITHER extension OR mimetype matches (more lenient)
+    if (mimetype || extname) {
+        console.log('✅ File accepted:', file.originalname);
         return cb(null, true);
     } else {
+        console.log('❌ File rejected:', file.originalname, 'MIME:', file.mimetype);
         cb(new Error('Chỉ chấp nhận file ảnh (jpeg, jpg, png, gif, webp)'));
     }
 };
