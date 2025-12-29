@@ -23,7 +23,7 @@ import com.google.gson.GsonBuilder
 object RetrofitClient {
 
     // Base URL - Use your actual domain in production
-    private const val BASE_URL = "http://192.168.1.3:3001/"
+    private const val BASE_URL = "http://192.168.2.247:3001/"
 
     // ✅ Production domain for certificate pinning
     // Replace with your actual domain when deploying to production
@@ -85,6 +85,10 @@ object RetrofitClient {
     var taskApiService: TaskApiService = retrofit.create(TaskApiService::class.java)
         private set
 
+    @Volatile
+    var teamApiService: TeamApiService = retrofit.create(TeamApiService::class.java)
+        private set
+
     private fun buildRetrofit(builder: OkHttpClient.Builder?): Retrofit {
         val clientBuilder = builder ?: OkHttpClient.Builder()
             .addInterceptor(loggingInterceptor)
@@ -140,6 +144,7 @@ object RetrofitClient {
             retrofit = buildRetrofit(builder)
             authApiService = retrofit.create(AuthApiService::class.java)
             taskApiService = retrofit.create(TaskApiService::class.java)
+            teamApiService = retrofit.create(TeamApiService::class.java)
 
         } catch (e: Exception) {
             // Fail gracefully - keep existing retrofit without auth interceptor

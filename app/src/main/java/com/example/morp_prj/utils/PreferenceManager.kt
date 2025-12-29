@@ -18,6 +18,7 @@ class PreferenceManager(context: Context) {
         private const val KEY_TOKEN = "auth_token"
         private const val KEY_IS_LOGGED_IN = "is_logged_in"
         private const val KEY_IS_GUEST = "is_guest"
+        private const val KEY_HAS_SEEN_ONBOARDING = "has_seen_onboarding"
 
         const val GUEST_USER_ID = "guest_local"
 
@@ -113,6 +114,14 @@ class PreferenceManager(context: Context) {
         return sharedPreferences.getBoolean(KEY_IS_GUEST, false)
     }
 
+    fun hasSeenOnboarding(): Boolean {
+        return sharedPreferences.getBoolean(KEY_HAS_SEEN_ONBOARDING, false)
+    }
+
+    fun setHasSeenOnboarding(seen: Boolean = true) {
+        sharedPreferences.edit().putBoolean(KEY_HAS_SEEN_ONBOARDING, seen).apply()
+    }
+
     fun getUserId(): String? {
         return sharedPreferences.getString(KEY_USER_ID, null)
     }
@@ -134,6 +143,11 @@ class PreferenceManager(context: Context) {
     }
 
     fun clearLoginData() {
+        // Giữ lại cờ hasSeenOnboarding khi logout
+        val hasSeenOnboarding = sharedPreferences.getBoolean(KEY_HAS_SEEN_ONBOARDING, false)
         sharedPreferences.edit().clear().apply()
+        if (hasSeenOnboarding) {
+            sharedPreferences.edit().putBoolean(KEY_HAS_SEEN_ONBOARDING, true).apply()
+        }
     }
 }

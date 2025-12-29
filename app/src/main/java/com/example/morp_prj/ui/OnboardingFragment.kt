@@ -63,9 +63,12 @@ class OnboardingFragment : Fragment(R.layout.fragment_onboarding) {
 
         val btnGuestMode = view.findViewById<TextView>(R.id.btn_guest_mode)
         val isGuest = PreferenceManager.isGuest(requireContext())
+        val preferenceManager = PreferenceManager(requireContext())
 
         // Nút "Get Started" chuyển đến Login
         view.findViewById<MaterialButton>(R.id.btn_get_started)?.setOnClickListener {
+            // Đánh dấu đã xem onboarding
+            preferenceManager.setHasSeenOnboarding(true)
             findNavController().navigate(R.id.action_onboarding_to_login)
         }
 
@@ -77,8 +80,9 @@ class OnboardingFragment : Fragment(R.layout.fragment_onboarding) {
             }
         } else {
             btnGuestMode?.setOnClickListener {
-                // Lưu guest mode và chuyển đến Home
-                PreferenceManager(requireContext()).saveGuestMode()
+                // Đánh dấu đã xem onboarding và lưu guest mode
+                preferenceManager.setHasSeenOnboarding(true)
+                preferenceManager.saveGuestMode()
                 findNavController().navigate(R.id.action_onboarding_to_home)
             }
         }

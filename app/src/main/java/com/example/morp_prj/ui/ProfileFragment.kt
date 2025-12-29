@@ -193,11 +193,17 @@ class ProfileFragment : Fragment() {
     }
 
     private fun performLogout() {
+        // Xóa dữ liệu preferences
         PreferenceManager.clear(requireContext())
-        val intent = Intent(requireActivity(), com.example.morp_prj.ui.MainActivity::class.java)
-        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-        startActivity(intent)
-        activity?.finish()
+
+        // Xóa tokens trong SecureTokenStorage
+        com.example.morp_prj.security.SecureTokenStorage(requireContext()).clearAll()
+
+        // Navigate đến màn hình login và xóa toàn bộ backstack
+        val navOptions = androidx.navigation.NavOptions.Builder()
+            .setPopUpTo(R.id.main_nav, true)
+            .build()
+        findNavController().navigate(R.id.login_fragment, null, navOptions)
     }
 
     override fun onDestroyView() {

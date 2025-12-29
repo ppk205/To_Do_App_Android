@@ -157,4 +157,20 @@
         <item quantity="one">%d Task</item>
         <item quantity="other">%d Tasks</item>
     </plurals>
+
+    <!-- Dashboard Detail Strings -->
+    <string name="dashboard_title">Dashboard</string>
+    <string name="task_overview">Task Overview</string>
+    <string name="total_tasks">Total Tasks</string>
+    <string name="todo_tasks">To Do</string>
+    <string name="in_progress_tasks">In Progress</string>
+    <string name="completed_tasks">Completed</string>
+    <string name="completion_rate">Completion Rate</string>
+    <string name="overall_progress">Overall Progress</string>
+    <string name="today_summary">Today\'s Summary</string>
+    <string name="today_tasks">Today\'s Tasks</string>
+    <string name="completed_today">Completed</string>
+    <string name="pending_today">Pending</string>
+    <string name="back">Back</string>
+    <string name="view_dashboard">View Dashboard</string>
 </resources>

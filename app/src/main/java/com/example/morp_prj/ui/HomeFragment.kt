@@ -12,6 +12,7 @@ import android.widget.Toast
 import androidx.core.widget.addTextChangedListener
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.morp_prj.R
@@ -221,12 +222,16 @@ class HomeFragment : Fragment() {
     private fun setupListeners(root: View) {
         val ivNotification = root.findViewById<ImageView>(R.id.ivNotification)
         val tvSeeAll = root.findViewById<TextView>(R.id.tvSeeAll)
+        val tvViewDashboard = root.findViewById<TextView>(R.id.tvViewDashboard)
 
         ivNotification.setOnClickListener {
             Toast.makeText(context, "Notifications clicked", Toast.LENGTH_SHORT).show()
         }
         tvSeeAll.setOnClickListener {
             Toast.makeText(context, "See All clicked", Toast.LENGTH_SHORT).show()
+        }
+        tvViewDashboard.setOnClickListener {
+            findNavController().navigate(R.id.action_home_to_dashboardDetail)
         }
     }
 }

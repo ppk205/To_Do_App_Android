@@ -114,6 +114,21 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/searchLayout" />
 
+        <!-- View Dashboard Button -->
+        <TextView
+            android:id="@+id/tvViewDashboard"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="24dp"
+            android:text="@string/view_dashboard"
+            android:textColor="#246BFD"
+            android:textSize="14sp"
+            android:drawableEnd="@drawable/ic_chevron_right"
+            android:drawablePadding="4dp"
+            app:drawableTint="#246BFD"
+            app:layout_constraintBaseline_toBaselineOf="@id/tvOverviewTitle"
+            app:layout_constraintEnd_toEndOf="parent" />
+
         <!-- Status Cards Container (Horizontal Scroll) -->
         <HorizontalScrollView
             android:id="@+id/hsvStatus"

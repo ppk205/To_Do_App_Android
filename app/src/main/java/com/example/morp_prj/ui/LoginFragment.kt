@@ -52,7 +52,7 @@ class LoginFragment : Fragment(R.layout.fragment_login) {
         }
 
         view.findViewById<View?>(R.id.btn_back)?.setOnClickListener {
-            if (isAdded) findNavController().popBackStack()
+            if (isAdded) findNavController().navigate(R.id.action_login_to_onboarding)
         }
     }
 
