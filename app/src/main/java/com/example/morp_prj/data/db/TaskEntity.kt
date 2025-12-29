@@ -23,6 +23,12 @@ data class TaskEntity(
     /** User ID who owns this task. Required for multi-user support. */
     val userId: String = "",
 
+    /**
+     * True if this row was created from server sync-down.
+     * Used to delete only server tasks on logout while keeping local tasks.
+     */
+    val isFromServer: Boolean = false,
+
     /** Sync state for offline-first. */
     val syncState: SyncState = SyncState.PENDING,
 

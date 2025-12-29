@@ -4,7 +4,10 @@ import com.google.gson.annotations.SerializedName
 
 data class TaskSyncRequest(
     @SerializedName("tasks")
-    val tasks: List<TaskSyncItem>
+    val tasks: List<TaskSyncItem>,
+
+    @SerializedName("deletedServerIds")
+    val deletedServerIds: List<String> = emptyList(),
 )
 
 data class TaskSyncItem(
