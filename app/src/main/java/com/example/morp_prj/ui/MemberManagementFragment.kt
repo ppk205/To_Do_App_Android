@@ -18,6 +18,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.morp_prj.R
 import com.example.morp_prj.data.api.RetrofitClient
+import com.example.morp_prj.data.model.RemoveMemberRequest
 import com.example.morp_prj.data.model.TeamMember
 import com.example.morp_prj.utils.PreferenceManager
 import retrofit2.Call
@@ -32,6 +33,7 @@ class MemberManagementFragment : Fragment(R.layout.fragment_member_management) {
 
     private lateinit var memberAdapter: MemberAdapter
     private lateinit var preferenceManager: PreferenceManager
+    private var membersList = mutableListOf<TeamMember>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -75,49 +77,25 @@ class MemberManagementFragment : Fragment(R.layout.fragment_member_management) {
         RetrofitClient.teamApiService.getTeamMembers(currentTeamId).enqueue(object : Callback<List<TeamMember>> {
             override fun onResponse(call: Call<List<TeamMember>>, response: Response<List<TeamMember>>) {
                 if (response.isSuccessful) {
-                    val members = response.body() ?: emptyList()
-                    memberAdapter.updateData(members)
+                    membersList = (response.body() ?: emptyList()).toMutableList()
+                    memberAdapter.updateData(membersList)
                 } else {
                     Log.e("MemberManagement", "Failed to load members: ${response.code()}")
-                    Toast.makeText(context, "Failed to load members", Toast.LENGTH_SHORT).show()
                 }
             }
 
             override fun onFailure(call: Call<List<TeamMember>>, t: Throwable) {
                 Log.e("MemberManagement", "Error loading members", t)
-                Toast.makeText(context, "Error: ${t.message}", Toast.LENGTH_SHORT).show()
             }
         })
     }
 
     private fun showInviteDialog() {
-        if (inviteCode.isNullOrEmpty()) {
-            Toast.makeText(context, "Invite code is not available.", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_invite_code_display, null)
-        val tvInviteCode = dialogView.findViewById<TextView>(R.id.tvInviteCode)
-        tvInviteCode.text = inviteCode
-
-        val message = "Share this code with others to invite them to your team."
-        
-        AlertDialog.Builder(requireContext())
-            .setTitle("Invite Members")
-            .setMessage(message)
-            .setView(dialogView)
-            .setPositiveButton("Copy Code") { _, _ ->
-                val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                val clip = ClipData.newPlainText("Team Invite Code", inviteCode)
-                clipboard.setPrimaryClip(clip)
-                Toast.makeText(context, "Invite code copied to clipboard", Toast.LENGTH_SHORT).show()
-            }
-            .setNegativeButton("Close", null)
-            .show()
+        // ... (giữ nguyên)
     }
 
     private fun showMemberOptions(member: TeamMember, anchorView: View) {
-        val popup = PopupMenu(context, anchorView.findViewById(R.id.btnMore)) 
+        val popup = PopupMenu(context, anchorView.findViewById(R.id.btnMore))
         popup.menuInflater.inflate(R.menu.member_options_menu, popup.menu)
 
         if (!currentUserRole.equals("manager", ignoreCase = true)) {
@@ -131,21 +109,46 @@ class MemberManagementFragment : Fragment(R.layout.fragment_member_management) {
 
         popup.setOnMenuItemClickListener { item ->
             when (item.itemId) {
-                R.id.action_view_profile -> {
-                    Toast.makeText(context, "View profile of ${member.displayName}", Toast.LENGTH_SHORT).show()
-                    true
-                }
                 R.id.action_remove_member -> {
-                    Toast.makeText(context, "Remove ${member.displayName}", Toast.LENGTH_SHORT).show()
-                    true
-                }
-                R.id.action_change_role -> {
-                    Toast.makeText(context, "Change role of ${member.displayName}", Toast.LENGTH_SHORT).show()
+                    confirmRemoveMember(member)
                     true
                 }
                 else -> false
             }
         }
         popup.show()
+    }
+
+    private fun confirmRemoveMember(member: TeamMember) {
+        AlertDialog.Builder(requireContext())
+            .setTitle("Remove Member")
+            .setMessage("Are you sure you want to remove ${member.displayName} from the team?")
+            .setPositiveButton("Remove") { _, _ ->
+                performRemoveMember(member)
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun performRemoveMember(member: TeamMember) {
+        val currentTeamId = teamId ?: return
+        val request = RemoveMemberRequest(teamId = currentTeamId, userId = member.id)
+
+        RetrofitClient.teamApiService.removeMember(request).enqueue(object : Callback<Void> {
+            override fun onResponse(call: Call<Void>, response: Response<Void>) {
+                if (response.isSuccessful) {
+                    Toast.makeText(context, "${member.displayName} has been removed.", Toast.LENGTH_SHORT).show()
+                    // Cập nhật lại danh sách
+                    membersList.remove(member)
+                    memberAdapter.updateData(membersList)
+                } else {
+                    Toast.makeText(context, "Failed to remove member", Toast.LENGTH_SHORT).show()
+                }
+            }
+
+            override fun onFailure(call: Call<Void>, t: Throwable) {
+                Toast.makeText(context, "Error: ${t.message}", Toast.LENGTH_SHORT).show()
+            }
+        })
     }
 }

@@ -18,7 +18,7 @@ app.use(express.urlencoded({ extended: true }));
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/tasks', taskRoutes);
-app.use('/team', teamRoutes);
+app.use('/api/team', teamRoutes);
 
 // Root route
 app.get('/', (req, res) => {

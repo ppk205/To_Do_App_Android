@@ -14,18 +14,6 @@
             android:name="teamId"
             app:argType="string"
             android:defaultValue="" />
-        <argument
-            android:name="teamName"
-            app:argType="string"
-            android:defaultValue="" />
-        <argument
-            android:name="role"
-            app:argType="string"
-            android:defaultValue="member" />
-        <argument
-            android:name="inviteCode"
-            app:argType="string"
-            android:defaultValue="" />
     </fragment>
 
     <fragment
@@ -38,15 +26,18 @@
             app:argType="string"
             android:defaultValue="" />
         <argument
-            android:name="teamName"
+            android:name="inviteCode"
             app:argType="string"
             android:defaultValue="" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/joinRequestFragment"
+        android:name="com.example.morp_prj.ui.JoinRequestFragment"
+        android:label="Join Requests"
+        tools:layout="@layout/fragment_join_requests">
         <argument
-            android:name="role"
-            app:argType="string"
-            android:defaultValue="member" />
-        <argument
-            android:name="inviteCode"
+            android:name="teamId"
             app:argType="string"
             android:defaultValue="" />
     </fragment>

@@ -44,7 +44,6 @@ class TeamDetailFragment : Fragment(R.layout.fragment_team_detail), NavigationVi
         drawerLayout = view.findViewById(R.id.drawer_layout)
         navView = view.findViewById(R.id.nav_view)
 
-        // Setup Nested NavHost
         val navHostFragment = childFragmentManager.findFragmentById(R.id.team_nav_host_fragment) as NavHostFragment
         teamNavController = navHostFragment.navController
 
@@ -70,11 +69,8 @@ class TeamDetailFragment : Fragment(R.layout.fragment_team_detail), NavigationVi
     private fun setupToolbarForDestination(destinationId: Int) {
         val currentFragmentView = childFragmentManager.fragments.firstOrNull()?.view ?: return
 
-        // SỬA LỖI: Xử lý nút Back cho nested navigation
         currentFragmentView.findViewById<ImageButton>(R.id.btnBack)?.setOnClickListener {
-            // Ưu tiên pop back stack của NavController con trước
             if (!teamNavController.popBackStack()) {
-                // Nếu không pop được nữa, mới pop NavController cha (thoát khỏi TeamDetailFragment)
                 findNavController().popBackStack()
             }
         }
@@ -90,11 +86,13 @@ class TeamDetailFragment : Fragment(R.layout.fragment_team_detail), NavigationVi
         val toolbarTitle = currentFragmentView.findViewById<TextView>(R.id.toolbar_title)
         toolbarTitle?.text = when(destinationId) {
             R.id.memberManagementFragment -> "Member Management"
+            R.id.joinRequestFragment -> "Join Requests"
             else -> "Team Dashboard"
         }
     }
 
     override fun onNavigationItemSelected(item: MenuItem): Boolean {
+        // SỬA LỖI: Thêm `role` vào bundle khi điều hướng
         val args = bundleOf(
             "teamId" to teamId,
             "teamName" to teamName,
@@ -104,6 +102,7 @@ class TeamDetailFragment : Fragment(R.layout.fragment_team_detail), NavigationVi
 
         when (item.itemId) {
             R.id.nav_member_management -> teamNavController.navigate(R.id.memberManagementFragment, args)
+            R.id.nav_join_requests -> teamNavController.navigate(R.id.joinRequestFragment, args)
             R.id.nav_manager_dashboard -> teamNavController.navigate(R.id.teamDashboardFragment, args)
             else -> Toast.makeText(context, "Feature coming soon!", Toast.LENGTH_SHORT).show()
         }

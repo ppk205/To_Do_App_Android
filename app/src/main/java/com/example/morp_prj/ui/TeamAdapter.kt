@@ -3,6 +3,7 @@ package com.example.morp_prj.ui
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
@@ -12,7 +13,7 @@ import com.example.morp_prj.data.model.Team
 import java.util.Locale
 
 class TeamAdapter(
-    private var teamList: List<Team>,
+    var members: List<Team>,
     private val layoutResId: Int,
     private val onItemClick: ((Team) -> Unit)? = null,
     private val onItemLongClick: ((Team) -> Unit)? = null
@@ -23,6 +24,7 @@ class TeamAdapter(
         val imgTeamLogo: ImageView = itemView.findViewById(R.id.imgTeamLogo)
         val tvRole: TextView? = itemView.findViewById(R.id.tvRole)
         val tvMemberCount: TextView? = itemView.findViewById(R.id.tvMemberCount)
+        val tvPendingStatus: TextView? = itemView.findViewById(R.id.tvPendingStatus)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): TeamViewHolder {
@@ -31,7 +33,7 @@ class TeamAdapter(
     }
 
     override fun onBindViewHolder(holder: TeamViewHolder, position: Int) {
-        val team = teamList[position]
+        val team = members[position]
         
         holder.tvTeamName.text = team.name
         
@@ -41,28 +43,41 @@ class TeamAdapter(
             .error(android.R.drawable.btn_star)
             .into(holder.imgTeamLogo)
 
-        val count = team.memberCount
-        holder.tvMemberCount?.text = "$count member${if (count > 1) "s" else ""}"
-        
-        val roleText = team.role?.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() } ?: "Member"
-        holder.tvRole?.text = roleText
+        // Xử lý hiển thị dựa trên status
+        if (team.status == "pending") {
+            holder.tvRole?.visibility = View.GONE
+            holder.tvMemberCount?.visibility = View.GONE
+            holder.tvPendingStatus?.visibility = View.VISIBLE
+        } else {
+            holder.tvRole?.visibility = View.VISIBLE
+            holder.tvMemberCount?.visibility = View.VISIBLE
+            holder.tvPendingStatus?.visibility = View.GONE
+
+            val count = team.memberCount
+            holder.tvMemberCount?.text = "$count member${if (count > 1) "s" else ""}"
+            
+            val roleText = team.role?.replaceFirstChar { it.titlecase(Locale.getDefault()) } ?: "Member"
+            holder.tvRole?.text = roleText
+        }
 
         holder.itemView.setOnClickListener {
-            onItemClick?.invoke(team)
+            if (team.status != "pending") { // Chỉ cho phép vào team khi đã active
+                onItemClick?.invoke(team)
+            }
         }
 
         holder.itemView.setOnLongClickListener {
-            onItemLongClick?.invoke(team)
+            if (team.status != "pending") { // Chỉ cho phép pin team đã active
+                onItemLongClick?.invoke(team)
+            }
             true
         }
     }
 
-    override fun getItemCount(): Int {
-        return teamList.size
-    }
-    
+    override fun getItemCount(): Int = members.size
+
     fun updateData(newTeams: List<Team>) {
-        teamList = newTeams
+        members = newTeams
         notifyDataSetChanged()
     }
 }
