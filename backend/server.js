@@ -3,7 +3,7 @@ const cors = require('cors');
 require('dotenv').config();
 
 const authRoutes = require('./routes/authRoutes');
-const { redisClient, connectRedis } = require('./config/redis'); // Import Redis client and connect function
+const { redisClient, connectRedis, quit: quitRedis } = require('./config/redis'); // Import Redis client and helpers
 
 const app = express();
 const DEFAULT_PORT = parseInt(process.env.PORT, 10) || 3001;
@@ -78,24 +78,12 @@ async function startServer(port = DEFAULT_PORT, maxRetries = 3) {
 startServer();
 
 // Graceful shutdown handling
-process.on('SIGTERM', async () => {
-    console.log('SIGTERM received, closing Redis connection...');
-    try {
-        await redisClient.quit();
-        console.log('Redis connection closed.');
-    } catch (err) {
-        console.error('Error closing Redis:', err);
-    }
+async function gracefulShutdown(signal) {
+    console.log(`${signal} received, closing Redis connection...`);
+    await quitRedis();
+    console.log('Redis connection closed.');
     process.exit(0);
-});
+}
 
-process.on('SIGINT', async () => {
-    console.log('SIGINT received, closing Redis connection...');
-    try {
-        await redisClient.quit();
-        console.log('Redis connection closed.');
-    } catch (err) {
-        console.error('Error closing Redis:', err);
-    }
-    process.exit(0);
-});
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
