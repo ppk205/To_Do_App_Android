@@ -7,8 +7,19 @@ function generateUserId() {
 
 // Remove sensitive data from user object
 function sanitizeUser(user) {
-    const { hashedPassword, ...sanitizedUser } = user;
-    return sanitizedUser;
+    return {
+        id: user.id,
+        username: user.username,
+        displayName: user.displayName,
+        email: user.email,
+        phone: user.phone,
+        avatarUrl: user.avatarUrl,
+        avatarId: user.avatarId,
+        bio: user.bio,
+        verified: user.verified,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt
+    };
 }
 
 module.exports = {

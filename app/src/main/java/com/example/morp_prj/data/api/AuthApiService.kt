@@ -1,11 +1,16 @@
 package com.example.morp_prj.data.api
 
 import com.example.morp_prj.data.model.*
+import okhttp3.MultipartBody
+import okhttp3.RequestBody
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.Header
+import retrofit2.http.Multipart
 import retrofit2.http.POST
+import retrofit2.http.PUT
+import retrofit2.http.Part
 
 interface AuthApiService {
 
@@ -35,5 +40,14 @@ interface AuthApiService {
 
     @POST("api/auth/sessions/revoke")
     suspend fun revokeSession(@Body request: RevokeSessionRequest): Response<AuthResponse>
+
+    @Multipart
+    @PUT("api/auth/profile")
+    suspend fun updateProfile(
+        @Part("displayName") displayName: RequestBody?,
+        @Part("phone") phone: RequestBody?,
+        @Part("bio") bio: RequestBody?,
+        @Part avatar: MultipartBody.Part?
+    ): Response<AuthResponse>
 
 }

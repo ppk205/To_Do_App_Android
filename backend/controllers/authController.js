@@ -485,6 +485,82 @@ async function getOTPStatus(req, res) {
     }
 }
 
+// ============================================
+// 9. UPDATE PROFILE - Cập nhật thông tin User
+// ============================================
+async function updateProfile(req, res) {
+    try {
+        const userId = req.user.id;
+        const { displayName, phone, bio } = req.body;
+
+        // Whitelist các field được phép update
+        const updateData = {};
+        if (displayName !== undefined) updateData.displayName = displayName;
+        if (phone !== undefined) updateData.phone = phone;
+        if (bio !== undefined) updateData.bio = bio;
+
+        // Nếu có upload avatar mới
+        if (req.file) {
+            // Tạo URL public: http://localhost:3001/uploads/avatars/filename.jpg
+            const avatarUrl = `/uploads/avatars/${req.file.filename}`;
+            updateData.avatarUrl = avatarUrl;
+        }
+
+        if (Object.keys(updateData).length === 0) {
+            return res.status(400).json({ success: false, message: 'Không có dữ liệu để cập nhật' });
+        }
+
+        // Gọi Model update
+        await User.update(userId, updateData);
+
+        // Lấy lại user mới nhất để trả về client
+        const updatedUser = await User.findById(userId);
+
+        res.status(200).json({
+            success: true,
+            message: 'Cập nhật hồ sơ thành công',
+            user: sanitizeUser(updatedUser)
+        });
+
+    } catch (error) {
+        console.error('Update profile error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi server khi cập nhật hồ sơ',
+            error: error.message
+        });
+    }
+}
+
+// ============================================
+// 10. GET PROFILE - Lấy thông tin User hiện tại
+// ============================================
+async function getProfile(req, res) {
+    try {
+        const userId = req.user.id; // Lấy từ token (đã auth)
+
+        // Lấy user từ DB
+        const user = await User.findById(userId);
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'Người dùng không tồn tại'
+            });
+        }
+
+        res.status(200).json(sanitizeUser(user));
+
+    } catch (error) {
+        console.error('Get profile error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi server khi lấy hồ sơ',
+            error: error.message
+        });
+    }
+}
+
 module.exports = {
     register,
     verifyOTP,
@@ -494,5 +570,7 @@ module.exports = {
     logout,
     getUserSessions,
     revokeSessionById,
-    getOTPStatus
+    getOTPStatus,
+    getProfile,
+    updateProfile
 };

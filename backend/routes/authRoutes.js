@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/authController');
 const { authenticateToken } = require('../middleware/authMiddleware');
+const upload = require('../middleware/upload');
 const {
     registerValidation,
     loginValidation,
@@ -43,10 +44,16 @@ router.post('/logout', authController.logout);
 // PROTECTED ROUTES (Authentication required)
 // ============================================
 
+// Get current user profile
+router.get('/profile', authenticateToken, authController.getProfile);
+
 // Get user's active sessions
 router.get('/sessions', authenticateToken, authController.getUserSessions);
 
 // Revoke specific session by ID
 router.post('/sessions/revoke', authenticateToken, authController.revokeSessionById);
+
+// Update user profile (with optional avatar upload)
+router.put('/profile', authenticateToken, upload.single('avatar'), authController.updateProfile);
 
 module.exports = router;

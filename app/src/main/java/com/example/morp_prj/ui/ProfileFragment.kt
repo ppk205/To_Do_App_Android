@@ -3,24 +3,24 @@ package com.example.morp_prj.ui
 import android.app.Activity
 import android.content.Intent
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Bundle
 import android.provider.MediaStore
-import android.util.Base64
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import com.bumptech.glide.Glide
 import com.example.morp_prj.R
 import com.example.morp_prj.databinding.FragmentProfileBinding
 import com.example.morp_prj.utils.PreferenceManager
 import com.example.morp_prj.data.model.User
-import java.io.ByteArrayOutputStream
+import com.example.morp_prj.data.repository.AuthRepository
+import kotlinx.coroutines.launch
 
 class ProfileFragment : Fragment() {
 
@@ -30,7 +30,7 @@ class ProfileFragment : Fragment() {
     // Biến cờ kiểm soát trạng thái
     private var isEditing = false
     private var currentUser: User? = null
-    private var selectedAvatarBase64: String? = null // Store selected avatar as Base64
+    private var selectedAvatarUri: Uri? = null // Store selected avatar URI
 
     // Launcher chọn ảnh
     private val pickImageLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -40,26 +40,10 @@ class ProfileFragment : Fragment() {
                 // 1. Preview ảnh ngay lập tức
                 binding.ivAvatar.setImageURI(imageUri)
 
-                // 2. Convert image to Base64 and store
-                try {
-                    val inputStream = requireContext().contentResolver.openInputStream(imageUri)
-                    val bitmap = BitmapFactory.decodeStream(inputStream)
-                    inputStream?.close()
+                // 2. Lưu URI để upload sau
+                selectedAvatarUri = imageUri
 
-                    // Resize bitmap to reduce storage size (max 300x300)
-                    val resizedBitmap = resizeBitmap(bitmap, 300, 300)
-
-                    // Convert to Base64
-                    val outputStream = ByteArrayOutputStream()
-                    resizedBitmap.compress(Bitmap.CompressFormat.JPEG, 80, outputStream)
-                    val byteArray = outputStream.toByteArray()
-                    selectedAvatarBase64 = "data:image/jpeg;base64," + Base64.encodeToString(byteArray, Base64.NO_WRAP)
-
-                    Toast.makeText(context, "Ảnh đã được chọn. Nhấn Save để lưu.", Toast.LENGTH_SHORT).show()
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                    Toast.makeText(context, "Lỗi khi xử lý ảnh: ${e.message}", Toast.LENGTH_SHORT).show()
-                }
+                Toast.makeText(context, "Ảnh đã được chọn. Nhấn Save để lưu.", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -81,48 +65,75 @@ class ProfileFragment : Fragment() {
         }
 
         loadUserData()
+        fetchProfileFromServer() // Fetch fresh data from server
         setupListeners()
         updateUIState(false) // Mặc định là chế độ View
     }
 
+    /**
+     * Fetch profile from server and update UI
+     */
+    private fun fetchProfileFromServer() {
+        val authRepo = AuthRepository(requireContext())
+
+        lifecycleScope.launch {
+            val result = authRepo.fetchProfile()
+
+            result.onSuccess { user ->
+                // Save to local cache
+                PreferenceManager.saveUser(requireContext(), user)
+                currentUser = user
+
+                // Update UI with fresh data
+                updateUIWithUser(user)
+            }.onFailure { error ->
+                // Silently fail - keep using cached data
+                // Only show error if it's critical
+                if (currentUser == null) {
+                    Toast.makeText(context, "Không thể tải profile: ${error.message}", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
     private fun loadUserData() {
         currentUser = PreferenceManager.getUser(requireContext())
-
         currentUser?.let { user ->
-            // Fill dữ liệu vào các trường
-            binding.tvUserName.text = user.displayName // Hiển thị fullName
-            binding.etFullName.setText(user.displayName) // Hiển thị fullName
-            binding.etFullName.visibility = View.VISIBLE // Hiển thị trường fullName
-            binding.etPhone.setText(user.phone ?: "")
-            binding.etEmail.setText(user.email)
-            binding.etUsername.setText(user.username)
-            binding.etBio.setText(user.bio ?: "")
-            // Các trường như avatarId, verified, createdAt, updatedAt nếu cần hiển thị thì thêm vào đây
+            updateUIWithUser(user)
+        }
+    }
 
-            // Load Avatar (hỗ trợ cả Base64 và URL)
-            if (!user.avatarUrl.isNullOrEmpty()) {
-                if (user.avatarUrl.startsWith("data:image")) {
-                    // Decode Base64 image
-                    try {
-                        val base64String = user.avatarUrl.substringAfter("base64,")
-                        val decodedBytes = Base64.decode(base64String, Base64.DEFAULT)
-                        val bitmap = BitmapFactory.decodeByteArray(decodedBytes, 0, decodedBytes.size)
-                        binding.ivAvatar.setImageBitmap(bitmap)
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                        binding.ivAvatar.setImageResource(R.drawable.ic_profile_unselected)
-                    }
-                } else {
-                    // Load from URL using Glide
-                    Glide.with(this)
-                        .load(user.avatarUrl)
-                        .placeholder(R.drawable.ic_profile_unselected)
-                        .error(R.drawable.ic_profile_unselected)
-                        .into(binding.ivAvatar)
-                }
+    /**
+     * Update UI fields with user data
+     */
+    private fun updateUIWithUser(user: User) {
+        // Fill dữ liệu vào các trường
+        binding.tvUserName.text = user.displayName // Hiển thị fullName
+        binding.etFullName.setText(user.displayName) // Hiển thị fullName
+        binding.etFullName.visibility = View.VISIBLE // Hiển thị trường fullName
+        binding.etPhone.setText(user.phone ?: "")
+        binding.etEmail.setText(user.email)
+        binding.etUsername.setText(user.username)
+        binding.etBio.setText(user.bio ?: "")
+        // Các trường như avatarId, verified, createdAt, updatedAt nếu cần hiển thị thì thêm vào đây
+
+        // Load Avatar từ server URL
+        if (!user.avatarUrl.isNullOrEmpty()) {
+            // Build full URL: http://localhost:3001/uploads/avatars/filename.jpg
+            val baseUrl = "http://10.0.2.2:3001" // Android emulator localhost
+            val fullUrl = if (user.avatarUrl.startsWith("http")) {
+                user.avatarUrl
             } else {
-                binding.ivAvatar.setImageResource(R.drawable.ic_profile_unselected)
+                "$baseUrl${user.avatarUrl}"
             }
+
+            Glide.with(this)
+                .load(fullUrl)
+                .placeholder(R.drawable.ic_profile_unselected)
+                .error(R.drawable.ic_profile_unselected)
+                .into(binding.ivAvatar)
+        } else {
+            binding.ivAvatar.setImageResource(R.drawable.ic_profile_unselected)
         }
     }
 
@@ -204,57 +215,52 @@ class ProfileFragment : Fragment() {
         val newDisplayName = binding.etFullName.text.toString()
         val newPhone = binding.etPhone.text.toString()
         val newBio = binding.etBio.text.toString()
-        // Các trường khác nếu cần
 
         if (newDisplayName.isBlank()) {
             Toast.makeText(context, "Tên hiển thị không được để trống", Toast.LENGTH_SHORT).show()
             return
         }
 
-        // Xác định avatarUrl - nếu có ảnh mới được chọn thì dùng Base64, không thì giữ nguyên
-        val newAvatarUrl = selectedAvatarBase64 ?: currentUser?.avatarUrl
+        // Hiện loading
+        binding.btnSave.isEnabled = false
+        binding.btnSave.text = "Đang lưu..."
 
-        // Cập nhật User Object immutably using copy()
-        currentUser = currentUser?.copy(
-            displayName = newDisplayName,
-            phone = if (newPhone.isBlank()) null else newPhone,
-            bio = if (newBio.isBlank()) null else newBio,
-            avatarUrl = newAvatarUrl
-        )
+        // Gọi API qua Repository
+        val authRepo = AuthRepository(requireContext())
 
-        // Lưu Local
-        currentUser?.let { PreferenceManager.saveUser(requireContext(), it) }
+        lifecycleScope.launch {
+            val result = authRepo.updateProfile(
+                displayName = newDisplayName,
+                phone = if (newPhone.isBlank()) null else newPhone,
+                bio = if (newBio.isBlank()) null else newBio,
+                avatarUri = selectedAvatarUri // Pass URI instead of Base64
+            )
 
-        // Cập nhật UI Header
-        binding.tvUserName.text = newDisplayName
+            result.onSuccess { response ->
+                // Update thành công trên Server -> Cập nhật Local Preference từ response server (Single Source of Truth)
+                response.user?.let { updatedUser ->
+                    PreferenceManager.saveUser(requireContext(), updatedUser)
+                    currentUser = updatedUser // Update biến tạm trong Fragment
 
-        // Reset selected avatar
-        selectedAvatarBase64 = null
+                    // Update UI
+                    binding.tvUserName.text = updatedUser.displayName
+                    updateUIWithUser(updatedUser) // Reload lại UI từ data mới
+                }
 
-        // Tắt chế độ Edit
-        updateUIState(false)
-        Toast.makeText(context, "Lưu thành công (Local)", Toast.LENGTH_SHORT).show()
-    }
+                Toast.makeText(context, "Đã cập nhật profile thành công!", Toast.LENGTH_SHORT).show()
+                updateUIState(false)
+                selectedAvatarUri = null // Reset selection
+            }.onFailure { error ->
+                Toast.makeText(context, "Lỗi cập nhật: ${error.message}", Toast.LENGTH_LONG).show()
+                // Không reset UI state để user có thể retry
+            }
 
-    // Helper function to resize bitmap
-    private fun resizeBitmap(bitmap: Bitmap, maxWidth: Int, maxHeight: Int): Bitmap {
-        val width = bitmap.width
-        val height = bitmap.height
-
-        val ratioBitmap = width.toFloat() / height.toFloat()
-        val ratioMax = maxWidth.toFloat() / maxHeight.toFloat()
-
-        var finalWidth = maxWidth
-        var finalHeight = maxHeight
-
-        if (ratioMax > ratioBitmap) {
-            finalWidth = (maxHeight.toFloat() * ratioBitmap).toInt()
-        } else {
-            finalHeight = (maxWidth.toFloat() / ratioBitmap).toInt()
+            // Reset nút Save
+            binding.btnSave.isEnabled = true
+            binding.btnSave.text = "Save"
         }
-
-        return Bitmap.createScaledBitmap(bitmap, finalWidth, finalHeight, true)
     }
+
 
     private fun performLogout() {
         // Xóa dữ liệu preferences (clearLoginData sẽ reset hasSeenOnboarding về false)
