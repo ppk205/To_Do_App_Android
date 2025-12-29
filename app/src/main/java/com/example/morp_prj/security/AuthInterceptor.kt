@@ -106,7 +106,11 @@ class AuthInterceptor(
                 path.contains("/auth/register") ||
                 path.contains("/auth/refresh") ||
                 path.contains("/auth/verify-otp") ||
-                path.contains("/auth/resend-otp")
+                path.contains("/auth/resend-otp") ||
+                path.contains("/auth/forgot-password") ||
+                path.contains("/auth/verify-reset-otp") ||
+                path.contains("/auth/resend-reset-otp") ||
+                path.contains("/auth/reset-password")
     }
 
     /**

@@ -35,4 +35,16 @@ interface AuthApiService {
 
     @POST("api/auth/sessions/revoke")
     suspend fun revokeSession(@Body request: RevokeSessionRequest): Response<AuthResponse>
+
+    @POST("api/auth/forgot-password")
+    suspend fun forgotPassword(@Body request: Map<String, String>): Response<AuthResponse>
+
+    @POST("api/auth/verify-reset-otp")
+    suspend fun verifyResetOTP(@Body request: Map<String, String>): Response<AuthResponse>
+
+    @POST("api/auth/resend-reset-otp")
+    suspend fun resendResetOTP(@Body request: Map<String, String>): Response<AuthResponse>
+
+    @POST("api/auth/reset-password")
+    suspend fun resetPassword(@Body request: Map<String, String>): Response<AuthResponse>
 }

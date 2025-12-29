@@ -2,13 +2,15 @@ const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/authController');
 const { authenticateToken } = require('../middleware/authMiddleware');
-const { loginRateLimiter, createRateLimiter } = require('../middleware/rateLimiter');
+// Rate limiter removed
 const {
     registerValidation,
     loginValidation,
     verifyOTPValidation,
     resendOTPValidation,
     registerInitValidation,
+    forgotPasswordValidation,
+    resetPasswordValidation,
     validate
 } = require('../middleware/validation');
 
@@ -31,14 +33,46 @@ router.post('/resend-otp', resendOTPValidation, validate, authController.resendO
 // Debug: Get OTP status (TTL, attempts, cooldowns)
 router.post('/otp-status', authController.getOTPStatus);
 
-// ✅ Login route with rate limiting - Issue access + refresh tokens
-router.post('/login', loginRateLimiter, loginValidation, validate, authController.login);
+// ✅ Login route - Issue access + refresh tokens
+router.post('/login', loginValidation, validate, authController.login);
 
 // Refresh token route - Rotate tokens
 router.post('/refresh', authController.refreshToken);
 
 // Logout route - Revoke session
 router.post('/logout', authController.logout);
+
+// ============================================
+// PASSWORD RESET ROUTES (OTP-BASED)
+// ============================================
+
+// Step 1: Request password reset OTP - Send OTP to email
+router.post('/forgot-password',
+    forgotPasswordValidation,
+    validate,
+    authController.forgotPassword
+);
+
+// Step 2: Verify reset OTP
+router.post('/verify-reset-otp',
+    verifyOTPValidation,
+    validate,
+    authController.verifyResetOTP
+);
+
+// Step 3: Resend reset OTP (with cooldown)
+router.post('/resend-reset-otp',
+    resendOTPValidation,
+    validate,
+    authController.resendResetOTP
+);
+
+// Step 4: Reset password with verified OTP
+router.post('/reset-password',
+    resetPasswordValidation,
+    validate,
+    authController.resetPassword
+);
 
 // ============================================
 // PROTECTED ROUTES (Authentication required)
