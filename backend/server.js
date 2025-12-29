@@ -5,6 +5,7 @@ require('dotenv').config();
 const authRoutes = require('./routes/authRoutes');
 const taskRoutes = require('./routes/taskRoutes');
 const redisClient = require('./config/redis'); // Import Redis client
+const teamRoutes = require('./routes/teamRoutes');
 
 const app = express();
 const DEFAULT_PORT = parseInt(process.env.PORT, 10) || 3001;
@@ -17,6 +18,7 @@ app.use(express.urlencoded({ extended: true }));
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/tasks', taskRoutes);
+app.use('/api/team', teamRoutes);
 
 // Root route
 app.get('/', (req, res) => {

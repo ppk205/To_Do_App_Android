@@ -120,16 +120,8 @@
         android:label="fragment_guest_prompt"
         tools:layout="@layout/fragment_guest_prompt">
         <action
-            android:id="@+id/action_guestPrompt_to_login"
-            app:destination="@id/login_fragment" />
-        <action
             android:id="@+id/action_guestPrompt_to_register"
             app:destination="@id/register_fragment" />
-        <action
-            android:id="@+id/action_guestPrompt_to_home"
-            app:destination="@id/menu_home"
-            app:popUpTo="@id/menu_home"
-            app:popUpToInclusive="true" />
     </fragment>
 
     <fragment
@@ -150,8 +142,8 @@
         android:label="fragment_team"
         tools:layout="@layout/fragment_team">
         <action
-            android:id="@+id/action_team_to_guestPrompt"
-            app:destination="@id/guest_prompt_fragment" />
+            android:id="@+id/action_team_to_detail"
+            app:destination="@id/teamDetailFragment" />
     </fragment>
     <fragment
         android:id="@+id/menu_home"
@@ -167,15 +159,29 @@
         android:id="@+id/menu_profile"
         android:name="com.example.morp_prj.ui.ProfileFragment"
         android:label="fragment_profile"
-        tools:layout="@layout/fragment_profile">
-        <action
-            android:id="@+id/action_profile_to_guestPrompt"
-            app:destination="@id/guest_prompt_fragment" />
-    </fragment>
+        tools:layout="@layout/fragment_profile" />
     <fragment
         android:id="@+id/taskFragment"
         android:name="com.example.morp_prj.ui.TaskFragment"
         android:label="fragment_task"
         tools:layout="@layout/fragment_task" />
+    <fragment
+        android:id="@+id/create_new_team_fragment"
+        android:name="com.example.morp_prj.ui.CreateNewTeamFragment"
+        android:label="Create New Team"
+        tools:layout="@layout/fragment_create_new_team" />
 
+    <fragment
+        android:id="@+id/teamDetailFragment"
+        android:name="com.example.morp_prj.ui.TeamDetailFragment"
+        android:label="fragment_team_detail"
+        tools:layout="@layout/fragment_team_detail">
+        <argument
+            android:name="teamId"
+            app:argType="string" />
+        <argument
+            android:name="teamName"
+            app:argType="string"
+            android:defaultValue="Team Detail" />
+    </fragment>
 </navigation>

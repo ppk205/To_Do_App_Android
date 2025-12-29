@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/team_nav_graph"
+    app:startDestination="@id/teamDashboardFragment">
+
+    <fragment
+        android:id="@+id/teamDashboardFragment"
+        android:name="com.example.morp_prj.ui.TeamDashboardFragment"
+        android:label="Team Dashboard"
+        tools:layout="@layout/fragment_team_dashboard">
+        <argument
+            android:name="teamId"
+            app:argType="string"
+            android:defaultValue="" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/memberManagementFragment"
+        android:name="com.example.morp_prj.ui.MemberManagementFragment"
+        android:label="Member Management"
+        tools:layout="@layout/fragment_member_management">
+        <argument
+            android:name="teamId"
+            app:argType="string"
+            android:defaultValue="" />
+        <argument
+            android:name="inviteCode"
+            app:argType="string"
+            android:defaultValue="" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/joinRequestFragment"
+        android:name="com.example.morp_prj.ui.JoinRequestFragment"
+        android:label="Join Requests"
+        tools:layout="@layout/fragment_join_requests">
+        <argument
+            android:name="teamId"
+            app:argType="string"
+            android:defaultValue="" />
+    </fragment>
+
+</navigation>
