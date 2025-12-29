@@ -4,7 +4,7 @@ require('dotenv').config();
 
 const authRoutes = require('./routes/authRoutes');
 const taskRoutes = require('./routes/taskRoutes');
-const redisClient = require('./config/redis'); // Import Redis client
+const { redisClient, connectRedis } = require('./config/redis'); // Import Redis helpers
 const teamRoutes = require('./routes/teamRoutes');
 
 const app = express();
@@ -43,7 +43,14 @@ app.use((err, req, res, next) => {
 });
 
 // Start server with robust EADDRINUSE handling and fallback
-function startServer(port = DEFAULT_PORT, maxRetries = 3) {
+async function startServer(port = DEFAULT_PORT, maxRetries = 3) {
+    // Attempt to connect to Redis if configured, but don't block server startup on failure.
+    try {
+        await connectRedis();
+    } catch (e) {
+        console.error('Redis initialization failed (non-fatal):', e);
+    }
+
     const server = app.listen(port, () => {
         console.log(`🚀 Server is running on port ${port}`);
         console.log(`📍 API URL: http://localhost:${port}`);
