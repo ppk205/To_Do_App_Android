@@ -15,10 +15,16 @@ class PreferenceManager(context: Context) {
         private const val KEY_USERNAME = "username"
         private const val KEY_DISPLAY_NAME = "display_name"
         private const val KEY_EMAIL = "email"
+        private const val KEY_PHONE = "phone"
+        private const val KEY_AVATAR_URL = "avatar_url"
+        private const val KEY_AVATAR_ID = "avatar_id"
+        private const val KEY_BIO = "bio"
+        private const val KEY_VERIFIED = "verified"
         private const val KEY_TOKEN = "auth_token"
         private const val KEY_IS_LOGGED_IN = "is_logged_in"
         private const val KEY_IS_GUEST = "is_guest"
         private const val KEY_HAS_SEEN_ONBOARDING = "has_seen_onboarding"
+        private const val KEY_JUST_LOGGED_OUT = "just_logged_out"
 
         const val GUEST_USER_ID = "guest_local"
 
@@ -30,6 +36,11 @@ class PreferenceManager(context: Context) {
             val username = prefs.getUsername() ?: ""
             val displayName = prefs.getDisplayName() ?: ""
             val email = prefs.getEmail() ?: ""
+            val phone = prefs.getPhone()
+            val avatarUrl = prefs.getAvatarUrl()
+            val avatarId = prefs.getAvatarId()
+            val bio = prefs.getBio()
+            val verified = prefs.getVerified()
 
             // The User data class requires several non-null fields like hashedPassword.
             // We don't persist all fields in preferences, so fill missing values with sensible defaults.
@@ -39,11 +50,11 @@ class PreferenceManager(context: Context) {
                 hashedPassword = "",
                 displayName = displayName,
                 email = email,
-                avatarUrl = null,
-                avatarId = null,
-                bio = null,
-                phone = null,
-                verified = false,
+                avatarUrl = avatarUrl,
+                avatarId = avatarId,
+                bio = bio,
+                phone = phone,
+                verified = verified,
                 createdAt = null,
                 updatedAt = null
             )
@@ -52,13 +63,7 @@ class PreferenceManager(context: Context) {
         // Persist the minimal user info to preferences used by the app
         fun saveUser(context: Context, user: User) {
             val prefs = PreferenceManager(context)
-            prefs.saveLoginData(
-                userId = user.id,
-                username = user.username,
-                displayName = user.displayName,
-                email = user.email,
-                token = null
-            )
+            prefs.saveFullUserData(user)
         }
 
         // Clear stored login/user data
@@ -93,6 +98,24 @@ class PreferenceManager(context: Context) {
         }
     }
 
+    // Save full user data including phone, avatarUrl, bio, etc.
+    fun saveFullUserData(user: User) {
+        sharedPreferences.edit().apply {
+            putString(KEY_USER_ID, user.id)
+            putString(KEY_USERNAME, user.username)
+            putString(KEY_DISPLAY_NAME, user.displayName)
+            putString(KEY_EMAIL, user.email)
+            putString(KEY_PHONE, user.phone)
+            putString(KEY_AVATAR_URL, user.avatarUrl)
+            putString(KEY_AVATAR_ID, user.avatarId)
+            putString(KEY_BIO, user.bio)
+            putBoolean(KEY_VERIFIED, user.verified)
+            putBoolean(KEY_IS_LOGGED_IN, true)
+            putBoolean(KEY_IS_GUEST, false)
+            apply()
+        }
+    }
+
     fun saveGuestMode() {
         sharedPreferences.edit().apply {
             putBoolean(KEY_IS_GUEST, true)
@@ -122,6 +145,19 @@ class PreferenceManager(context: Context) {
         sharedPreferences.edit().putBoolean(KEY_HAS_SEEN_ONBOARDING, seen).apply()
     }
 
+    // Flag to indicate user just logged out (to show login instead of onboarding)
+    fun isJustLoggedOut(): Boolean {
+        return sharedPreferences.getBoolean(KEY_JUST_LOGGED_OUT, false)
+    }
+
+    fun setJustLoggedOut(value: Boolean) {
+        sharedPreferences.edit().putBoolean(KEY_JUST_LOGGED_OUT, value).apply()
+    }
+
+    fun clearJustLoggedOut() {
+        sharedPreferences.edit().remove(KEY_JUST_LOGGED_OUT).apply()
+    }
+
     fun getUserId(): String? {
         return sharedPreferences.getString(KEY_USER_ID, null)
     }
@@ -138,16 +174,34 @@ class PreferenceManager(context: Context) {
         return sharedPreferences.getString(KEY_EMAIL, null)
     }
 
+    fun getPhone(): String? {
+        return sharedPreferences.getString(KEY_PHONE, null)
+    }
+
+    fun getAvatarUrl(): String? {
+        return sharedPreferences.getString(KEY_AVATAR_URL, null)
+    }
+
+    fun getAvatarId(): String? {
+        return sharedPreferences.getString(KEY_AVATAR_ID, null)
+    }
+
+    fun getBio(): String? {
+        return sharedPreferences.getString(KEY_BIO, null)
+    }
+
+    fun getVerified(): Boolean {
+        return sharedPreferences.getBoolean(KEY_VERIFIED, false)
+    }
+
     fun getToken(): String? {
         return sharedPreferences.getString(KEY_TOKEN, null)
     }
 
     fun clearLoginData() {
-        // Giữ lại cờ hasSeenOnboarding khi logout
-        val hasSeenOnboarding = sharedPreferences.getBoolean(KEY_HAS_SEEN_ONBOARDING, false)
+        // Clear all login data completely
+        // After logout and app restart, user will see onboarding (fresh start)
+        // hasSeenOnboarding will be false (default) after clear
         sharedPreferences.edit().clear().apply()
-        if (hasSeenOnboarding) {
-            sharedPreferences.edit().putBoolean(KEY_HAS_SEEN_ONBOARDING, true).apply()
-        }
     }
 }

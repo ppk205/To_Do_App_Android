@@ -28,9 +28,9 @@ class OnboardingFragment : Fragment(R.layout.fragment_onboarding) {
         }
 
         val images = listOf(
-            R.drawable.img_onboarding_work,
-            R.drawable.img_onboarding_work_2,
-            R.drawable.img_onboarding_work_3
+            R.drawable.img,
+            R.drawable.img,
+            R.drawable.img
         )
         val adapter = ImagePagerAdapter(images)
         viewPager.adapter = adapter

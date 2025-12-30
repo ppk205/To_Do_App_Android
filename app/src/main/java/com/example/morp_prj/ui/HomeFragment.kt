@@ -15,6 +15,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
 import com.example.morp_prj.R
 import com.example.morp_prj.data.TaskRepository
 import com.example.morp_prj.data.TaskUiMapper.toUiItem
@@ -54,6 +55,7 @@ class HomeFragment : Fragment() {
         get() = if (prefs.isGuest()) GUEST_USER_ID else prefs.getUserId() ?: GUEST_USER_ID
 
     private lateinit var tvWelcome: TextView
+    private lateinit var ivAvatar: ImageView
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -67,6 +69,7 @@ class HomeFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         tvWelcome = view.findViewById(R.id.tvWelcome)
+        ivAvatar = view.findViewById(R.id.ivAvatar)
         updateGreeting()
 
         // 1. Lấy thông tin user hiện tại
@@ -103,6 +106,30 @@ class HomeFragment : Fragment() {
             else -> getString(R.string.default_user_name)
         }
         tvWelcome.text = getString(R.string.home_greeting_format, name)
+
+        // Load avatar from server or use default
+        if (user != null && !user.avatarUrl.isNullOrEmpty()) {
+            // Build full URL for server avatar
+            val baseUrl = "http://10.0.2.2:3001" // Android emulator localhost
+            val fullUrl = if (user.avatarUrl.startsWith("http")) {
+                user.avatarUrl
+            } else {
+                "$baseUrl${user.avatarUrl}"
+            }
+
+            Glide.with(this)
+                .load(fullUrl)
+                .placeholder(R.drawable.img_1) // Default avatar while loading
+                .error(R.drawable.img_1) // Default avatar if load fails
+                .circleCrop() // Make it circular
+                .into(ivAvatar)
+        } else {
+            // No avatar URL, use default image
+            Glide.with(this)
+                .load(R.drawable.img_1)
+                .circleCrop()
+                .into(ivAvatar)
+        }
     }
 
     private fun setupSearch(root: View) {
