@@ -202,69 +202,35 @@ class AuthRepository(private val context: Context) {
     }
 
     /**
-     * Update user profile with optional avatar file upload
-     * @param avatarUri URI của ảnh từ gallery/camera (nếu có)
+     * Update user profile with Cloudinary avatar URL only
+     * @param avatarUrl Cloudinary HTTPS URL (uploaded from app)
      */
     suspend fun updateProfile(
         displayName: String?,
         phone: String?,
         bio: String?,
-        avatarUri: android.net.Uri?
+        avatarUrl: String?
     ): Result<AuthResponse> = withContext(Dispatchers.IO) {
         try {
-            // Convert các field thành RequestBody
-            val displayNameBody = displayName?.let {
-                okhttp3.RequestBody.create(okhttp3.MediaType.parse("text/plain"), it)
-            }
-            val phoneBody = phone?.let {
-                okhttp3.RequestBody.create(okhttp3.MediaType.parse("text/plain"), it)
-            }
-            val bioBody = bio?.let {
-                okhttp3.RequestBody.create(okhttp3.MediaType.parse("text/plain"), it)
-            }
+            val request = com.example.morp_prj.data.model.UpdateProfileWithDriveLinkRequest(
+                displayName = displayName,
+                phone = phone,
+                bio = bio,
+                avatarUrl = avatarUrl
+            )
 
-            // Nếu có avatar URI, convert thành MultipartBody.Part
-            var avatarPart: okhttp3.MultipartBody.Part? = null
-            if (avatarUri != null) {
-                try {
-                    // Get actual MIME type from ContentResolver
-                    val mimeType = context.contentResolver.getType(avatarUri) ?: "image/jpeg"
+            val response = apiService.updateProfile(request)
 
-                    val inputStream = context.contentResolver.openInputStream(avatarUri)
-                    val bytes = inputStream?.readBytes()
-                    inputStream?.close()
-
-                    if (bytes != null) {
-                        val requestFile = okhttp3.RequestBody.create(
-                            okhttp3.MediaType.parse(mimeType),
-                            bytes
-                        )
-
-                        // Get file extension from MIME type
-                        val extension = when(mimeType) {
-                            "image/png" -> ".png"
-                            "image/gif" -> ".gif"
-                            "image/webp" -> ".webp"
-                            else -> ".jpg" // Default to jpg for jpeg and others
-                        }
-
-                        avatarPart = okhttp3.MultipartBody.Part.createFormData(
-                            "avatar",
-                            "avatar_${System.currentTimeMillis()}${extension}",
-                            requestFile
-                        )
-                    }
-                } catch (e: Exception) {
-                    android.util.Log.e("AuthRepository", "Error reading avatar file", e)
-                }
-            }
-
-            val response = apiService.updateProfile(displayNameBody, phoneBody, bioBody, avatarPart)
-
-            if (response.isSuccessful && response.body()?.success == true) {
-                Result.success(response.body()!!)
+            if (response.isSuccessful && response.body() != null) {
+                val user = response.body()!!
+                val authResponse = AuthResponse(
+                    success = true,
+                    message = "Profile updated successfully",
+                    user = user
+                )
+                Result.success(authResponse)
             } else {
-                Result.failure(Exception(response.body()?.message ?: "Update failed"))
+                Result.failure(Exception(response.message() ?: "Update failed"))
             }
         } catch (e: Exception) {
             Result.failure(e)
