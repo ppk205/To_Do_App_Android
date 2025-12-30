@@ -37,10 +37,15 @@ interface AuthApiService {
     @POST("api/auth/sessions/revoke")
     suspend fun revokeSession(@Body request: RevokeSessionRequest): Response<AuthResponse>
 
-    // Update profile with Cloudinary avatar URL (HTTPS link only)
-    @PUT("api/auth/profile")
-    suspend fun updateProfileWithDriveLink(
-        @Body request: UpdateProfileWithDriveLinkRequest
-    ): Response<AuthResponse>
+    @POST("api/auth/forgot-password")
+    suspend fun forgotPassword(@Body request: Map<String, String>): Response<AuthResponse>
 
+    @POST("api/auth/verify-reset-otp")
+    suspend fun verifyResetOTP(@Body request: Map<String, String>): Response<AuthResponse>
+
+    @POST("api/auth/resend-reset-otp")
+    suspend fun resendResetOTP(@Body request: Map<String, String>): Response<AuthResponse>
+
+    @POST("api/auth/reset-password")
+    suspend fun resetPassword(@Body request: Map<String, String>): Response<AuthResponse>
 }
