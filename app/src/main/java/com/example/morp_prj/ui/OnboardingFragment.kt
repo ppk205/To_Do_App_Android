@@ -66,9 +66,8 @@ class OnboardingFragment : Fragment(R.layout.fragment_onboarding) {
         val preferenceManager = PreferenceManager(requireContext())
 
         // Nút "Get Started" chuyển đến Login
+        // ⚠️ KHÔNG set hasSeenOnboarding ở đây - chỉ set khi đăng nhập thành công hoặc chọn guest
         view.findViewById<MaterialButton>(R.id.btn_get_started)?.setOnClickListener {
-            // Đánh dấu đã xem onboarding
-            preferenceManager.setHasSeenOnboarding(true)
             findNavController().navigate(R.id.action_onboarding_to_login)
         }
 

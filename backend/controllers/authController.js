@@ -495,12 +495,12 @@ async function getOTPStatus(req, res) {
 }
 
 // ============================================
-// 9. UPDATE PROFILE - Cập nhật thông tin User
+// 9. UPDATE PROFILE - Cập nhật thông tin User (Cloudinary only)
 // ============================================
 async function updateProfile(req, res) {
     try {
         const userId = req.user.id;
-        const { displayName, phone, bio } = req.body;
+        const { displayName, phone, bio, avatarUrl } = req.body;
 
         // Whitelist các field được phép update
         const updateData = {};
@@ -508,22 +508,36 @@ async function updateProfile(req, res) {
         if (phone !== undefined) updateData.phone = phone;
         if (bio !== undefined) updateData.bio = bio;
 
-        // Nếu có upload avatar mới
-        if (req.file) {
-            // Tạo URL public: http://localhost:3001/uploads/avatars/filename.jpg
-            const avatarUrl = `/uploads/avatars/${req.file.filename}`;
-            updateData.avatarUrl = avatarUrl;
+        // Chỉ nhận avatarUrl từ Cloudinary (link HTTPS trực tiếp)
+        if (avatarUrl !== undefined) {
+            // Validate URL format
+            if (avatarUrl === null || avatarUrl === '' ||
+                avatarUrl.startsWith('https://res.cloudinary.com/') ||
+                avatarUrl.startsWith('http://res.cloudinary.com/')) {
+                updateData.avatarUrl = avatarUrl;
+            } else {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Avatar URL phải là link Cloudinary hợp lệ'
+                });
+            }
         }
 
         if (Object.keys(updateData).length === 0) {
             return res.status(400).json({ success: false, message: 'Không có dữ liệu để cập nhật' });
         }
 
+        // Log để debug
+        console.log('📝 UPDATE PROFILE - userId:', userId);
+        console.log('📝 UPDATE PROFILE - updateData:', JSON.stringify(updateData, null, 2));
+
         // Gọi Model update
         await User.update(userId, updateData);
 
         // Lấy lại user mới nhất để trả về client
         const updatedUser = await User.findById(userId);
+
+        console.log('✅ UPDATED USER from DB:', JSON.stringify(updatedUser, null, 2));
 
         res.status(200).json({
             success: true,

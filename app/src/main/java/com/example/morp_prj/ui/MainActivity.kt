@@ -75,10 +75,9 @@ class MainActivity : AppCompatActivity() {
         }
 
         // Navigation logic:
-        // 1. If user has NOT seen onboarding -> stay on onboarding (fresh install or after logout)
-        // 2. If user has seen onboarding AND is actually logged in (not guest) -> go to home
-        // 3. If user is guest -> clear guest mode and stay on onboarding (guest must see onboarding each time)
-        // 4. If user has seen onboarding but NOT logged in -> go to login
+        // 1. If user is guest -> clear guest mode and stay on onboarding (guest must see onboarding each time)
+        // 2. If user is actually logged in -> go to home
+        // 3. Otherwise (not logged in, not guest) -> stay on onboarding
         try {
             val preferenceManager = PreferenceManager(this)
             val tokenStorage = SecureTokenStorage(this)
@@ -94,32 +93,26 @@ class MainActivity : AppCompatActivity() {
             android.util.Log.d("MainActivity", "isActuallyLoggedIn=$isActuallyLoggedIn")
             android.util.Log.d("MainActivity", "=======================================")
 
-            // If user was in guest mode, clear it so they have to go through onboarding again
-            if (isGuest) {
-                android.util.Log.d("MainActivity", "Clearing guest mode - guest must see onboarding on each app launch")
-                preferenceManager.clearLoginData()
-                // Stay on onboarding (start destination) - no navigation needed
-                android.util.Log.d("MainActivity", "Staying on ONBOARDING (guest mode cleared)")
-            } else when {
-                !hasSeenOnboarding -> {
-                    // Fresh install or after logout (data cleared) -> stay on onboarding
-                    android.util.Log.d("MainActivity", "Staying on ONBOARDING (fresh install or after logout)")
+            when {
+                isGuest -> {
+                    // If user was in guest mode, clear it so they have to go through onboarding again
+                    android.util.Log.d("MainActivity", "Clearing guest mode - guest must see onboarding on each app launch")
+                    preferenceManager.clearLoginData()
+                    // Stay on onboarding (start destination) - no navigation needed
+                    android.util.Log.d("MainActivity", "Staying on ONBOARDING (guest mode cleared)")
                 }
                 isActuallyLoggedIn -> {
-                    // User has seen onboarding and is actually logged in -> go to home
-                    android.util.Log.d("MainActivity", "Navigating to HOME")
+                    // User is actually logged in -> go to home
+                    android.util.Log.d("MainActivity", "Navigating to HOME (user logged in)")
                     val navOptions = NavOptions.Builder()
                         .setPopUpTo(navController.graph.startDestinationId, true)
                         .build()
                     navController.navigate(R.id.menu_home, null, navOptions)
                 }
                 else -> {
-                    // User has seen onboarding but not logged in -> go to login
-                    android.util.Log.d("MainActivity", "Navigating to LOGIN (seen onboarding but not logged in)")
-                    val navOptions = NavOptions.Builder()
-                        .setPopUpTo(navController.graph.startDestinationId, true)
-                        .build()
-                    navController.navigate(R.id.login_fragment, null, navOptions)
+                    // Not logged in, not guest -> stay on onboarding
+                    // This includes: fresh install, after logout, or during login/register process
+                    android.util.Log.d("MainActivity", "Staying on ONBOARDING (not logged in)")
                 }
             }
         } catch (e: Exception) {

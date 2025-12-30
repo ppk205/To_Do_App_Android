@@ -4,11 +4,19 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
+// Read local.properties
+import java.util.Properties
+import java.io.FileInputStream
+
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    FileInputStream(localPropertiesFile).use { localProperties.load(it) }
+}
+
 android {
     namespace = "com.example.morp_prj"
-    compileSdk {
-        version = release(36)
-    }
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.example.morp_prj"
@@ -18,12 +26,33 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // Add Cloudinary config to BuildConfig
+        buildConfigField("String", "CLOUDINARY_CLOUD_NAME", "\"${localProperties.getProperty("cloudinary.cloud_name", "dxohngowm")}\"")
+        buildConfigField("String", "CLOUDINARY_API_KEY", "\"${localProperties.getProperty("cloudinary.api_key", "687411225619873")}\"")
+        buildConfigField("String", "CLOUDINARY_UPLOAD_PRESET", "\"${localProperties.getProperty("cloudinary.upload_preset", "upload_project")}\"")
     }
 
     buildFeatures {
         dataBinding = true
         buildConfig = true // ✅ Enable BuildConfig generation
         viewBinding = true
+    }
+
+    packaging {
+        resources {
+            excludes += setOf(
+                "META-INF/DEPENDENCIES",
+                "META-INF/LICENSE",
+                "META-INF/LICENSE.txt",
+                "META-INF/license.txt",
+                "META-INF/NOTICE",
+                "META-INF/NOTICE.txt",
+                "META-INF/notice.txt",
+                "META-INF/ASL2.0",
+                "META-INF/*.kotlin_module"
+            )
+        }
     }
 
     buildTypes {
@@ -78,4 +107,13 @@ dependencies {
 
     // Donut Chart
     implementation("com.github.PhilJay:MPAndroidChart:3.1.0")
+
+    // Google Drive API (giữ lại cho GoogleDriveUploader nếu cần)
+    implementation("com.google.android.gms:play-services-auth:21.0.0")
+    implementation("com.google.api-client:google-api-client-android:2.2.0")
+    implementation("com.google.apis:google-api-services-drive:v3-rev20220815-2.0.0")
+
+    // Cloudinary SDK for image upload
+    implementation("com.cloudinary:cloudinary-android:2.5.0")
+    implementation("com.google.http-client:google-http-client-gson:1.43.3")
 }

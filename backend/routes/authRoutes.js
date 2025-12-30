@@ -55,6 +55,7 @@ router.get('/sessions', authenticateToken, authController.getUserSessions);
 router.post('/sessions/revoke', authenticateToken, authController.revokeSessionById);
 
 // Update user profile (with optional avatar upload)
-router.put('/profile', authenticateToken, upload.single('avatar'), authController.updateProfile);
+// Update user profile (Cloudinary URL only - no file upload)
+router.put('/profile', authenticateToken, authController.updateProfile);
 
 module.exports = router;

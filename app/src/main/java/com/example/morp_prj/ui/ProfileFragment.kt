@@ -2,7 +2,6 @@ package com.example.morp_prj.ui
 
 import android.app.Activity
 import android.content.Intent
-import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Bundle
 import android.provider.MediaStore
@@ -20,6 +19,7 @@ import com.example.morp_prj.databinding.FragmentProfileBinding
 import com.example.morp_prj.utils.PreferenceManager
 import com.example.morp_prj.data.model.User
 import com.example.morp_prj.data.repository.AuthRepository
+import com.example.morp_prj.utils.CloudinaryHelper
 import kotlinx.coroutines.launch
 
 class ProfileFragment : Fragment() {
@@ -31,6 +31,7 @@ class ProfileFragment : Fragment() {
     private var isEditing = false
     private var currentUser: User? = null
     private var selectedAvatarUri: Uri? = null // Store selected avatar URI
+    private var uploadedCloudinaryLink: String? = null // Store uploaded Cloudinary link
 
     // Launcher chọn ảnh
     private val pickImageLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -42,11 +43,13 @@ class ProfileFragment : Fragment() {
 
                 // 2. Lưu URI để upload sau
                 selectedAvatarUri = imageUri
+                uploadedCloudinaryLink = null // Reset cloudinary link khi chọn ảnh mới
 
                 Toast.makeText(context, "Ảnh đã được chọn. Nhấn Save để lưu.", Toast.LENGTH_SHORT).show()
             }
         }
     }
+
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentProfileBinding.inflate(inflater, container, false)
@@ -55,6 +58,9 @@ class ProfileFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        // Initialize Cloudinary
+        CloudinaryHelper.init(requireContext())
 
         // Check if user is in guest mode
         val prefs = PreferenceManager(requireContext())
@@ -211,6 +217,37 @@ class ProfileFragment : Fragment() {
         pickImageLauncher.launch(intent)
     }
 
+    /**
+     * Upload selected image to Cloudinary
+     */
+    private fun uploadImageToCloudinary(imageUri: Uri) {
+        // Show progress
+        binding.btnSave.isEnabled = false
+        binding.btnSave.text = "Đang upload..."
+
+        lifecycleScope.launch {
+            val result = CloudinaryHelper.uploadImage(imageUri)
+
+            result.onSuccess { cloudinaryLink ->
+                uploadedCloudinaryLink = cloudinaryLink
+                Toast.makeText(context, "Upload thành công lên Cloudinary!", Toast.LENGTH_SHORT).show()
+
+                // Auto save after upload
+                val newDisplayName = binding.etFullName.text.toString()
+                val newPhone = binding.etPhone.text.toString()
+                val newBio = binding.etBio.text.toString()
+
+                performSave(newDisplayName, newPhone, newBio, cloudinaryLink)
+            }.onFailure { error ->
+                Toast.makeText(context, "Lỗi upload: ${error.message}", Toast.LENGTH_LONG).show()
+
+                // Reset button
+                binding.btnSave.isEnabled = true
+                binding.btnSave.text = "Save"
+            }
+        }
+    }
+
     private fun saveChanges() {
         val newDisplayName = binding.etFullName.text.toString()
         val newPhone = binding.etPhone.text.toString()
@@ -221,6 +258,21 @@ class ProfileFragment : Fragment() {
             return
         }
 
+        // Check if user selected an image but hasn't uploaded to Cloudinary yet
+        if (selectedAvatarUri != null && uploadedCloudinaryLink == null) {
+            // Upload to Cloudinary first
+            uploadImageToCloudinary(selectedAvatarUri!!)
+            return
+        }
+
+        // Save profile (with or without Cloudinary link)
+        performSave(newDisplayName, newPhone, newBio, uploadedCloudinaryLink)
+    }
+
+    /**
+     * Save profile with optional Cloudinary avatar URL
+     */
+    private fun performSave(displayName: String, phone: String, bio: String, avatarUrl: String?) {
         // Hiện loading
         binding.btnSave.isEnabled = false
         binding.btnSave.text = "Đang lưu..."
@@ -230,29 +282,35 @@ class ProfileFragment : Fragment() {
 
         lifecycleScope.launch {
             val result = authRepo.updateProfile(
-                displayName = newDisplayName,
-                phone = if (newPhone.isBlank()) null else newPhone,
-                bio = if (newBio.isBlank()) null else newBio,
-                avatarUri = selectedAvatarUri // Pass URI instead of Base64
+                displayName = displayName,
+                phone = if (phone.isBlank()) null else phone,
+                bio = if (bio.isBlank()) null else bio,
+                avatarUrl = avatarUrl
             )
 
             result.onSuccess { response ->
-                // Update thành công trên Server -> Cập nhật Local Preference từ response server (Single Source of Truth)
+                // Log response để debug
+                android.util.Log.d("ProfileFragment", "✅ Update success response: ${response.user}")
+
+                // Update thành công trên Server
                 response.user?.let { updatedUser ->
+                    android.util.Log.d("ProfileFragment", "📝 Avatar URL from server: ${updatedUser.avatarUrl}")
+
                     PreferenceManager.saveUser(requireContext(), updatedUser)
-                    currentUser = updatedUser // Update biến tạm trong Fragment
+                    currentUser = updatedUser
 
                     // Update UI
                     binding.tvUserName.text = updatedUser.displayName
-                    updateUIWithUser(updatedUser) // Reload lại UI từ data mới
+                    updateUIWithUser(updatedUser)
                 }
 
                 Toast.makeText(context, "Đã cập nhật profile thành công!", Toast.LENGTH_SHORT).show()
                 updateUIState(false)
-                selectedAvatarUri = null // Reset selection
+                selectedAvatarUri = null
+                uploadedCloudinaryLink = null
             }.onFailure { error ->
+                android.util.Log.e("ProfileFragment", "❌ Update failed: ${error.message}")
                 Toast.makeText(context, "Lỗi cập nhật: ${error.message}", Toast.LENGTH_LONG).show()
-                // Không reset UI state để user có thể retry
             }
 
             // Reset nút Save
