@@ -52,4 +52,15 @@
             app:argType="string" />
     </fragment>
 
+    <fragment
+        android:id="@+id/assignedTasksFragment"
+        android:name="com.example.morp_prj.ui.AssignedTeamTasksFragment"
+        android:label="Assigned Tasks"
+        tools:layout="@layout/fragment_assigned_team_tasks" >
+        <argument
+            android:name="teamId"
+            app:argType="string"
+            android:defaultValue="" />
+    </fragment>
+
 </navigation>

@@ -14,10 +14,6 @@
             android:icon="@drawable/ic_add_task"
             android:title="Create Team Task" />
         <item
-            android:id="@+id/nav_assigned_tasks"
-            android:icon="@drawable/ic_assignment"
-            android:title="Assigned Tasks" />
-        <item
             android:id="@+id/nav_task_management"
             android:icon="@drawable/ic_task_alt"
             android:title="Team Task Management" />
@@ -25,5 +21,11 @@
             android:id="@+id/nav_manager_dashboard"
             android:icon="@drawable/ic_dashboard"
             android:title="Team Manager Dashboard" />
+    </group>
+    <group android:checkableBehavior="single">
+        <item
+            android:id="@+id/nav_assigned_tasks"
+            android:icon="@drawable/ic_assignment"
+            android:title="Assigned Tasks" />
     </group>
 </menu>
