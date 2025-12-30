@@ -219,12 +219,18 @@ class AuthRepository(private val context: Context) {
                 avatarUrl = avatarUrl
             )
 
-            val response = apiService.updateProfileWithDriveLink(request)
+            val response = apiService.updateProfile(request)
 
-            if (response.isSuccessful && response.body()?.success == true) {
-                Result.success(response.body()!!)
+            if (response.isSuccessful && response.body() != null) {
+                val user = response.body()!!
+                val authResponse = AuthResponse(
+                    success = true,
+                    message = "Profile updated successfully",
+                    user = user
+                )
+                Result.success(authResponse)
             } else {
-                Result.failure(Exception(response.body()?.message ?: "Update failed"))
+                Result.failure(Exception(response.message() ?: "Update failed"))
             }
         } catch (e: Exception) {
             Result.failure(e)

@@ -48,4 +48,9 @@ interface AuthApiService {
 
     @POST("api/auth/reset-password")
     suspend fun resetPassword(@Body request: Map<String, String>): Response<AuthResponse>
+
+    @PUT("api/auth/profile")
+    suspend fun updateProfile(
+        @Body request: UpdateProfileWithDriveLinkRequest
+    ): Response<User>
 }

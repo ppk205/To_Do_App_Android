@@ -743,6 +743,96 @@ async function resetPassword(req, res) {
     }
 }
 
+// ============================================
+// 9. UPDATE PROFILE - Cập nhật thông tin User (Cloudinary only)
+// ============================================
+async function updateProfile(req, res) {
+    try {
+        const userId = req.user.id;
+        const { displayName, phone, bio, avatarUrl } = req.body;
+
+        // Whitelist các field được phép update
+        const updateData = {};
+        if (displayName !== undefined) updateData.displayName = displayName;
+        if (phone !== undefined) updateData.phone = phone;
+        if (bio !== undefined) updateData.bio = bio;
+
+        // Chỉ nhận avatarUrl từ Cloudinary (link HTTPS trực tiếp)
+        if (avatarUrl !== undefined) {
+            // Validate URL format
+            if (avatarUrl === null || avatarUrl === '' ||
+                avatarUrl.startsWith('https://res.cloudinary.com/') ||
+                avatarUrl.startsWith('http://res.cloudinary.com/')) {
+                updateData.avatarUrl = avatarUrl;
+            } else {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Avatar URL phải là link Cloudinary hợp lệ'
+                });
+            }
+        }
+
+        if (Object.keys(updateData).length === 0) {
+            return res.status(400).json({ success: false, message: 'Không có dữ liệu để cập nhật' });
+        }
+
+        // Log để debug
+        console.log('📝 UPDATE PROFILE - userId:', userId);
+        console.log('📝 UPDATE PROFILE - updateData:', JSON.stringify(updateData, null, 2));
+
+        // Gọi Model update
+        await User.update(userId, updateData);
+
+        // Lấy lại user mới nhất để trả về client
+        const updatedUser = await User.findById(userId);
+
+        console.log('✅ UPDATED USER from DB:', JSON.stringify(updatedUser, null, 2));
+
+        res.status(200).json({
+            success: true,
+            message: 'Cập nhật hồ sơ thành công',
+            user: sanitizeUser(updatedUser)
+        });
+
+    } catch (error) {
+        console.error('Update profile error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi server khi cập nhật hồ sơ',
+            error: error.message
+        });
+    }
+}
+
+// ============================================
+// 10. GET PROFILE - Lấy thông tin User hiện tại
+// ============================================
+async function getProfile(req, res) {
+    try {
+        const userId = req.user.id; // Lấy từ token (đã auth)
+
+        // Lấy user từ DB
+        const user = await User.findById(userId);
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'Người dùng không tồn tại'
+            });
+        }
+
+        res.status(200).json(sanitizeUser(user));
+
+    } catch (error) {
+        console.error('Get profile error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi server khi lấy hồ sơ',
+            error: error.message
+        });
+    }
+}
+
 module.exports = {
     register,
     verifyOTP,
@@ -752,5 +842,11 @@ module.exports = {
     logout,
     getUserSessions,
     revokeSessionById,
-    getOTPStatus
+    getOTPStatus,
+    forgotPassword,
+    verifyResetOTP,
+    resendResetOTP,
+    resetPassword,
+    getProfile,
+    updateProfile
 };
