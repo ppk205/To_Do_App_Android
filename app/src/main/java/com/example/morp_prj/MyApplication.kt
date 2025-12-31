@@ -3,6 +3,8 @@ package com.example.morp_prj
 import android.app.Application
 import android.content.Intent
 import com.example.morp_prj.data.api.RetrofitClient
+import com.example.morp_prj.notifications.NotificationChannels
+import com.example.morp_prj.notifications.WorkScheduler
 import com.example.morp_prj.security.SecurityChecker
 import com.example.morp_prj.security.SecureTokenStorage
 import com.example.morp_prj.utils.PreferenceManager
@@ -57,6 +59,14 @@ class MyApplication : Application() {
             }
         } catch (e: Exception) {
             android.util.Log.e("MyApplication", "Failed to set AuthInterceptor", e)
+        }
+
+        // Notifications: ensure channels + schedule periodic reminders
+        try {
+            NotificationChannels.ensureCreated(this)
+            WorkScheduler.scheduleTaskDueSoon(this)
+        } catch (t: Throwable) {
+            android.util.Log.w("MyApplication", "Failed to init notifications", t)
         }
     }
 }

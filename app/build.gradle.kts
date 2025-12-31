@@ -78,4 +78,7 @@ dependencies {
 
     // Donut Chart
     implementation("com.github.PhilJay:MPAndroidChart:3.1.0")
+
+    // WorkManager (background notifications)
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
 }
