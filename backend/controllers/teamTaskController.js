@@ -42,4 +42,73 @@ const createTeamTask = async (req, res) => {
     }
 };
 
-module.exports = { createTeamTask };
+const getTeamTasks = async (req, res) => {
+    const { teamId } = req.params;
+
+    // Lấy ID người dùng hiện tại từ middleware auth
+    const currentUserId = req.user.id;
+
+    if (!teamId) {
+        return res.status(400).json({ message: 'Missing teamId parameter' });
+    }
+
+    const conn = await pool.getConnection();
+    try {
+        // Chỉ lấy những task mà taskId đó tồn tại trong bảng team_task_assignees với userId của bạn
+        const query = `
+            SELECT
+                t.id, t.teamId, t.title, t.description, t.dueDate, t.priority, t.status, t.createdAt, t.createdBy,
+                u.id as assigneeId, u.username, u.avatarUrl, u.email
+            FROM team_tasks t
+            LEFT JOIN team_task_assignees ta ON t.id = ta.taskId
+            LEFT JOIN users u ON ta.userId = u.id
+            WHERE t.teamId = ?
+              AND t.id IN (SELECT taskId FROM team_task_assignees WHERE userId = ?)
+            ORDER BY t.dueDate ASC, t.createdAt DESC
+        `;
+
+        const [rows] = await conn.query(query, [teamId, currentUserId]);
+
+        const tasksMap = new Map();
+
+        for (const row of rows) {
+            if (!tasksMap.has(row.id)) {
+                tasksMap.set(row.id, {
+                    id: row.id,
+                    teamId: row.teamId,
+                    title: row.title,
+                    description: row.description,
+                    dueDate: row.dueDate,
+                    priority: row.priority,
+                    status: row.status,
+                    createdAt: row.createdAt,
+                    createdBy: row.createdBy,
+                    assignees: []
+                });
+            }
+
+            if (row.assigneeId) {
+                const task = tasksMap.get(row.id);
+                if (!task.assignees.some(a => a.id === row.assigneeId)) {
+                    task.assignees.push({
+                        id: row.assigneeId,
+                        username: row.username,
+                        avatarUrl: row.avatarUrl,
+                        email: row.email
+                    });
+                }
+            }
+        }
+
+        const tasks = Array.from(tasksMap.values());
+        res.json(tasks);
+
+    } catch (error) {
+        console.error('Error fetching team tasks:', error);
+        res.status(500).json({ message: 'Failed to fetch team tasks' });
+    } finally {
+        conn.release();
+    }
+};
+
+module.exports = { createTeamTask, getTeamTasks };
