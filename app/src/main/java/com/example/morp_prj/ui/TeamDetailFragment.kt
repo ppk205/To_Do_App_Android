@@ -59,11 +59,15 @@ class TeamDetailFragment : Fragment(R.layout.fragment_team_detail), NavigationVi
             view.post { setupToolbarForDestination(destination.id) }
         }
 
+        navView.menu.clear()
         if (userRole.equals("manager", ignoreCase = true)) {
-            navView.setNavigationItemSelectedListener(this)
+            navView.inflateMenu(R.menu.manager_drawer_menu)
+        } else if (userRole.equals("member", ignoreCase = true)) {
+            navView.inflateMenu(R.menu.member_drawer_menu)
         } else {
             drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED)
         }
+        navView.setNavigationItemSelectedListener(this)
     }
 
     private fun setupToolbarForDestination(destinationId: Int) {
@@ -76,7 +80,9 @@ class TeamDetailFragment : Fragment(R.layout.fragment_team_detail), NavigationVi
         }
 
         val btnMenu = currentFragmentView.findViewById<ImageView>(R.id.btnMenu)
-        if (userRole.equals("manager", ignoreCase = true)) {
+        if (userRole.equals("manager", ignoreCase = true)
+            or (userRole.equals("member", ignoreCase = true))) {
+
             btnMenu?.visibility = View.VISIBLE
             btnMenu?.setOnClickListener { drawerLayout.openDrawer(GravityCompat.END) }
         } else {
@@ -88,6 +94,7 @@ class TeamDetailFragment : Fragment(R.layout.fragment_team_detail), NavigationVi
             R.id.memberManagementFragment -> "Member Management"
             R.id.joinRequestFragment -> "Join Requests"
             R.id.createTeamTaskFragment -> "Create New Task"
+            R.id.assignedTasksFragment -> "Assigned Tasks"
             else -> "Team Dashboard"
         }
     }
@@ -101,10 +108,16 @@ class TeamDetailFragment : Fragment(R.layout.fragment_team_detail), NavigationVi
         )
 
         when (item.itemId) {
+            // For Manager
             R.id.nav_member_management -> teamNavController.navigate(R.id.memberManagementFragment, args)
             R.id.nav_join_requests -> teamNavController.navigate(R.id.joinRequestFragment, args)
             R.id.nav_manager_dashboard -> teamNavController.navigate(R.id.teamDashboardFragment, args)
             R.id.nav_create_task -> teamNavController.navigate(R.id.createTeamTaskFragment, args)
+
+            // For Member + Manager
+            R.id.nav_assigned_tasks -> teamNavController.navigate(R.id.assignedTasksFragment, args)
+
+
             else -> Toast.makeText(context, "Feature coming soon!", Toast.LENGTH_SHORT).show()
         }
 
