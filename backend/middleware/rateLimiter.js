@@ -1,113 +1,110 @@
-const { ensureRedisConnected } = require('../config/redis');
-const redisClient = require('../config/redis');
+const rateLimit = require('express-rate-limit');
 
 /**
- * ========================================
- * RATE LIMITER MIDDLEWARE
- * ========================================
+ * Rate limiter for login endpoint
+ * Prevents brute force attacks on login
+ */
+const loginRateLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 5, // Limit each IP to 5 requests per windowMs
+    message: {
+        success: false,
+        message: 'Quá nhiều lần thử đăng nhập từ IP này. Vui lòng thử lại sau 15 phút.'
+    },
+    standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+    legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+    skipSuccessfulRequests: false, // Count successful requests
+    skipFailedRequests: false // Count failed requests
+});
+
+/**
+ * Generic rate limiter factory
+ * Can be used to create custom rate limiters for different endpoints
  *
- * Redis-based rate limiting to prevent brute force attacks
- * - Login attempts: 5 attempts per 15 minutes
- * - General API: configurable per endpoint
+ * @param {number} windowMs - Time window in milliseconds
+ * @param {number} max - Maximum number of requests per window
+ * @param {string} message - Custom error message
  */
+const createRateLimiter = (windowMs = 15 * 60 * 1000, max = 100, message = 'Quá nhiều yêu cầu. Vui lòng thử lại sau.') => {
+    return rateLimit({
+        windowMs,
+        max,
+        message: {
+            success: false,
+            message
+        },
+        standardHeaders: true,
+        legacyHeaders: false
+    });
+};
 
 /**
- * ✅ Rate limit middleware for login attempts
- * Prevents brute force attacks on authentication
+ * Rate limiter for registration endpoint
+ * Prevents spam registration
  */
-async function loginRateLimiter(req, res, next) {
-    try {
-        ensureRedisConnected();
-
-        const identifier = req.body.usernameOrEmail || req.ip;
-        const key = `login_attempts:${identifier.toLowerCase()}`;
-        const maxAttempts = 5;
-        const windowSeconds = 900; // 15 minutes
-
-        const attempts = await redisClient.get(key);
-        const currentAttempts = attempts ? parseInt(attempts) : 0;
-
-        if (currentAttempts >= maxAttempts) {
-            const ttl = await redisClient.ttl(key);
-            return res.status(429).json({
-                success: false,
-                message: `Quá nhiều lần đăng nhập thất bại. Vui lòng thử lại sau ${Math.ceil(ttl / 60)} phút.`,
-                code: 'TOO_MANY_ATTEMPTS',
-                retryAfter: ttl
-            });
-        }
-
-        // Store original send to increment counter after failed login
-        const originalJson = res.json.bind(res);
-        res.json = function(data) {
-            // Only increment on failed login (401/403)
-            if (res.statusCode === 401 || res.statusCode === 403) {
-                redisClient.incr(key)
-                    .then(() => redisClient.expire(key, windowSeconds))
-                    .catch(err => console.error('Rate limiter increment error:', err));
-            }
-            // On successful login (200), clear the counter
-            else if (res.statusCode === 200 && data.success) {
-                redisClient.del(key)
-                    .catch(err => console.error('Rate limiter clear error:', err));
-            }
-            return originalJson(data);
-        };
-
-        next();
-    } catch (error) {
-        console.error('Rate limiter error:', error);
-        // Fail open - don't block requests if Redis is down
-        next();
-    }
-}
+const registerRateLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000, // 1 hour
+    max: 3, // Limit each IP to 3 registration attempts per hour
+    message: {
+        success: false,
+        message: 'Quá nhiều lần thử đăng ký từ IP này. Vui lòng thử lại sau 1 giờ.'
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+    skipSuccessfulRequests: false
+});
 
 /**
- * ✅ Generic rate limiter factory
- * @param {number} maxRequests - Maximum requests allowed
- * @param {number} windowSeconds - Time window in seconds
- * @param {string} keyPrefix - Redis key prefix
+ * Rate limiter for OTP endpoints (verify, resend)
+ * Prevents OTP brute force and spam
  */
-function createRateLimiter(maxRequests = 10, windowSeconds = 60, keyPrefix = 'rate_limit') {
-    return async (req, res, next) => {
-        try {
-            ensureRedisConnected();
+const otpRateLimiter = rateLimit({
+    windowMs: 5 * 60 * 1000, // 5 minutes
+    max: 10, // Limit each IP to 10 OTP requests per 5 minutes
+    message: {
+        success: false,
+        message: 'Quá nhiều yêu cầu OTP. Vui lòng thử lại sau 5 phút.'
+    },
+    standardHeaders: true,
+    legacyHeaders: false
+});
 
-            const identifier = req.user?.id || req.ip;
-            const key = `${keyPrefix}:${identifier}`;
+/**
+ * Rate limiter for password reset endpoints
+ * Prevents password reset abuse
+ */
+const passwordResetRateLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000, // 1 hour
+    max: 5, // Limit each IP to 5 password reset attempts per hour
+    message: {
+        success: false,
+        message: 'Quá nhiều lần yêu cầu đặt lại mật khẩu. Vui lòng thử lại sau 1 giờ.'
+    },
+    standardHeaders: true,
+    legacyHeaders: false
+});
 
-            const requests = await redisClient.incr(key);
-
-            if (requests === 1) {
-                await redisClient.expire(key, windowSeconds);
-            }
-
-            if (requests > maxRequests) {
-                const ttl = await redisClient.ttl(key);
-                return res.status(429).json({
-                    success: false,
-                    message: 'Quá nhiều yêu cầu. Vui lòng thử lại sau.',
-                    code: 'RATE_LIMIT_EXCEEDED',
-                    retryAfter: ttl
-                });
-            }
-
-            // Add rate limit headers
-            res.setHeader('X-RateLimit-Limit', maxRequests);
-            res.setHeader('X-RateLimit-Remaining', Math.max(0, maxRequests - requests));
-            res.setHeader('X-RateLimit-Reset', Date.now() + (windowSeconds * 1000));
-
-            next();
-        } catch (error) {
-            console.error('Rate limiter error:', error);
-            // Fail open - don't block requests if Redis is down
-            next();
-        }
-    };
-}
+/**
+ * General API rate limiter
+ * Applies to all API endpoints
+ */
+const generalApiLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // Limit each IP to 100 requests per windowMs
+    message: {
+        success: false,
+        message: 'Quá nhiều yêu cầu từ IP này. Vui lòng thử lại sau.'
+    },
+    standardHeaders: true,
+    legacyHeaders: false
+});
 
 module.exports = {
     loginRateLimiter,
-    createRateLimiter
+    createRateLimiter,
+    registerRateLimiter,
+    otpRateLimiter,
+    passwordResetRateLimiter,
+    generalApiLimiter
 };
 

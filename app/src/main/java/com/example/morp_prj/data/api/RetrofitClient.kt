@@ -23,7 +23,7 @@ import com.google.gson.GsonBuilder
 object RetrofitClient {
 
     // Base URL - Use your actual domain in production
-    private const val BASE_URL = "https://bloomberg-examination-festivals-conversations.trycloudflare.com/"
+    private const val BASE_URL = "http://192.168.2.247:3001/"
 
     // ✅ Production domain for certificate pinning
     // Replace with your actual domain when deploying to production
@@ -49,21 +49,12 @@ object RetrofitClient {
             true
         }
     }
-
-    /**
-     * Certificate Pinning - Protects against MITM attacks
-     *
-     * IMPORTANT: Replace the sample pin with your real certificate SHA-256 pins.
-     */
     private val certificatePinner = CertificatePinner.Builder()
         // Example pins (replace these with your actual production pins)
         .add(PRODUCTION_DOMAIN, "sha256/YOUR_PRIMARY_PIN_BASE64=")
         .add(PRODUCTION_DOMAIN, "sha256/YOUR_BACKUP_PIN_BASE64=")
         .build()
 
-    /**
-     * Logging interceptor - Only enabled in debug builds
-     */
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
         level = if (isDebugBuild()) {
             HttpLoggingInterceptor.Level.BODY

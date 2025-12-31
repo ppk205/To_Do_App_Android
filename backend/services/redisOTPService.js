@@ -148,8 +148,10 @@ class RedisOTPService {
 
     /**
      * ✅ Xác thực OTP
+     * @param {boolean} deleteOnVerify - If true, delete OTP after successful verification (default: true)
+     *                                   For RESET_PASSWORD, should be false (only delete after password change)
      */
-    static async verifyOTP(email, otpCode, purpose = 'REGISTER') {
+    static async verifyOTP(email, otpCode, purpose = 'REGISTER', deleteOnVerify = true) {
         try {
             ensureRedisConnected();
              const otpKey = this.getOTPKey(email, purpose);
@@ -245,14 +247,44 @@ class RedisOTPService {
                 };
             }
 
-            // 5. OTP đúng → Xóa tất cả
-            await this.invalidateOTP(email, purpose);
+            // 5. OTP đúng → Lấy pendingData trước khi xóa
+            let pendingData = null;
+            const pendingKey = this.getPendingRegKey(email);
+            const pendingDataStr = await redisClient.get(pendingKey);
 
-            console.log(`✅ OTP verified successfully for ${email} (${purpose})`);
+            if (pendingDataStr) {
+                try {
+                    pendingData = JSON.parse(pendingDataStr);
+                } catch (e) {
+                    console.error('❌ Error parsing pendingData:', e);
+                }
+            }
+
+            // Chỉ xóa OTP nếu deleteOnVerify = true (REGISTER flow)
+            // RESET_PASSWORD flow: giữ OTP để verify lần nữa khi reset password
+            if (deleteOnVerify) {
+                // Xóa OTP và attempts
+                await this.invalidateOTP(email, purpose);
+
+                // Xóa pendingData
+                if (pendingKey) {
+                    await redisClient.del(pendingKey);
+                }
+                console.log(`✅ OTP verified and deleted for ${email} (${purpose})`);
+            } else {
+                // Chỉ reset attempts về 0 để cho phép verify lại
+                await redisClient.set(attemptsKey, '0');
+                const otpTTL = await redisClient.ttl(otpKey);
+                if (otpTTL > 0) {
+                    await redisClient.expire(attemptsKey, otpTTL);
+                }
+                console.log(`✅ OTP verified but kept for ${email} (${purpose})`);
+            }
 
             return {
                 success: true,
-                message: 'OTP xác thực thành công'
+                message: 'OTP xác thực thành công',
+                pendingData: pendingData
             };
 
         } catch (error) {

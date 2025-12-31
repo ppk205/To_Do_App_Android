@@ -3,8 +3,9 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const RedisOTPService = require('../services/redisOTPService');
 const tokenService = require('../services/tokenService');
+const passwordResetService = require('../services/passwordResetService');
 const { generateUserId, sanitizeUser } = require('../utils/helpers');
-const { sendOTPEmail } = require('../utils/emailService');
+const { sendOTPEmail, sendResetPasswordEmail, sendPasswordResetEmail, sendPasswordChangedEmail } = require('../utils/emailService');
 
 // ============================================
 // 1. REGISTER (Step 1) - Lưu pending registration vào Redis + gửi OTP
@@ -494,6 +495,347 @@ async function getOTPStatus(req, res) {
     }
 }
 
+// ============================================
+// FORGOT PASSWORD FLOW (OTP-BASED)
+// ============================================
+
+/**
+ * ✅ POST /api/auth/forgot-password
+ * Request password reset OTP
+ */
+async function forgotPassword(req, res) {
+    try {
+        const { email } = req.body;
+
+        console.log('🔍 Forgot password request received:', {
+            email: email ? `${email.substring(0, 3)}***` : 'missing',
+            ip: req.ip,
+            hasAuthHeader: !!req.headers.authorization
+        });
+
+        // Get request info for security logging
+        const requestInfo = {
+            ipAddress: req.ip || req.connection?.remoteAddress,
+            userAgent: req.headers['user-agent']
+        };
+
+        // ⚠️ SECURITY: Use setTimeout to prevent timing attacks
+        const startTime = Date.now();
+
+        // Generate reset OTP
+        const result = await passwordResetService.generateResetOTP(email, requestInfo);
+
+        // Send email if user exists (don't await to prevent timing attack)
+        if (result.otp) {
+            console.log('📧 Calling sendResetPasswordEmail for:', result.email ? result.email.substring(0, 3) + '***' : 'unknown');
+            // Send OTP email asynchronously (fire and forget)
+            sendResetPasswordEmail(result.email, result.otp, result.displayName)
+                .then((emailResult) => {
+                    if (emailResult && emailResult.success) {
+                        console.log('✅ Email sent successfully, messageId:', emailResult.messageId);
+                    } else {
+                        console.error('❌ Email sending failed:', emailResult ? emailResult.error : 'Unknown error');
+                    }
+                })
+                .catch(err => {
+                    console.error('❌ Error in sendResetPasswordEmail promise:', err.message);
+                    console.error('❌ Stack:', err.stack);
+                });
+        } else {
+            console.log('⚠️ No OTP generated, email will not be sent');
+        }
+
+        // ✅ SECURITY: Always add artificial delay to prevent timing attacks
+        const elapsedTime = Date.now() - startTime;
+        const minResponseTime = 500; // 500ms minimum response time
+
+        if (elapsedTime < minResponseTime) {
+            await new Promise(resolve => setTimeout(resolve, minResponseTime - elapsedTime));
+        }
+
+        // ✅ SECURITY: Always return same success message (prevent user enumeration)
+        res.status(200).json({
+            success: true,
+            message: 'If the email exists, an OTP has been sent. Please check your inbox.',
+            note: 'The OTP will expire in 10 minutes.'
+        });
+
+    } catch (error) {
+        console.error('Forgot password error:', error);
+        // ❌ SECURITY: Don't expose error details
+        res.status(500).json({
+            success: false,
+            message: 'An error occurred. Please try again later.'
+        });
+    }
+}
+
+/**
+ * ✅ POST /api/auth/verify-reset-otp
+ * Verify password reset OTP
+ */
+async function verifyResetOTP(req, res) {
+    try {
+        const { email, otp } = req.body;
+
+        if (!email || !otp) {
+            return res.status(400).json({
+                success: false,
+                message: 'Email and OTP are required'
+            });
+        }
+
+        const verification = await passwordResetService.verifyResetOTP(email, otp);
+
+        if (!verification.valid) {
+            return res.status(400).json({
+                success: false,
+                message: verification.message,
+                attemptsLeft: verification.attemptsLeft
+            });
+        }
+
+        // ✅ Return minimal information
+        res.status(200).json({
+            success: true,
+            message: 'OTP verified successfully',
+            email: email // Return email for next step
+        });
+
+    } catch (error) {
+        console.error('Verify reset OTP error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'An error occurred while verifying OTP'
+        });
+    }
+}
+
+/**
+ * ✅ POST /api/auth/resend-reset-otp
+ * Resend password reset OTP
+ */
+async function resendResetOTP(req, res) {
+    try {
+        const { email } = req.body;
+
+        if (!email) {
+            return res.status(400).json({
+                success: false,
+                message: 'Email is required'
+            });
+        }
+
+        const result = await passwordResetService.resendResetOTP(email);
+
+        if (!result.success) {
+            return res.status(429).json({
+                success: false,
+                message: result.message,
+                cooldownRemaining: result.cooldownRemaining
+            });
+        }
+
+        // Send email if user exists
+        if (result.otp) {
+            console.log('📧 Resending OTP email for:', result.email ? result.email.substring(0, 3) + '***' : 'unknown');
+            sendResetPasswordEmail(result.email, result.otp, result.displayName)
+                .then((emailResult) => {
+                    if (emailResult && emailResult.success) {
+                        console.log('✅ Resend email sent successfully, messageId:', emailResult.messageId);
+                    } else {
+                        console.error('❌ Resend email failed:', emailResult ? emailResult.error : 'Unknown error');
+                    }
+                })
+                .catch(err => {
+                    console.error('❌ Error in resendResetPasswordEmail promise:', err.message);
+                });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'If the email exists, a new OTP has been sent'
+        });
+
+    } catch (error) {
+        console.error('Resend reset OTP error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'An error occurred while resending OTP'
+        });
+    }
+}
+
+/**
+ * ✅ POST /api/auth/reset-password
+ * Reset password with verified OTP
+ */
+async function resetPassword(req, res) {
+    try {
+        const { email, otp, newPassword } = req.body;
+
+        if (!email || !otp || !newPassword) {
+            return res.status(400).json({
+                success: false,
+                message: 'Email, OTP, and new password are required'
+            });
+        }
+
+        // Get user for validation
+        const user = await User.findByEmail(email);
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        // ✅ SECURITY: Check if new password is different from old password
+        const isSamePassword = await bcrypt.compare(newPassword, user.hashedPassword);
+        if (isSamePassword) {
+            return res.status(400).json({
+                success: false,
+                message: 'New password must be different from the old password'
+            });
+        }
+
+        // Hash new password
+        const newPasswordHash = await bcrypt.hash(newPassword, 10);
+
+        // Reset password (verifies OTP inside)
+        const result = await passwordResetService.resetPassword(email, otp, newPasswordHash);
+
+        if (!result.success) {
+            return res.status(400).json({
+                success: false,
+                message: result.message
+            });
+        }
+
+        // ✅ SECURITY: Send email notification (async, don't wait)
+        const timestamp = new Date().toLocaleString('en-US', {
+            timeZone: 'Asia/Ho_Chi_Minh',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+
+        const ipAddress = req.ip || req.connection?.remoteAddress;
+
+        sendPasswordChangedEmail(user.email, user.displayName, timestamp, ipAddress)
+            .catch(err => console.error('Error sending password changed notification:', err.message));
+
+        res.status(200).json({
+            success: true,
+            message: 'Password reset successfully. All sessions have been logged out. Please login with your new password.',
+            note: 'A confirmation email has been sent to your email address.'
+        });
+
+    } catch (error) {
+        console.error('Reset password error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'An error occurred while resetting password'
+        });
+    }
+}
+
+// ============================================
+// 9. UPDATE PROFILE - Cập nhật thông tin User (Cloudinary only)
+// ============================================
+async function updateProfile(req, res) {
+    try {
+        const userId = req.user.id;
+        const { displayName, phone, bio, avatarUrl, githubUrl, linkedinUrl, websiteUrl } = req.body;
+
+        // Whitelist các field được phép update
+        const updateData = {};
+        if (displayName !== undefined) updateData.displayName = displayName;
+        if (phone !== undefined) updateData.phone = phone;
+        if (bio !== undefined) updateData.bio = bio;
+        if (githubUrl !== undefined) updateData.githubUrl = githubUrl;
+        if (linkedinUrl !== undefined) updateData.linkedinUrl = linkedinUrl;
+        if (websiteUrl !== undefined) updateData.websiteUrl = websiteUrl;
+
+        // Chỉ nhận avatarUrl từ Cloudinary (link HTTPS trực tiếp)
+        if (avatarUrl !== undefined) {
+            // Validate URL format
+            if (avatarUrl === null || avatarUrl === '' ||
+                avatarUrl.startsWith('https://res.cloudinary.com/') ||
+                avatarUrl.startsWith('http://res.cloudinary.com/')) {
+                updateData.avatarUrl = avatarUrl;
+            } else {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Avatar URL phải là link Cloudinary hợp lệ'
+                });
+            }
+        }
+
+        if (Object.keys(updateData).length === 0) {
+            return res.status(400).json({ success: false, message: 'Không có dữ liệu để cập nhật' });
+        }
+
+        // Log để debug
+        console.log('📝 UPDATE PROFILE - userId:', userId);
+        console.log('📝 UPDATE PROFILE - updateData:', JSON.stringify(updateData, null, 2));
+
+        // Gọi Model update
+        await User.update(userId, updateData);
+
+        // Lấy lại user mới nhất để trả về client
+        const updatedUser = await User.findById(userId);
+
+        console.log('✅ UPDATED USER from DB:', JSON.stringify(updatedUser, null, 2));
+
+        res.status(200).json({
+            success: true,
+            message: 'Cập nhật hồ sơ thành công',
+            user: sanitizeUser(updatedUser)
+        });
+
+    } catch (error) {
+        console.error('Update profile error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi server khi cập nhật hồ sơ',
+            error: error.message
+        });
+    }
+}
+
+// ============================================
+// 10. GET PROFILE - Lấy thông tin User hiện tại
+// ============================================
+async function getProfile(req, res) {
+    try {
+        const userId = req.user.id; // Lấy từ token (đã auth)
+
+        // Lấy user từ DB
+        const user = await User.findById(userId);
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'Người dùng không tồn tại'
+            });
+        }
+
+        res.status(200).json(sanitizeUser(user));
+
+    } catch (error) {
+        console.error('Get profile error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi server khi lấy hồ sơ',
+            error: error.message
+        });
+    }
+}
+
 module.exports = {
     register,
     verifyOTP,
@@ -503,5 +845,11 @@ module.exports = {
     logout,
     getUserSessions,
     revokeSessionById,
-    getOTPStatus
+    getOTPStatus,
+    forgotPassword,
+    verifyResetOTP,
+    resendResetOTP,
+    resetPassword,
+    getProfile,
+    updateProfile
 };

@@ -101,4 +101,9 @@ interface TaskDao {
     /** When a user logs in again, clear old server cache and re-sync down. */
     @Query("DELETE FROM tasks WHERE userId = :userId AND isFromServer = 1")
     suspend fun clearServerCacheForUser(userId: String): Int
+
+    @Query(
+        "SELECT * FROM tasks WHERE userId = :userId AND deadlineAt IS NOT NULL AND deadlineAt >= :fromMillis AND deadlineAt <= :toMillis ORDER BY deadlineAt ASC"
+    )
+    suspend fun getDueSoonForUser(userId: String, fromMillis: Long, toMillis: Long): List<TaskEntity>
 }

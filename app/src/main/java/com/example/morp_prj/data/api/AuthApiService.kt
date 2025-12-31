@@ -6,6 +6,7 @@ import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.POST
+import retrofit2.http.PUT
 
 interface AuthApiService {
 
@@ -35,4 +36,21 @@ interface AuthApiService {
 
     @POST("api/auth/sessions/revoke")
     suspend fun revokeSession(@Body request: RevokeSessionRequest): Response<AuthResponse>
+
+    @POST("api/auth/forgot-password")
+    suspend fun forgotPassword(@Body request: Map<String, String>): Response<AuthResponse>
+
+    @POST("api/auth/verify-reset-otp")
+    suspend fun verifyResetOTP(@Body request: Map<String, String>): Response<AuthResponse>
+
+    @POST("api/auth/resend-reset-otp")
+    suspend fun resendResetOTP(@Body request: Map<String, String>): Response<AuthResponse>
+
+    @POST("api/auth/reset-password")
+    suspend fun resetPassword(@Body request: Map<String, String>): Response<AuthResponse>
+
+    @PUT("api/auth/profile")
+    suspend fun updateProfile(
+        @Body request: UpdateProfileWithDriveLinkRequest
+    ): Response<User>
 }
