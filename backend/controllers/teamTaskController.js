@@ -44,33 +44,42 @@ const createTeamTask = async (req, res) => {
 
 const getTeamTasks = async (req, res) => {
     const { teamId } = req.params;
-
-    // Lấy ID người dùng hiện tại từ middleware auth
-    const currentUserId = req.user.id;
-
     if (!teamId) {
         return res.status(400).json({ message: 'Missing teamId parameter' });
     }
 
     const conn = await pool.getConnection();
     try {
-        // Chỉ lấy những task mà taskId đó tồn tại trong bảng team_task_assignees với userId của bạn
+        // --- CẬP NHẬT TỰ ĐỘNG TRẠNG THÁI OVERDUE ---
+        // Trước khi lấy danh sách, update các task đã quá hạn mà chưa hoàn thành
+        const now = Date.now();
+        const updateQuery = `
+            UPDATE team_tasks 
+            SET status = 'OVERDUE' 
+            WHERE teamId = ? 
+            AND dueDate <= ?
+            AND status NOT IN ('DONE', 'COMPLETED', 'OVERDUE')
+        `;
+        await conn.query(updateQuery, [teamId, now]);
+        // --------------------------------------------
+
+        // Query tasks and their assignees via JOIN
         const query = `
-            SELECT
+            SELECT 
                 t.id, t.teamId, t.title, t.description, t.dueDate, t.priority, t.status, t.createdAt, t.createdBy,
                 u.id as assigneeId, u.username, u.avatarUrl, u.email
             FROM team_tasks t
             LEFT JOIN team_task_assignees ta ON t.id = ta.taskId
             LEFT JOIN users u ON ta.userId = u.id
             WHERE t.teamId = ?
-              AND t.id IN (SELECT taskId FROM team_task_assignees WHERE userId = ?)
             ORDER BY t.dueDate ASC, t.createdAt DESC
         `;
+        
+        const [rows] = await conn.query(query, [teamId]);
 
-        const [rows] = await conn.query(query, [teamId, currentUserId]);
-
+        // Group rows by task ID since one task can have multiple assignees
         const tasksMap = new Map();
-
+        
         for (const row of rows) {
             if (!tasksMap.has(row.id)) {
                 tasksMap.set(row.id, {
@@ -86,8 +95,9 @@ const getTeamTasks = async (req, res) => {
                     assignees: []
                 });
             }
-
+            
             if (row.assigneeId) {
+                // Check uniqueness
                 const task = tasksMap.get(row.id);
                 if (!task.assignees.some(a => a.id === row.assigneeId)) {
                     task.assignees.push({

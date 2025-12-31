@@ -63,4 +63,15 @@
             android:defaultValue="" />
     </fragment>
 
+    <fragment
+        android:id="@+id/teamTaskManagementFragment"
+        android:name="com.example.morp_prj.ui.TeamTaskManagementFragment"
+        android:label="Team Tasks Management"
+        tools:layout="@layout/fragment_team_task_management" >
+        <argument
+            android:name="teamId"
+            app:argType="string"
+            android:defaultValue="" />
+    </fragment>
+
 </navigation>

@@ -14,7 +14,7 @@
             android:icon="@drawable/ic_add_task"
             android:title="Create Team Task" />
         <item
-            android:id="@+id/nav_task_management"
+            android:id="@+id/nav_team_task_management"
             android:icon="@drawable/ic_task_alt"
             android:title="Team Task Management" />
         <item

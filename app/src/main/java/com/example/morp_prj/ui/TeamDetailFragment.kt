@@ -95,6 +95,7 @@ class TeamDetailFragment : Fragment(R.layout.fragment_team_detail), NavigationVi
             R.id.joinRequestFragment -> "Join Requests"
             R.id.createTeamTaskFragment -> "Create New Task"
             R.id.assignedTasksFragment -> "Assigned Tasks"
+            R.id.teamTaskManagementFragment -> "Team Task Management"
             else -> "Team Dashboard"
         }
     }
@@ -113,6 +114,7 @@ class TeamDetailFragment : Fragment(R.layout.fragment_team_detail), NavigationVi
             R.id.nav_join_requests -> teamNavController.navigate(R.id.joinRequestFragment, args)
             R.id.nav_manager_dashboard -> teamNavController.navigate(R.id.teamDashboardFragment, args)
             R.id.nav_create_task -> teamNavController.navigate(R.id.createTeamTaskFragment, args)
+            R.id.nav_team_task_management -> teamNavController.navigate(R.id.teamTaskManagementFragment, args)
 
             // For Member + Manager
             R.id.nav_assigned_tasks -> teamNavController.navigate(R.id.assignedTasksFragment, args)
