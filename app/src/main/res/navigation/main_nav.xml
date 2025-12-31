@@ -37,6 +37,70 @@
             app:destination="@id/onboarding_fragment"
             app:popUpTo="@id/onboarding_fragment"
             app:popUpToInclusive="true" />
+        <action
+            android:id="@+id/action_login_to_forgotPassword"
+            app:destination="@id/forgot_password_fragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/forgot_password_fragment"
+        android:name="com.example.morp_prj.ui.ForgotPasswordFragment"
+        android:label="@string/forgot_password_title"
+        tools:layout="@layout/fragment_forgot_password">
+        <action
+            android:id="@+id/action_forgotPassword_to_login"
+            app:destination="@id/login_fragment"
+            app:popUpTo="@id/login_fragment"
+            app:popUpToInclusive="true" />
+        <action
+            android:id="@+id/action_forgotPassword_to_verifyResetOTP"
+            app:destination="@id/verify_reset_otp_fragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/verify_reset_otp_fragment"
+        android:name="com.example.morp_prj.ui.VerifyResetOTPFragment"
+        android:label="@string/verify_reset_otp_title"
+        tools:layout="@layout/fragment_verify_reset_otp">
+        <argument
+            android:name="email"
+            app:argType="string" />
+        <action
+            android:id="@+id/action_verifyResetOTP_to_resetPassword"
+            app:destination="@id/reset_password_fragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/reset_password_fragment"
+        android:name="com.example.morp_prj.ui.ResetPasswordFragment"
+        android:label="@string/reset_password_title"
+        tools:layout="@layout/fragment_reset_password">
+        <argument
+            android:name="email"
+            app:argType="string" />
+        <argument
+            android:name="otp"
+            app:argType="string" />
+        <action
+            android:id="@+id/action_resetPassword_to_login"
+            app:destination="@id/login_fragment"
+            app:popUpTo="@id/login_fragment"
+            app:popUpToInclusive="true" />
+        <action
+            android:id="@+id/action_resetPassword_to_resetSuccess"
+            app:destination="@id/reset_password_success_fragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/reset_password_success_fragment"
+        android:name="com.example.morp_prj.ui.ResetPasswordSuccessFragment"
+        android:label="@string/reset_password_success_title"
+        tools:layout="@layout/fragment_reset_password_success">
+        <action
+            android:id="@+id/action_resetSuccess_to_login"
+            app:destination="@id/login_fragment"
+            app:popUpTo="@id/login_fragment"
+            app:popUpToInclusive="true" />
     </fragment>
 
     <fragment

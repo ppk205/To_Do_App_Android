@@ -310,6 +310,9 @@ class VerifyOtpFragment : Fragment(R.layout.fragment_verify_otp) {
                             token = savedToken
                         )
 
+                        // ✅ Đánh dấu đã xem onboarding sau khi đăng ký thành công
+                        preferenceManager.setHasSeenOnboarding(true)
+
                         // Also save tokens securely (if provided) so session persists across app restarts
                         try {
                             val tokenStorage = com.example.morp_prj.security.SecureTokenStorage(requireContext())

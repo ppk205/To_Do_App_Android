@@ -39,5 +39,14 @@ data class User(
     val createdAt: String? = null,
 
     @SerializedName("updatedAt")
-    val updatedAt: String? = null
+    val updatedAt: String? = null,
+
+    @SerializedName("githubUrl")
+    val githubUrl: String? = null,
+
+    @SerializedName("linkedinUrl")
+    val linkedinUrl: String? = null,
+
+    @SerializedName("websiteUrl")
+    val websiteUrl: String? = null
 )

@@ -132,6 +132,49 @@ const registerInitValidation = [
         .withMessage('Số điện thoại không hợp lệ')
 ];
 
+/**
+ * ✅ Validation for forgot password request
+ */
+const forgotPasswordValidation = [
+    body('email')
+        .trim()
+        .isEmail()
+        .withMessage('Email không hợp lệ')
+        .normalizeEmail()
+        .customSanitizer(sanitizeInput)
+];
+
+/**
+ * ✅ Validation for reset password request (OTP-based)
+ */
+const resetPasswordValidation = [
+    body('email')
+        .trim()
+        .isEmail()
+        .withMessage('Email không hợp lệ')
+        .normalizeEmail()
+        .customSanitizer(sanitizeInput),
+
+    body('otp')
+        .trim()
+        .isLength({ min: 6, max: 6 })
+        .withMessage('OTP phải có 6 chữ số')
+        .isNumeric()
+        .withMessage('OTP phải là số'),
+
+    body('newPassword')
+        .isLength({ min: 6 })
+        .withMessage('Mật khẩu phải có ít nhất 6 ký tự'),
+
+    body('confirmPassword')
+        .custom((value, { req }) => {
+            if (value !== req.body.newPassword) {
+                throw new Error('Mật khẩu xác nhận không khớp');
+            }
+            return true;
+        })
+];
+
 // Middleware kiểm tra validation errors
 const validate = (req, res, next) => {
     const errors = validationResult(req);
@@ -151,5 +194,7 @@ module.exports = {
     verifyOTPValidation,
     resendOTPValidation,
     registerInitValidation,
+    forgotPasswordValidation,
+    resetPasswordValidation,
     validate
 };

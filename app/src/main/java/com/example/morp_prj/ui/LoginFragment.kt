@@ -40,6 +40,7 @@ class LoginFragment : Fragment(R.layout.fragment_login) {
         val inputPassword = view.findViewById<TextInputEditText>(R.id.input_password)
         val btnLogin = view.findViewById<MaterialButton>(R.id.btn_login)
         val txtRegisterLink = view.findViewById<TextView>(R.id.txt_register_link)
+        val txtForgotPassword = view.findViewById<TextView>(R.id.txt_forgot_password)
 
         btnLogin.setOnClickListener {
             // Safe read of text (avoid NPE if .text is null)
@@ -54,6 +55,12 @@ class LoginFragment : Fragment(R.layout.fragment_login) {
         txtRegisterLink.setOnClickListener {
             if (isAdded) {
                 findNavController().navigate(R.id.action_login_to_register)
+            }
+        }
+
+        txtForgotPassword.setOnClickListener {
+            if (isAdded) {
+                findNavController().navigate(R.id.action_login_to_forgotPassword)
             }
         }
 
@@ -127,6 +134,9 @@ class LoginFragment : Fragment(R.layout.fragment_login) {
                                 email = user.email,
                                 token = response.token
                             )
+
+                            // ✅ Đánh dấu đã xem onboarding sau khi đăng nhập thành công
+                            preferenceManager.setHasSeenOnboarding(true)
 
                             // Apply session task rules (show this user's tasks; later can trigger sync-down)
                             try {

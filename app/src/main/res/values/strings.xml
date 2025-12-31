@@ -49,89 +49,89 @@
     <string name="guest_prompt_title">Register to sync and access Team features!</string>
     <string name="guest_register_now">Register Now</string>
     <string name="login">Login</string>
-    <string name="back_home">Quay lại</string>
+    <string name="back_home">Back</string>
 
     <!-- OTP Verification Strings -->
-    <string name="verify_otp_title">Xác Thực OTP</string>
-    <string name="verify_otp_message">Nhập Mã OTP</string>
-    <string name="otp_sent_to">OTP đã gửi đến</string>
-    <string name="otp_expire_in">Hết hạn trong</string>
-    <string name="otp_description">Vui lòng nhập mã OTP 6 chữ số được gửi đến email của bạn. Mã này sẽ hết hạn sau 5 phút.</string>
-    <string name="otp_not_received">Không nhận được OTP?</string>
-    <string name="resend_otp">Gửi lại</string>
-    <string name="verify_button">Xác Thực</string>
-    <string name="back_button">Quay Lại</string>
+    <string name="verify_otp_title">Verify OTP</string>
+    <string name="verify_otp_message">Enter OTP Code</string>
+    <string name="otp_sent_to">OTP sent to</string>
+    <string name="otp_expire_in">Expires in</string>
+    <string name="otp_description">Please enter the 6-digit OTP sent to your email. The code will expire after 5 minutes.</string>
+    <string name="otp_not_received">Did not receive code?</string>
+    <string name="resend_otp">Resend</string>
+    <string name="verify_button">Verify</string>
+    <string name="back_button">Back</string>
 
     <!-- Register Success Strings -->
-    <string name="register_success_title">Đăng Ký Thành Công!</string>
-    <string name="register_success_message">Tài khoản của bạn đã được kích hoạt thành công. Bây giờ bạn có thể đăng nhập.</string>
+    <string name="register_success_title">Registration Successful!</string>
+    <string name="register_success_message">Your account has been activated. You can now log in.</string>
     <string name="username_label">Username:</string>
     <string name="email_label">Email:</string>
-    <string name="continue_button">Tiếp Tục</string>
+    <string name="continue_button">Continue</string>
 
     <!-- Error Strings -->
-    <string name="error_title">Lỗi</string>
-    <string name="error_message">Đã xảy ra lỗi. Vui lòng thử lại.</string>
-    <string name="wrong_otp_title">OTP Không Chính Xác</string>
-    <string name="wrong_otp_message">Mã OTP bạn nhập không đúng. Vui lòng kiểm tra lại và thử lại.</string>
-    <string name="wrong_otp_description">Nếu bạn còn lại 1 lần thử, vui lòng cẩn thận. Nếu quá 5 lần sai, vui lòng gửi lại OTP.</string>
-    <string name="otp_expired_title">OTP Hết Hạn</string>
-    <string name="otp_expired_message">Mã OTP của bạn đã hết hạn. Vui lòng gửi lại OTP mới.</string>
-    <string name="otp_expired_info">Mã OTP chỉ có hiệu lực trong 5 phút. Nếu bạn không nhận được mã, hãy kiểm tra email spam hoặc gửi lại.</string>
+    <string name="error_title">Error</string>
+    <string name="error_message">An error occurred. Please try again.</string>
+    <string name="wrong_otp_title">Invalid OTP</string>
+    <string name="wrong_otp_message">The OTP you entered is incorrect. Please check and try again.</string>
+    <string name="wrong_otp_description">If you have only one attempt left, please be careful. After 5 failed attempts, request a new OTP.</string>
+    <string name="otp_expired_title">OTP Expired</string>
+    <string name="otp_expired_message">Your OTP has expired. Please request a new one.</string>
+    <string name="otp_expired_info">The OTP is valid for 5 minutes. If you did not receive it, check your spam folder or request a new code.</string>
 
     <!-- Button Strings -->
-    <string name="cancel_button">Hủy</string>
-    <string name="retry_button">Thử Lại</string>
-    <string name="resend_otp_button">Gửi Lại OTP</string>
-    <string name="try_again_button">Thử Lại</string>
+    <string name="cancel_button">Cancel</string>
+    <string name="retry_button">Retry</string>
+    <string name="resend_otp_button">Resend OTP</string>
+    <string name="try_again_button">Try Again</string>
 
     <!-- Labels & Common -->
-    <string name="attempts_label">Số lần nhập:</string>
-    <string name="attempts_format">Số lần nhập: %1$d/5</string>
-    <string name="success">Thành công</string>
-    <string name="error">Lỗi</string>
-    <string name="warning">Cảnh báo</string>
-    <string name="info">Thông tin</string>
-    <string name="otp_verification">Xác thực OTP</string>
+    <string name="attempts_label">Attempts:</string>
+    <string name="attempts_format">Attempts: %1$d/5</string>
+    <string name="success">Success</string>
+    <string name="error">Error</string>
+    <string name="warning">Warning</string>
+    <string name="info">Info</string>
+    <string name="otp_verification">OTP Verification</string>
 
     <!-- OTP small strings -->
     <string name="otp_digit_hint">*</string>
-    <string name="paste_clipboard">Dán từ clipboard</string>
-    <string name="otp_timer_placeholder">Mã sẽ hết hạn trong 05:00</string>
+    <string name="paste_clipboard">Paste from clipboard</string>
+    <string name="otp_timer_placeholder">Code expires in 05:00</string>
 
     <!-- Verify OTP messages -->
-    <string name="otp_incomplete">Vui lòng nhập đầy đủ mã OTP</string>
-    <string name="verifying">Đang xác thực…</string>
-    <string name="verify">Xác thực</string>
-    <string name="verify_success_welcome">Xác thực thành công! Chào mừng %1$s!</string>
-    <string name="clipboard_empty">Clipboard rỗng</string>
-    <string name="clipboard_invalid">Clipboard không chứa 6 chữ số OTP</string>
-    <string name="otp_expired">OTP đã hết hạn. Vui lòng gửi lại.</string>
-    <string name="attempts_limit_message">Bạn đã nhập sai 5 lần. Vui lòng gửi lại OTP.</string>
-    <string name="resend_success">OTP mới đã được gửi đến email của bạn!</string>
-    <string name="resend_failed_default">Không thể gửi lại OTP. Vui lòng thử lại.</string>
+    <string name="otp_incomplete">Please enter the full OTP code</string>
+    <string name="verifying">Verifying…</string>
+    <string name="verify">Verify</string>
+    <string name="verify_success_welcome">Verification successful! Welcome %1$s!</string>
+    <string name="clipboard_empty">Clipboard is empty</string>
+    <string name="clipboard_invalid">Clipboard does not contain a 6-digit OTP</string>
+    <string name="otp_expired">OTP expired. Please request a new one.</string>
+    <string name="attempts_limit_message">You have entered the OTP incorrectly 5 times. Please request a new OTP.</string>
+    <string name="resend_success">A new OTP has been sent to your email!</string>
+    <string name="resend_failed_default">Unable to resend OTP. Please try again.</string>
 
     <!-- Network / generic errors -->
-    <string name="network_timeout">Kết nối timeout. Vui lòng kiểm tra mạng.</string>
-    <string name="network_unreachable">Không thể kết nối server. Kiểm tra kết nối mạng.</string>
-    <string name="generic_error">Lỗi: %1$s</string>
+    <string name="network_timeout">Connection timed out. Please check your network.</string>
+    <string name="network_unreachable">Cannot reach server. Check your network connection.</string>
+    <string name="generic_error">Error: %1$s</string>
 
     <!-- Missing user info & init error -->
-    <string name="missing_user_info">Lỗi: Thiếu thông tin userId hoặc email</string>
-    <string name="init_error_format">Lỗi khởi tạo: %1$s</string>
+    <string name="missing_user_info">Error: Missing userId or email</string>
+    <string name="init_error_format">Initialization error: %1$s</string>
 
     <!-- Register Success Fragment -->
-    <string name="continue_to_login">Đăng Nhập Ngay</string>
+    <string name="continue_to_login">Continue to Login</string>
 
     <!-- OTP Resend Required Fragment -->
-    <string name="otp_attempts_exceeded_title">Vượt Quá Số Lần Thử</string>
-    <string name="otp_attempts_exceeded_message">Bạn đã nhập sai mã OTP quá 5 lần. Vui lòng yêu cầu gửi lại mã OTP mới.</string>
-    <string name="otp_attempts_exceeded_info">Vì lý do bảo mật, mã OTP cũ đã bị vô hiệu hóa. Hãy nhấn nút bên dưới để nhận mã mới qua email.</string>
-    <string name="cancel_and_back">Hủy và Quay Lại</string>
+    <string name="otp_attempts_exceeded_title">Attempts Exceeded</string>
+    <string name="otp_attempts_exceeded_message">You have exceeded the maximum number of OTP attempts. Please request a new OTP.</string>
+    <string name="otp_attempts_exceeded_info">For security reasons the old OTP has been invalidated. Press the button below to request a new OTP via email.</string>
+    <string name="cancel_and_back">Cancel and Go Back</string>
 
     <!-- OTP resend cooldown -->
-    <string name="resend_countdown_format">Vui lòng đợi %1$d giây để gửi lại mã</string>
-    <string name="resend_ready">Bạn có thể gửi lại OTP</string>
+    <string name="resend_countdown_format">Please wait %1$d seconds before resending</string>
+    <string name="resend_ready">You can resend the OTP now</string>
     <string name="to_do_tasks">Prepare presentation for Q3 review meeting with marketing team and stakeholders</string>
 
     <!-- Home Fragment Strings -->
@@ -173,4 +173,63 @@
     <string name="pending_today">Pending</string>
     <string name="back">Back</string>
     <string name="view_dashboard">View Dashboard</string>
+
+    <!-- Forgot Password Screen -->
+    <string name="forgot_password_title">Forgot Password</string>
+    <string name="forgot_password_heading">Forgot Password?</string>
+    <string name="forgot_password_description">No worries! Enter your email address and we will send you an OTP to reset your password.</string>
+    <string name="forgot_password_email_label">Email Address</string>
+    <string name="forgot_password_email_hint">Enter your registered email</string>
+    <string name="forgot_password_button">Send OTP</string>
+    <string name="forgot_password_info">You will receive a password reset OTP at your email. The OTP will expire in 10 minutes for security reasons.</string>
+    <string name="forgot_password_success_title">Email Sent!</string>
+    <string name="forgot_password_success_message">If the email exists, a password reset OTP has been sent. Please check your inbox and spam folder.</string>
+    <string name="forgot_password_remember">Remember your password?</string>
+    <string name="forgot_password_back_to_login">Back to Login</string>
+    <string name="cd_forgot_password">Forgot password illustration</string>
+    <string name="cd_info">Information icon</string>
+    <string name="cd_success">Success icon</string>
+
+    <!-- Reset Password Screen -->
+    <string name="reset_password_title">Reset Password</string>
+    <string name="reset_password_heading">Create New Password</string>
+    <string name="reset_password_description">Your new password must be different from your previous password.</string>
+    <string name="reset_password_new_label">New Password</string>
+    <string name="reset_password_new_hint">Enter new password</string>
+    <string name="reset_password_confirm_label">Confirm Password</string>
+    <string name="reset_password_confirm_hint">Re-enter new password</string>
+    <string name="reset_password_button">Reset Password</string>
+    <string name="reset_password_requirements_title">Password Requirements:</string>
+    <string name="reset_password_req_length">• At least 8 characters</string>
+    <string name="reset_password_req_uppercase">• Contains uppercase letter (A-Z)</string>
+    <string name="reset_password_req_lowercase">• Contains lowercase letter (a-z)</string>
+    <string name="reset_password_req_number">• Contains number (0-9)</string>
+    <string name="reset_password_req_special">• Contains special character (@$!%*?&amp;)</string>
+
+    <!-- Reset Password Validation Messages -->
+    <string name="reset_password_empty">Password cannot be empty</string>
+    <string name="reset_password_mismatch">Passwords do not match</string>
+    <string name="reset_password_weak">Password does not meet requirements</string>
+    <string name="reset_password_success">Password reset successfully! Please login with your new password.</string>
+    <string name="reset_password_success_message">Your password has been changed successfully. For your security, all active sessions have been logged out. Please login with your new password.</string>
+    <string name="reset_password_security_note">If you did not request this change, please contact support immediately or change your password again.</string>
+    <string name="reset_password_invalid_token">Invalid or expired reset link. Please request a new one.</string>
+    <string name="reset_password_same_as_old">New password must be different from old password</string>
+    <string name="reset_password_go_to_login">Go to Login</string>
+    <string name="reset_password_success_title">Password Reset Successful!</string>
+
+    <!-- Verify Reset OTP Screen -->
+    <string name="verify_reset_otp_title">Verify OTP</string>
+    <string name="verify_reset_otp_message">Enter Verification Code</string>
+    <string name="verify_reset_otp_description">Enter the 6-digit code sent to your email</string>
+    <string name="verify_reset_otp_input_label">Verification Code</string>
+    <string name="otp_expires_in">OTP expires in: %s</string>
+    <string name="didnt_receive_code">Did not receive code?</string>
+
+    <!-- Common Actions -->
+    <string name="action_back_to_login">Back to Login</string>
+    <string name="action_go_to_login">Go to Login</string>
+    <string name="action_send">Send</string>
+    <string name="action_submit">Submit</string>
+    <string name="action_continue">Continue</string>
 </resources>
