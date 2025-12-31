@@ -16,6 +16,9 @@ function sanitizeUser(user) {
         avatarUrl: user.avatarUrl,
         avatarId: user.avatarId,
         bio: user.bio,
+        githubUrl: user.githubUrl,
+        linkedinUrl: user.linkedinUrl,
+        websiteUrl: user.websiteUrl,
         verified: user.verified,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt

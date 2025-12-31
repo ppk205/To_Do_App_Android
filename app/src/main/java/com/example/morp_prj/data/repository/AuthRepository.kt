@@ -209,14 +209,20 @@ class AuthRepository(private val context: Context) {
         displayName: String?,
         phone: String?,
         bio: String?,
-        avatarUrl: String?
+        avatarUrl: String?,
+        githubUrl: String? = null,
+        linkedinUrl: String? = null,
+        websiteUrl: String? = null
     ): Result<AuthResponse> = withContext(Dispatchers.IO) {
         try {
             val request = com.example.morp_prj.data.model.UpdateProfileWithDriveLinkRequest(
                 displayName = displayName,
                 phone = phone,
                 bio = bio,
-                avatarUrl = avatarUrl
+                avatarUrl = avatarUrl,
+                githubUrl = githubUrl,
+                linkedinUrl = linkedinUrl,
+                websiteUrl = websiteUrl
             )
 
             val response = apiService.updateProfile(request)

@@ -749,13 +749,16 @@ async function resetPassword(req, res) {
 async function updateProfile(req, res) {
     try {
         const userId = req.user.id;
-        const { displayName, phone, bio, avatarUrl } = req.body;
+        const { displayName, phone, bio, avatarUrl, githubUrl, linkedinUrl, websiteUrl } = req.body;
 
         // Whitelist các field được phép update
         const updateData = {};
         if (displayName !== undefined) updateData.displayName = displayName;
         if (phone !== undefined) updateData.phone = phone;
         if (bio !== undefined) updateData.bio = bio;
+        if (githubUrl !== undefined) updateData.githubUrl = githubUrl;
+        if (linkedinUrl !== undefined) updateData.linkedinUrl = linkedinUrl;
+        if (websiteUrl !== undefined) updateData.websiteUrl = websiteUrl;
 
         // Chỉ nhận avatarUrl từ Cloudinary (link HTTPS trực tiếp)
         if (avatarUrl !== undefined) {
