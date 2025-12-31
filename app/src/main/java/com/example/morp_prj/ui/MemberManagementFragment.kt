@@ -91,7 +91,29 @@ class MemberManagementFragment : Fragment(R.layout.fragment_member_management) {
     }
 
     private fun showInviteDialog() {
-        // ... (giữ nguyên)
+        if (inviteCode.isNullOrEmpty()) {
+            Toast.makeText(context, "Invite code is not available.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_invite_code_display, null)
+        val tvInviteCode = dialogView.findViewById<TextView>(R.id.tvInviteCode)
+        tvInviteCode.text = inviteCode
+
+        val message = "Share this code with others to invite them to your team."
+
+        AlertDialog.Builder(requireContext())
+            .setTitle("Invite Members")
+            .setMessage(message)
+            .setView(dialogView)
+            .setPositiveButton("Copy Code") { _, _ ->
+                val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                val clip = ClipData.newPlainText("Team Invite Code", inviteCode)
+                clipboard.setPrimaryClip(clip)
+                Toast.makeText(context, "Invite code copied to clipboard", Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton("Close", null)
+            .show()
     }
 
     private fun showMemberOptions(member: TeamMember, anchorView: View) {
