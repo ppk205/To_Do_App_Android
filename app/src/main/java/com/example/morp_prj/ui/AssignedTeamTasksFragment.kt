@@ -21,10 +21,10 @@ class AssignedTeamTasksFragment : Fragment() {
 
     private val viewModel: TeamTaskViewModel by viewModels()
     private lateinit var adapter: AssignedTeamTasksAdapter
-    
+
     // Lưu danh sách gốc của user (sau khi lọc theo userId)
     private var myTasks: List<TeamTask> = emptyList()
-    
+
     // Trạng thái filter hiện tại: "OVERDUE", "TODAY", "UPCOMING", "COMPLETED", hoặc null (ALL)
     private var currentFilter: String? = null
 
@@ -85,7 +85,7 @@ class AssignedTeamTasksFragment : Fragment() {
             // Click thẻ mới -> Chọn filter đó
             currentFilter = filterType
         }
-        
+
         updateCardVisuals()
         applyFilter()
     }
@@ -100,18 +100,15 @@ class AssignedTeamTasksFragment : Fragment() {
             }
         }
 
-        // Highlight thẻ đang chọn (nếu có)
         currentFilter?.let { filter ->
             val selectedCard = cardMap?.get(filter)
             if (selectedCard is CardView) {
-                // Dùng màu highlight nhẹ, ví dụ xám nhạt hoặc xanh nhạt
                 selectedCard.setCardBackgroundColor(Color.parseColor("#E3F2FD"))
             } else {
                 selectedCard?.setBackgroundColor(Color.LTGRAY)
             }
         }
-        // Note: Nếu R.color.material_dynamic_neutral90 không có, có thể thay bằng Color.parseColor("#E0E0E0")
-        // Tôi sẽ dùng mã màu hex an toàn:
+
         currentFilter?.let { filter ->
             val selectedCard = cardMap?.get(filter)
             if (selectedCard is CardView) {

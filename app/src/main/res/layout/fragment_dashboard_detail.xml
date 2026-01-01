@@ -27,7 +27,7 @@
                 android:layout_height="40dp"
                 android:padding="8dp"
                 android:background="@drawable/bg_input_field"
-                android:src="@drawable/ic_back"
+                android:src="@drawable/ic_arrow_back"
                 android:contentDescription="@string/back"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent"

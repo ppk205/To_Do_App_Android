@@ -72,6 +72,16 @@
             android:name="teamId"
             app:argType="string"
             android:defaultValue="" />
+        <action
+            android:id="@+id/action_teamTaskManagement_to_taskDetail"
+            app:destination="@id/teamTaskDetailFragment" />
     </fragment>
-
+    <fragment
+        android:id="@+id/teamTaskDetailFragment"
+        android:name="com.example.morp_prj.ui.TeamTaskDetailFragment"
+        android:label="Task Detail">
+        <argument
+            android:name="taskId"
+            app:argType="string" />
+    </fragment>
 </navigation>

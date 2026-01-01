@@ -12,6 +12,7 @@ import com.example.morp_prj.R
 import com.example.morp_prj.data.model.TeamTask
 import com.example.morp_prj.databinding.FragmentTeamTaskManagementBinding
 import com.google.android.material.chip.Chip
+import androidx.navigation.fragment.findNavController
 
 class TeamTaskManagementFragment : Fragment() {
 
@@ -53,16 +54,18 @@ class TeamTaskManagementFragment : Fragment() {
 
     private fun setupRecyclerView() {
         adapter = TeamTaskManagementAdapter { task ->
-            // Handle task click (e.g., navigate to detail)
-            Toast.makeText(context, "Clicked: ${task.title}", Toast.LENGTH_SHORT).show()
+            val bundle = Bundle().apply {
+                putString("taskId", task.id)
+            }
+            findNavController().navigate(R.id.action_teamTaskManagement_to_taskDetail, bundle)
         }
         binding.rvTasks.layoutManager = LinearLayoutManager(context)
         binding.rvTasks.adapter = adapter
     }
 
     private fun setupViewModel() {
-        viewModel = ViewModelProvider(this)[TeamTaskViewModel::class.java]
-
+        //viewModel = ViewModelProvider(this)[TeamTaskViewModel::class.java]
+        viewModel = ViewModelProvider(requireActivity())[TeamTaskViewModel::class.java]
         viewModel.tasks.observe(viewLifecycleOwner) { tasks ->
             originalTasks = tasks
             applyFilter() // Apply current filter to new data
