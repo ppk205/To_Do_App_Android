@@ -53,12 +53,24 @@ class TeamTaskManagementFragment : Fragment() {
     }
 
     private fun setupRecyclerView() {
-        adapter = TeamTaskManagementAdapter { task ->
-            val bundle = Bundle().apply {
-                putString("taskId", task.id)
-            }
-            findNavController().navigate(R.id.action_teamTaskManagement_to_taskDetail, bundle)
-        }
+        adapter = TeamTaskManagementAdapter(onTaskClick = { task, itemView ->
+            // highlight/animate the item then navigate
+            itemView.isClickable = false
+            itemView.animate().alpha(0.9f).scaleX(0.995f).scaleY(0.995f).setDuration(120).withEndAction {
+                itemView.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(120).withEndAction {
+                    val bundle = Bundle().apply { putString("taskId", task.id) }
+                    val navOptions = androidx.navigation.navOptions {
+                        anim {
+                            enter = R.anim.slide_in_right
+                            exit = R.anim.slide_out_left
+                            popEnter = R.anim.fade_in
+                            popExit = R.anim.fade_out
+                        }
+                    }
+                    findNavController().navigate(R.id.action_teamTaskManagement_to_taskDetail, bundle, navOptions)
+                }.start()
+            }.start()
+        })
         binding.rvTasks.layoutManager = LinearLayoutManager(context)
         binding.rvTasks.adapter = adapter
     }
@@ -71,9 +83,7 @@ class TeamTaskManagementFragment : Fragment() {
             applyFilter() // Apply current filter to new data
         }
 
-        viewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
-            // Show/hide loading indicator if available in layout
-        }
+        viewModel.isLoading.observe(viewLifecycleOwner) { /* optional loading handling */ }
     }
 
     private fun loadData(id: String) {

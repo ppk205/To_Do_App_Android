@@ -1,6 +1,5 @@
 package com.example.morp_prj.ui
 
-import android.content.res.ColorStateList
 import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.ViewGroup
@@ -19,7 +18,8 @@ import java.util.Locale
 
 class TeamTaskManagementAdapter(
     private var tasks: List<TeamTask> = emptyList(),
-    private val onTaskClick: (TeamTask) -> Unit
+    // updated callback to include the itemView for animation before navigate
+    private val onTaskClick: ((TeamTask, android.view.View) -> Unit)? = null
 ) : RecyclerView.Adapter<TeamTaskManagementAdapter.ViewHolder>() {
 
     fun submitList(newTasks: List<TeamTask>) {
@@ -116,7 +116,7 @@ class TeamTaskManagementAdapter(
             }
 
             binding.btnViewDetails.setOnClickListener {
-                onTaskClick(task)
+                onTaskClick?.invoke(task, binding.root)
             }
             
             binding.btnEdit.setOnClickListener {

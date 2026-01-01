@@ -17,7 +17,9 @@ import java.util.Date
 import java.util.Locale
 
 class AssignedTeamTasksAdapter(
-    private var tasks: List<TeamTask> = emptyList()
+    private var tasks: List<TeamTask> = emptyList(),
+    // provide the clicked item view so caller can animate it before navigation
+    private val onArrowClick: ((TeamTask, View) -> Unit)? = null
 ) : RecyclerView.Adapter<AssignedTeamTasksAdapter.ViewHolder>() {
 
     fun submitList(newTasks: List<TeamTask>) {
@@ -31,6 +33,7 @@ class AssignedTeamTasksAdapter(
         val tvStatusBadge: TextView = view.findViewById(R.id.tvStatusBadge)
         val tvDate: TextView = view.findViewById(R.id.tvDate)
         val layoutAvatarContainer: LinearLayout = view.findViewById(R.id.layoutAvatarContainer)
+        val ivArrow: ImageView = view.findViewById(R.id.ivArrow)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -104,6 +107,11 @@ class AssignedTeamTasksAdapter(
             // Ideally define a drawable for this
 
             holder.layoutAvatarContainer.addView(textView)
+        }
+
+        // Arrow click: pass both task and the itemView to the caller
+        holder.ivArrow.setOnClickListener {
+            onArrowClick?.invoke(task, holder.itemView)
         }
     }
 

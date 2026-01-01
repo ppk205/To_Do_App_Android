@@ -7,9 +7,9 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.cardview.widget.CardView
-import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.morp_prj.R
@@ -42,7 +42,25 @@ class AssignedTeamTasksFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         val rvTasks = view.findViewById<RecyclerView>(R.id.rvTasks)
-        adapter = AssignedTeamTasksAdapter()
+        adapter = AssignedTeamTasksAdapter(onArrowClick = { task, itemView ->
+            // animate highlight on the row then navigate
+            itemView.isClickable = false
+            itemView.animate().alpha(0.85f).scaleX(0.995f).scaleY(0.995f).setDuration(120).withEndAction {
+                // revert the animation quickly and navigate
+                itemView.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(120).withEndAction {
+                    val bundle = Bundle().apply { putString("taskId", task.id) }
+                    val navOptions = androidx.navigation.navOptions {
+                        anim {
+                            enter = R.anim.slide_in_right
+                            exit = R.anim.slide_out_left
+                            popEnter = R.anim.fade_in
+                            popExit = R.anim.fade_out
+                        }
+                    }
+                    findNavController().navigate(R.id.teamTaskDetailFragment, bundle, navOptions)
+                }.start()
+            }.start()
+        })
         rvTasks.layoutManager = LinearLayoutManager(context)
         rvTasks.adapter = adapter
 
@@ -152,10 +170,10 @@ class AssignedTeamTasksFragment : Fragment() {
             } else {
                 emptyList()
             }
-            
+
             // 2. Tính toán Summary (luôn tính trên toàn bộ tasks của user)
             calculateMySummary(view, myTasks)
-            
+
             // 3. Hiển thị danh sách (có áp dụng filter nếu đang chọn)
             applyFilter()
         }
