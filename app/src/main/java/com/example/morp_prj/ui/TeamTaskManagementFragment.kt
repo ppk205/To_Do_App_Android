@@ -26,7 +26,7 @@ class TeamTaskManagementFragment : Fragment() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // Nhận teamId từ arguments. Ví dụ: Bundle.getString("teamId")
+        // Nhận teamId từ arguments
         teamId = arguments?.getString("teamId")
     }
 

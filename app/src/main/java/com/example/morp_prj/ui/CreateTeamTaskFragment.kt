@@ -64,7 +64,7 @@ class CreateTeamTaskFragment : Fragment(R.layout.fragment_create_team_task) {
         val spinnerPriority = view.findViewById<Spinner>(R.id.spinnerPriority)
         ArrayAdapter.createFromResource(
             requireContext(),
-            R.array.filter_priorities,
+            R.array.priorities_teamtask_spinner,
             android.R.layout.simple_spinner_item
         ).also { adapter ->
             adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
@@ -105,16 +105,48 @@ class CreateTeamTaskFragment : Fragment(R.layout.fragment_create_team_task) {
 
     private fun showDatePickerDialog() {
         val calendar = Calendar.getInstance()
+
         val datePickerDialog = DatePickerDialog(
             requireContext(),
             { _, year, month, dayOfMonth ->
-                val selectedCalendar = Calendar.getInstance().apply { set(year, month, dayOfMonth) }
-                dueDate = selectedCalendar.timeInMillis
-                etDueDate.setText(SimpleDateFormat("MMMM dd, yyyy", Locale.getDefault()).format(selectedCalendar.time))
+                // Khi chọn xong ngày, tiếp tục mở TimePickerDialog
+                showTimePickerDialog(year, month, dayOfMonth)
             },
-            calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)
+            calendar.get(Calendar.YEAR),
+            calendar.get(Calendar.MONTH),
+            calendar.get(Calendar.DAY_OF_MONTH)
         )
         datePickerDialog.show()
+    }
+
+    private fun showTimePickerDialog(year: Int, month: Int, dayOfMonth: Int) {
+        val calendar = Calendar.getInstance()
+
+        val timePickerDialog = android.app.TimePickerDialog(
+            requireContext(),
+            { _, hourOfDay, minute ->
+                val selectedCalendar = Calendar.getInstance().apply {
+                    set(Calendar.YEAR, year)
+                    set(Calendar.MONTH, month)
+                    set(Calendar.DAY_OF_MONTH, dayOfMonth)
+                    set(Calendar.HOUR_OF_DAY, hourOfDay)
+                    set(Calendar.MINUTE, minute)
+                    set(Calendar.SECOND, 59)
+                    set(Calendar.MILLISECOND, 999)
+                }
+
+                dueDate = selectedCalendar.timeInMillis
+
+                etDueDate.setText(
+                    SimpleDateFormat("dd-MM-yyyy  |  HH:MM", Locale.getDefault())
+                        .format(selectedCalendar.time)
+                )
+            },
+            calendar.get(Calendar.HOUR_OF_DAY),
+            calendar.get(Calendar.MINUTE),
+            true // true = Chế độ 24h, false = Chế độ 12h (AM/PM)
+        )
+        timePickerDialog.show()
     }
 
     private fun showAssigneeSelectionDialog() {
@@ -152,6 +184,10 @@ class CreateTeamTaskFragment : Fragment(R.layout.fragment_create_team_task) {
 
         val title = view?.findViewById<EditText>(R.id.etTaskName)?.text.toString()
         val description = view?.findViewById<EditText>(R.id.etDescription)?.text.toString()
+        val tagsInput = view?.findViewById<EditText>(R.id.etTaskTags)?.text?.toString()?.trim()
+        val tagsCsv = if (!tagsInput.isNullOrBlank()) {
+            tagsInput.split(",").map { it.trim() }.filter { it.isNotEmpty() }.joinToString(",")
+        } else null
         val priority = view?.findViewById<Spinner>(R.id.spinnerPriority)?.selectedItem.toString()
         val assigneeIds = selectedAssignees.map { it.id }
 
@@ -160,7 +196,7 @@ class CreateTeamTaskFragment : Fragment(R.layout.fragment_create_team_task) {
             return
         }
 
-        val request = CreateTeamTaskRequest(currentTeamId, title, description, dueDate, priority, assigneeIds, currentUserId)
+        val request = CreateTeamTaskRequest(currentTeamId, title, description, dueDate, priority, assigneeIds, tagsCsv, currentUserId)
 
         RetrofitClient.teamTaskApiService.createTeamTask(request).enqueue(object : Callback<Void> {
             override fun onResponse(call: Call<Void>, response: Response<Void>) {

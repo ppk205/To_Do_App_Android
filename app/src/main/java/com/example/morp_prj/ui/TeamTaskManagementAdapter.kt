@@ -1,5 +1,6 @@
 package com.example.morp_prj.ui
 
+import android.content.res.ColorStateList
 import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.ViewGroup
@@ -35,7 +36,7 @@ class TeamTaskManagementAdapter(
             
             // Format Date
             if (task.dueDate != null) {
-                val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                val sdf = SimpleDateFormat("dd-MM-yyyy  |  HH:MM", Locale.getDefault())
                 binding.tvDueDate.text = "Due: ${sdf.format(Date(task.dueDate))}"
             } else {
                 binding.tvDueDate.text = "No Due Date"
@@ -122,7 +123,25 @@ class TeamTaskManagementAdapter(
             binding.btnEdit.setOnClickListener {
                 // Handle edit click
             }
-        }
+
+            // Tag
+            binding.chipGroupTags.removeAllViews()
+            task.tagsCsv?.let { csv ->
+                val tags = csv.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+                for (tag in tags) {
+                    val chip = com.google.android.material.chip.Chip(binding.root.context)
+                    chip.text = tag
+                    chip.isCheckable = false
+                    chip.isClickable = false
+                    chip.setTextColor(ContextCompat.getColor(binding.root.context, R.color.black))
+                    val bgColor = Color.parseColor("#E0E0E0")
+                    chip.chipBackgroundColor = ColorStateList.valueOf(bgColor)
+                     chip.textSize = 12f
+                     binding.chipGroupTags.addView(chip)
+                 }
+             }
+         }
+
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {

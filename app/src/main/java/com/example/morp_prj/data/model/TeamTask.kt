@@ -25,5 +25,8 @@ data class TeamTask(
     val status: String = "TODO",
 
     @SerializedName("assignees")
-    val assignees: List<User> = emptyList()
+    val assignees: List<User> = emptyList(),
+
+    @SerializedName("tagsCsv")
+    val tagsCsv: String? = null
 )

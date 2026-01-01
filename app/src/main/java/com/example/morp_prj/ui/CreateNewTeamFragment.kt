@@ -42,22 +42,24 @@ class CreateNewTeamFragment : Fragment() {
 
         etTeamName = view.findViewById(R.id.etTeamName)
         etTeamDescription = view.findViewById(R.id.etTeamDescription)
+        val etTeamTags = view.findViewById<EditText>(R.id.etTeamTags)
         btnCreateTeam = view.findViewById(R.id.btnCreateTeam)
 
         btnCreateTeam.setOnClickListener {
             val name = etTeamName.text.toString().trim()
             val desc = etTeamDescription.text.toString().trim()
+            val tags = etTeamTags.text.toString().trim()
 
             if (name.isEmpty()) {
                 etTeamName.error = "Team Name is required"
                 return@setOnClickListener
             }
 
-            createTeam(name, desc)
+            createTeam(name, desc, if (tags.isEmpty()) null else tags)
         }
     }
 
-    private fun createTeam(name: String, description: String) {
+    private fun createTeam(name: String, description: String, tagsCsv: String?) {
         val userId = preferenceManager.getUserId()
         
         if (userId.isNullOrEmpty()) {
@@ -65,7 +67,7 @@ class CreateNewTeamFragment : Fragment() {
             return
         }
 
-        val request = CreateTeamRequest(name, description, userId)
+        val request = CreateTeamRequest(name, description, userId, tagsCsv)
 
         // Vô hiệu hóa nút để tránh double click
         btnCreateTeam.isEnabled = false

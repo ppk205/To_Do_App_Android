@@ -75,6 +75,23 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
+            android:text="Tags (comma separated)"
+            android:textStyle="bold"
+            android:textColor="#555555" />
+
+        <EditText
+            android:id="@+id/etTeamTags"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/bg_edittext"
+            android:hint="e.g. frontend,marketing,design"
+            android:padding="12dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
             android:text="Team Avatar"
             android:textStyle="bold"
             android:textColor="#555555" />

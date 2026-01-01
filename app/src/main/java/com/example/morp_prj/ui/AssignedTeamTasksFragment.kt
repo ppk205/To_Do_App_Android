@@ -8,7 +8,7 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.cardview.widget.CardView
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.viewModels
+import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -19,17 +19,23 @@ import java.util.Calendar
 
 class AssignedTeamTasksFragment : Fragment() {
 
-    private val viewModel: TeamTaskViewModel by viewModels()
+    private val viewModel: TeamTaskViewModel by activityViewModels()
     private lateinit var adapter: AssignedTeamTasksAdapter
 
     // Lưu danh sách gốc của user (sau khi lọc theo userId)
     private var myTasks: List<TeamTask> = emptyList()
 
-    // Trạng thái filter hiện tại: "OVERDUE", "TODAY", "UPCOMING", "COMPLETED", hoặc null (ALL)
+    // Filter status: "OVERDUE", "TODAY", "UPCOMING", "COMPLETED", hoặc null (ALL)
     private var currentFilter: String? = null
 
     // Map lưu reference đến các CardView để đổi màu
     private var cardMap: Map<String, View>? = null
+
+    // remember previous status for tasks when toggling to DONE so unchecking restores it
+    private val previousStatusMap = mutableMapOf<String, String>()
+
+    // current teamId context (used to refetch authoritative list after updates)
+    private var currentTeamId: String? = null
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -42,25 +48,54 @@ class AssignedTeamTasksFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         val rvTasks = view.findViewById<RecyclerView>(R.id.rvTasks)
-        adapter = AssignedTeamTasksAdapter(onArrowClick = { task, itemView ->
-            // animate highlight on the row then navigate
-            itemView.isClickable = false
-            itemView.animate().alpha(0.85f).scaleX(0.995f).scaleY(0.995f).setDuration(120).withEndAction {
-                // revert the animation quickly and navigate
-                itemView.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(120).withEndAction {
-                    val bundle = Bundle().apply { putString("taskId", task.id) }
-                    val navOptions = androidx.navigation.navOptions {
-                        anim {
-                            enter = R.anim.slide_in_right
-                            exit = R.anim.slide_out_left
-                            popEnter = R.anim.fade_in
-                            popExit = R.anim.fade_out
-                        }
-                    }
-                    findNavController().navigate(R.id.teamTaskDetailFragment, bundle, navOptions)
-                }.start()
-            }.start()
-        })
+        adapter = AssignedTeamTasksAdapter(
+            emptyList(),
+            { task: TeamTask, itemView: View ->
+                 // Use a ripple/elevation pulse for feedback and then navigate
+                 val originalElevation = itemView.elevation
+                 itemView.elevation = originalElevation + 8f
+                 itemView.postDelayed({
+                     itemView.elevation = originalElevation
+                     val bundle = Bundle().apply { putString("taskId", task.id) }
+                     val navOptions = androidx.navigation.navOptions {
+                         anim {
+                             enter = R.anim.slide_in_right
+                             exit = R.anim.slide_out_left
+                             popEnter = R.anim.fade_in
+                             popExit = R.anim.fade_out
+                         }
+                     }
+                     findNavController().navigate(R.id.teamTaskDetailFragment, bundle, navOptions)
+                 }, 140)
+            }, { task: TeamTask, isChecked: Boolean ->
+                 // Determine the current status from our local snapshot (myTasks) before making changes
+                 val currentStatus = myTasks.firstOrNull { it.id == task.id }?.status ?: task.status
+
+                 // When checking -> mark DONE and remember previous status
+                 // When unchecking -> restore previous status if known, otherwise fallback to currentStatus or OVERDUE or TODO
+                 val newStatus: String
+                 if (isChecked) {
+                     previousStatusMap[task.id] = currentStatus
+                     newStatus = "DONE"
+                 } else {
+                     val now = System.currentTimeMillis()
+                     val isOverDue = task.dueDate != null && task.dueDate < now
+
+                     newStatus = when {
+                         isOverDue -> "OVERDUE"
+                         else -> previousStatusMap.remove(task.id) ?: "TODO"
+                     }
+                 }
+
+                 // Use unified helper for optimistic update + UI feedback
+                 val oldTasks = myTasks
+                 updateTaskStatusWithUi(task, newStatus, oldTasks)
+            }, { task: TeamTask, status: String ->
+                 // status changed from popup -> reuse same helper
+                 val oldTasks = myTasks
+                 updateTaskStatusWithUi(task, status, oldTasks)
+            }
+        )
         rvTasks.layoutManager = LinearLayoutManager(context)
         rvTasks.adapter = adapter
 
@@ -68,11 +103,12 @@ class AssignedTeamTasksFragment : Fragment() {
         setupCardListeners(view)
 
         val teamId = arguments?.getString("teamId") ?: ""
+        currentTeamId = if (teamId.isNotEmpty()) teamId else null
 
         observeViewModel(view)
 
-        if (teamId.isNotEmpty()) {
-            viewModel.fetchTasks(teamId)
+        if (currentTeamId != null && viewModel.tasks.value.isNullOrEmpty()) {
+            viewModel.fetchTasks(currentTeamId!!)
         }
     }
 
@@ -161,7 +197,7 @@ class AssignedTeamTasksFragment : Fragment() {
 
     private fun observeViewModel(view: View) {
         viewModel.tasks.observe(viewLifecycleOwner) { taskList ->
-            // 1. Lọc lấy tasks của user hiện tại
+            // get current user's tasks
             val userId = PreferenceManager(requireContext()).getUserId()
             myTasks = if (userId != null) {
                 taskList.filter { task ->
@@ -171,11 +207,25 @@ class AssignedTeamTasksFragment : Fragment() {
                 emptyList()
             }
 
-            // 2. Tính toán Summary (luôn tính trên toàn bộ tasks của user)
+            // Merge pending optimistic statuses from ViewModel so UI remains consistent
+            myTasks = myTasks.map { t ->
+                val pending = viewModel.getPendingStatus(t.id)
+                if (!pending.isNullOrEmpty() && pending != t.status) t.copy(status = pending) else t
+            }
+
+            // Remove any previousStatus entries that no longer correspond to existing tasks
+            previousStatusMap.keys.retainAll(myTasks.map { it.id })
+
+            // luôn tính trên toàn bộ tasks của user
             calculateMySummary(view, myTasks)
 
-            // 3. Hiển thị danh sách (có áp dụng filter nếu đang chọn)
+            // Hiển thị danh sách (có áp dụng filter nếu đang chọn)
             applyFilter()
+
+            // Reflect pending update states in the adapter so checkboxes are disabled for inflight changes
+            myTasks.forEach { t ->
+                adapter.setLoading(t.id, viewModel.isPending(t.id))
+            }
         }
     }
 
@@ -213,6 +263,70 @@ class AssignedTeamTasksFragment : Fragment() {
         if (card != null) {
             card.findViewById<TextView>(R.id.tvSummaryLabel).text = label
             card.findViewById<TextView>(R.id.tvSummaryCount).text = count.toString()
+        }
+    }
+
+    // Unified helper that performs optimistic UI update, shows loading state, calls ViewModel, and handles success/failure UI flows
+    private fun updateTaskStatusWithUi(task: TeamTask, targetStatus: String, previousTasksSnapshot: List<TeamTask>) {
+        // mark loading
+        adapter.setLoading(task.id, true)
+
+        // optimistic update
+        myTasks = myTasks.map { if (it.id == task.id) it.copy(status = targetStatus) else it }
+        applyFilter()
+
+        viewModel.updateTaskStatus(task.id, targetStatus) { success, errMsg ->
+            // clear loading
+            adapter.setLoading(task.id, false)
+
+            val root = view ?: return@updateTaskStatus
+
+            if (success) {
+                // show undo snackbar
+                val snack = com.google.android.material.snackbar.Snackbar.make(root, "Task updated", com.google.android.material.snackbar.Snackbar.LENGTH_LONG)
+                snack.setAction("Undo") {
+                    // revert to previous status snapshot
+                    myTasks = previousTasksSnapshot
+                    applyFilter()
+                    // send revert request (no further undo)
+                    adapter.setLoading(task.id, true)
+                    viewModel.updateTaskStatus(task.id, previousTasksSnapshot.firstOrNull { it.id == task.id }?.status ?: "TODO") { ok, _ ->
+                        adapter.setLoading(task.id, false)
+                        if (!ok) {
+                            android.widget.Toast.makeText(requireContext(), "Failed to revert", android.widget.Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+                // Update local snapshot from ViewModel so UI reflects the confirmed state immediately
+                val vmTasks = viewModel.tasks.value ?: emptyList()
+                val userIdNow = PreferenceManager(requireContext()).getUserId()
+                myTasks = if (userIdNow != null) {
+                    vmTasks.filter { it.assignees.any { a -> a.id == userIdNow } }
+                } else {
+                    emptyList()
+                }
+                // Merge any still-pending optimistic statuses
+                myTasks = myTasks.map { t ->
+                    val pending = viewModel.getPendingStatus(t.id)
+                    if (!pending.isNullOrEmpty() && pending != t.status) t.copy(status = pending) else t
+                }
+                applyFilter()
+
+                // scheduling a delayed authoritative fetch to fully reconcile with server (small debounce)
+                view?.postDelayed({ currentTeamId?.let { viewModel.fetchTasks(it) } }, 800)
+            } else {
+                // revert locally to previous snapshot and show retry snackbar
+                myTasks = previousTasksSnapshot
+                applyFilter()
+
+                val errText = errMsg ?: "Failed to update task status"
+                val snack = com.google.android.material.snackbar.Snackbar.make(root, errText, com.google.android.material.snackbar.Snackbar.LENGTH_INDEFINITE)
+                snack.setAction("Retry") {
+                    updateTaskStatusWithUi(task, targetStatus, previousTasksSnapshot)
+                }
+                snack.setActionTextColor(android.graphics.Color.YELLOW)
+                snack.show()
+            }
         }
     }
 }

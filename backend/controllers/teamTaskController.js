@@ -2,7 +2,7 @@ const pool = require('../config/database');
 const crypto = require('crypto');
 
 const createTeamTask = async (req, res) => {
-    const { teamId, title, description, dueDate, priority, assignees, createdBy } = req.body;
+    const { teamId, title, description, dueDate, priority, assignees, createdBy, tagsCsv } = req.body;
 
     if (!teamId || !title || !createdBy || !Array.isArray(assignees)) {
         return res.status(400).json({ message: 'Missing required fields.' });
@@ -13,14 +13,15 @@ const createTeamTask = async (req, res) => {
         await conn.beginTransaction();
 
         const taskId = crypto.randomUUID();
+
         const createdAt = Date.now();
 
         // 1. Insert vào bảng team_tasks
         const taskQuery = `
-            INSERT INTO team_tasks (id, teamId, title, description, dueDate, priority, createdBy, createdAt)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO team_tasks (id, teamId, title, description, dueDate, priority, status, createdBy, createdAt, tagsCsv)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
-        await conn.query(taskQuery, [taskId, teamId, title, description, dueDate, priority, createdBy, createdAt]);
+        await conn.query(taskQuery, [taskId, teamId, title, description, dueDate, priority, 'TODO', createdBy, createdAt, tagsCsv || null]);
 
         // 2. Insert vào bảng team_task_assignees
         if (assignees.length > 0) {
@@ -50,14 +51,13 @@ const getTeamTasks = async (req, res) => {
 
     const conn = await pool.getConnection();
     try {
-        // --- CẬP NHẬT TỰ ĐỘNG TRẠNG THÁI OVERDUE ---
-        // Trước khi lấy danh sách, update các task đã quá hạn mà chưa hoàn thành
         const now = Date.now();
+
         const updateQuery = `
             UPDATE team_tasks 
             SET status = 'OVERDUE' 
             WHERE teamId = ? 
-            AND dueDate <= ?
+            AND dueDate < ?
             AND status NOT IN ('DONE', 'COMPLETED', 'OVERDUE')
         `;
         await conn.query(updateQuery, [teamId, now]);
@@ -66,7 +66,7 @@ const getTeamTasks = async (req, res) => {
         // Query tasks and their assignees via JOIN
         const query = `
             SELECT 
-                t.id, t.teamId, t.title, t.description, t.dueDate, t.priority, t.status, t.createdAt, t.createdBy,
+                t.id, t.teamId, t.title, t.description, t.dueDate, t.priority, t.status, t.createdAt, t.createdBy, t.tagsCsv,
                 u.id as assigneeId, u.username, u.avatarUrl, u.email
             FROM team_tasks t
             LEFT JOIN team_task_assignees ta ON t.id = ta.taskId
@@ -90,6 +90,7 @@ const getTeamTasks = async (req, res) => {
                     dueDate: row.dueDate,
                     priority: row.priority,
                     status: row.status,
+                    tagsCsv: row.tagsCsv,
                     createdAt: row.createdAt,
                     createdBy: row.createdBy,
                     assignees: []
@@ -121,4 +122,38 @@ const getTeamTasks = async (req, res) => {
     }
 };
 
-module.exports = { createTeamTask, getTeamTasks };
+// Update the status of a team task
+const updateTaskStatus = async (req, res) => {
+    const { taskId } = req.params;
+    const { status } = req.body;
+
+    console.log('[teamTaskController] updateTaskStatus called', { taskId, body: req.body, auth: req.headers['authorization'] });
+
+    if (!taskId || !status) {
+        return res.status(400).json({ message: 'Missing taskId or status' });
+    }
+
+    const allowed = ['TODO', 'IN_PROGRESS', 'DONE', 'COMPLETED', 'OVERDUE'];
+    if (!allowed.includes(status.toUpperCase())) {
+        return res.status(400).json({ message: 'Invalid status' });
+    }
+
+    const conn = await pool.getConnection();
+    try {
+        const updateQuery = `UPDATE team_tasks SET status = ? WHERE id = ?`;
+        const [result] = await conn.query(updateQuery, [status.toUpperCase(), taskId]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: 'Task not found' });
+        }
+
+        res.status(200).json({ success: true });
+    } catch (error) {
+        console.error('Error updating task status:', error);
+        res.status(500).json({ message: 'Failed to update task status' });
+    } finally {
+        conn.release();
+    }
+};
+
+module.exports = { createTeamTask, getTeamTasks, updateTaskStatus };

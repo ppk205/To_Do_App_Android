@@ -9,4 +9,7 @@ router.post('/', authenticateToken, teamTaskController.createTeamTask);
 // Route lấy danh sách task theo team: GET /api/team-tasks/team/:teamId
 router.get('/team/:teamId', authenticateToken, teamTaskController.getTeamTasks);
 
+// Route cập nhật trạng thái task: PATCH /api/team-tasks/:taskId/status
+router.patch('/:taskId/status', authenticateToken, teamTaskController.updateTaskStatus);
+
 module.exports = router;

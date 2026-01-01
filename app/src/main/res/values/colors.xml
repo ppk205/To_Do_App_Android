@@ -40,4 +40,7 @@
     <color name="light_gray">#F5F5F5</color>
     <color name="medium_gray">#EEEEEE</color>
     <color name="divider_color">#E0E0E0</color>
+
+    <!-- Chip background for tag chips -->
+    <color name="chip_background_gray">#E0E0E0</color>
 </resources>

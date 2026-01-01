@@ -4,12 +4,15 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.content.res.ColorStateList
+import android.graphics.Color
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.morp_prj.R
 import com.example.morp_prj.data.model.TeamTask
 import com.example.morp_prj.databinding.FragmentTeamTaskDetailBinding
+import com.google.android.material.chip.Chip
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -36,7 +39,6 @@ class TeamTaskDetailFragment : Fragment() {
 
         // Quan sát danh sách task
         viewModel.tasks.observe(viewLifecycleOwner) { tasks ->
-            // Tìm task cụ thể dựa trên ID
             val task = tasks.find { it.id == taskId }
 
             // If found, render full details using the helper
@@ -62,7 +64,7 @@ class TeamTaskDetailFragment : Fragment() {
 
         // Date formatting
         task.dueDate?.let {
-            val sdf = SimpleDateFormat("EEEE, dd MMM yyyy", Locale.getDefault())
+            val sdf = SimpleDateFormat("dd-MM-yyyy  |  HH:MM", Locale.getDefault())
             binding.tvDueDate.text = sdf.format(Date(it))
         } ?: run {
             binding.tvDueDate.text = "No deadline"
@@ -70,6 +72,22 @@ class TeamTaskDetailFragment : Fragment() {
 
         // Priority & Status Styling
         setupBadges(task)
+
+        // Tags: render tagsCsv into chips
+        binding.chipGroupTags.removeAllViews()
+        task.tagsCsv?.let { csv ->
+            val tags = csv.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+            for (tag in tags) {
+                val chip = Chip(requireContext())
+                chip.text = tag
+                chip.isClickable = false
+                chip.isCheckable = false
+                chip.setTextColor(Color.DKGRAY)
+                chip.chipBackgroundColor = ColorStateList.valueOf(Color.parseColor("#E0E0E0"))
+                chip.textSize = 14f
+                binding.chipGroupTags.addView(chip)
+            }
+        }
 
         binding.rvAssignees.layoutManager = LinearLayoutManager(context)
         val assigneeAdapter = AssigneeAdapter(task.assignees) // task.assignees là List<User>
@@ -82,7 +100,7 @@ class TeamTaskDetailFragment : Fragment() {
             "HIGH" -> binding.tvPriority.setBackgroundResource(R.drawable.bg_priority_high)
             "MEDIUM" -> binding.tvPriority.setBackgroundResource(R.drawable.bg_priority_medium)
             "LOW" -> binding.tvPriority.setBackgroundResource(R.drawable.bg_priority_low)
-            else -> binding.tvPriority.setBackgroundColor(resources.getColor(android.R.color.darker_gray))
+            else -> binding.tvPriority.setBackgroundColor(androidx.core.content.ContextCompat.getColor(requireContext(), android.R.color.darker_gray))
         }
 
         binding.tvStatus.text = task.status
