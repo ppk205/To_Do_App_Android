@@ -8,5 +8,7 @@ data class CreateTeamRequest(
     @SerializedName("description")
     val description: String,
     @SerializedName("createdBy")
-    val createdBy: String
+    val createdBy: String,
+    @SerializedName("tagsCsv")
+    val tagsCsv: String? = null
 )

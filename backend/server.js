@@ -8,6 +8,10 @@ const taskRoutes = require('./routes/taskRoutes');
 const { redisClient, connectRedis } = require('./config/redis'); // Import Redis helpers
 const teamRoutes = require('./routes/teamRoutes');
 const teamTaskRoutes = require('./routes/teamTaskRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
+
+const { initRealtime } = require('./services/realtime');
+const { startDuePoller } = require('./services/taskDueScheduler');
 
 const app = express();
 const DEFAULT_PORT = parseInt(process.env.PORT, 10) || 3001;
@@ -25,6 +29,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/team', teamRoutes);
 app.use('/api/team-tasks', teamTaskRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Root route
 app.get('/', (req, res) => {
@@ -62,6 +67,10 @@ async function startServer(port = DEFAULT_PORT, maxRetries = 3) {
         console.log(`📍 API URL: http://localhost:${port}`);
         console.log(`🌍 Environment: ${process.env.NODE_ENV}`);
     });
+
+    // init realtime + due poller after HTTP server is available
+    initRealtime(server);
+    startDuePoller();
 
     server.on('error', (err) => {
         if (err && err.code === 'EADDRINUSE') {

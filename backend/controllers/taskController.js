@@ -1,4 +1,5 @@
 const pool = require('../config/database');
+const { scheduleForTask } = require('../services/taskDueScheduler');
 
 /**
  * POST /api/tasks/sync
@@ -126,6 +127,14 @@ async function syncTasks(req, res) {
                     );
 
                     idMap.push({ localId, serverId });
+
+                    // schedule due notifications (best-effort)
+                    await scheduleForTask({
+                        userId,
+                        taskId: serverId,
+                        title: payload.title,
+                        deadlineAt: payload.deadlineAt,
+                    });
                     continue;
                 }
 
@@ -158,6 +167,14 @@ async function syncTasks(req, res) {
                 );
 
                 idMap.push({ localId, serverId: newId });
+
+                // schedule due notifications (best-effort)
+                await scheduleForTask({
+                    userId,
+                    taskId: newId,
+                    title: payload.title,
+                    deadlineAt: payload.deadlineAt,
+                });
             }
 
             await conn.commit();

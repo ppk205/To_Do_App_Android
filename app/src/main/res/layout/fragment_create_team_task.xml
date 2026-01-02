@@ -119,6 +119,16 @@
                 style="@style/InputStyle"
                 android:layout_height="56dp" />
 
+            <TextView
+                style="@style/LabelStyle"
+                android:layout_marginTop="16dp"
+                android:text="Tags (comma separated)" />
+            <EditText
+                android:id="@+id/etTaskTags"
+                style="@style/InputStyle"
+                android:hint="e.g. frontend,marketing,bug"
+                android:layout_height="56dp" />
+
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnAttachFile"
                 android:layout_width="match_parent"

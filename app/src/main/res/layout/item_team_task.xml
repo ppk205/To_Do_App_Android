@@ -14,6 +14,15 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
+    <ProgressBar
+        android:id="@+id/pbTaskLoading"
+        style="?android:attr/progressBarStyleSmall"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:visibility="gone"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
     <TextView
         android:id="@+id/tvTaskTitle"
         android:layout_width="0dp"
@@ -50,13 +59,24 @@
         app:layout_constraintStart_toStartOf="@id/tvTaskTitle"
         app:layout_constraintTop_toBottomOf="@id/tvTaskDesc">
 
-        <TextView
-            android:id="@+id/tvTeamName"
+        <LinearLayout
+            android:id="@+id/layoutAvatarContainer"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Marketing Team"
-            android:textColor="#212121"
-            android:textSize="12sp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical" />
+
+        <TextView
+            android:id="@+id/tvPriorityBadge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:background="@drawable/bg_badge_purple"
+            android:paddingHorizontal="8dp"
+            android:paddingVertical="2dp"
+            android:text="MEDIUM"
+            android:textColor="@color/white"
+            android:textSize="10sp"
             android:textStyle="bold" />
 
         <TextView
@@ -73,28 +93,27 @@
             android:textStyle="bold" />
     </LinearLayout>
 
-    <ImageView
-        android:id="@+id/ivMemberIcons"
-        android:layout_width="40dp"
-        android:layout_height="24dp"
-        android:layout_marginTop="8dp"
-        android:src="@drawable/ic_group_placeholder"
-        app:layout_constraintStart_toStartOf="@id/tvTaskTitle"
-        app:layout_constraintTop_toBottomOf="@id/statusLayout" />
-
     <TextView
         android:id="@+id/tvDate"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="8dp"
+        android:layout_marginTop="8dp"
         android:drawablePadding="4dp"
         android:text="Oct 26, 2023"
         android:textSize="12sp"
         app:drawableStartCompat="@drawable/ic_calendar"
         app:drawableTint="#757575"
-        app:layout_constraintBottom_toBottomOf="@id/ivMemberIcons"
-        app:layout_constraintStart_toEndOf="@id/ivMemberIcons"
-        app:layout_constraintTop_toTopOf="@id/ivMemberIcons" />
+        app:layout_constraintStart_toStartOf="@id/tvTaskTitle"
+        app:layout_constraintTop_toBottomOf="@id/statusLayout" />
+
+    <com.google.android.material.chip.ChipGroup
+        android:id="@+id/chip_group_tags"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        app:chipSpacing="8dp"
+        app:layout_constraintStart_toStartOf="@id/tvTaskTitle"
+        app:layout_constraintTop_toBottomOf="@id/tvDate" />
 
     <ImageView
         android:id="@+id/ivArrow"
@@ -111,6 +130,6 @@
         android:layout_height="1dp"
         android:layout_marginTop="16dp"
         android:background="#F5F5F5"
-        app:layout_constraintTop_toBottomOf="@id/ivMemberIcons" />
+        app:layout_constraintTop_toBottomOf="@id/tvDate" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

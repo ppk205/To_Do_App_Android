@@ -48,7 +48,7 @@ class AuthInterceptor(
         val originalRequest = chain.request()
 
         // Skip auth for public endpoints
-        if (isPublicEndpoint(originalRequest.url().encodedPath())) {
+        if (isPublicEndpoint(originalRequest.url.encodedPath)) {
             return chain.proceed(originalRequest)
         }
 
@@ -68,7 +68,7 @@ class AuthInterceptor(
         val response = chain.proceed(authenticatedRequest)
 
         // If 401 Unauthorized, try to refresh once
-        if (response.code() == 401) {
+        if (response.code == 401) {
             response.close()
 
             // Attempt refresh

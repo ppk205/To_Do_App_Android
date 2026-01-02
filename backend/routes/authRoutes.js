@@ -92,4 +92,7 @@ router.post('/sessions/revoke', authenticateToken, authController.revokeSessionB
 // Update user profile (Cloudinary URL only - no file upload)
 router.put('/profile', authenticateToken, authController.updateProfile);
 
+// Change password (requires old password verification)
+router.post('/change-password', authenticateToken, authController.changePassword);
+
 module.exports = router;

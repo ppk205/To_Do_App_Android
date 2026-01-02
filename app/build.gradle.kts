@@ -1,3 +1,6 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -5,9 +8,6 @@ plugins {
 }
 
 // Read local.properties
-import java.util.Properties
-import java.io.FileInputStream
-
 val localProperties = Properties()
 val localPropertiesFile = rootProject.file("local.properties")
 if (localPropertiesFile.exists()) {
@@ -35,7 +35,7 @@ android {
 
     buildFeatures {
         dataBinding = true
-        buildConfig = true // ✅ Enable BuildConfig generation
+        buildConfig = true
         viewBinding = true
     }
 
@@ -65,11 +65,15 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
-    kotlinOptions {
-        jvmTarget = "11"
+}
+
+// Configure Kotlin compiler options
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
     }
 }
 
@@ -86,13 +90,13 @@ dependencies {
     androidTestImplementation(libs.androidx.espresso.core)
 
     // Networking
-    implementation("com.squareup.retrofit2:retrofit:2.9.0")
-    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
-    implementation("com.squareup.okhttp3:logging-interceptor:3.12.0")
+    implementation(libs.retrofit)
+    implementation(libs.retrofit.converter.gson)
+    implementation(libs.okhttp.logging.interceptor)
 
     // Image loading
-    implementation("com.github.bumptech.glide:glide:4.14.2")
-    annotationProcessor("com.github.bumptech.glide:compiler:4.14.2")
+    implementation(libs.glide)
+    ksp(libs.glide.compiler)
 
     // Room (SQLite)
     implementation(libs.androidx.room.runtime)
@@ -100,20 +104,25 @@ dependencies {
     ksp(libs.androidx.room.compiler)
 
     // Security - Encrypted SharedPreferences
-    implementation("androidx.security:security-crypto:1.1.0-alpha06")
+    implementation(libs.androidx.security.crypto)
 
     // Biometric Authentication
-    implementation("androidx.biometric:biometric:1.1.0")
+    implementation(libs.androidx.biometric)
 
     // Donut Chart
-    implementation("com.github.PhilJay:MPAndroidChart:3.1.0")
+    implementation(libs.mp.android.chart)
 
-    // Google Drive API (giữ lại cho GoogleDriveUploader nếu cần)
-    implementation("com.google.android.gms:play-services-auth:21.0.0")
-    implementation("com.google.api-client:google-api-client-android:2.2.0")
-    implementation("com.google.apis:google-api-services-drive:v3-rev20220815-2.0.0")
+    // WorkManager (background notifications)
+    implementation(libs.androidx.work.runtime.ktx)
+
+    // Google Drive API
+    implementation(libs.play.services.auth)
+    implementation(libs.google.api.client.android)
 
     // Cloudinary SDK for image upload
-    implementation("com.cloudinary:cloudinary-android:2.5.0")
-    implementation("com.google.http-client:google-http-client-gson:1.43.3")
+    implementation(libs.cloudinary.android)
+    implementation(libs.google.http.client.gson)
+
+    // BCrypt for password hashing
+    implementation("org.mindrot:jbcrypt:0.4")
 }

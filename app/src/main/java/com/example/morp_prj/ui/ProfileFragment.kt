@@ -121,7 +121,11 @@ class ProfileFragment : Fragment() {
         binding.etEmail.setText(user.email)
         binding.etUsername.setText(user.username)
         binding.etBio.setText(user.bio ?: "")
-        // Các trường như avatarId, verified, createdAt, updatedAt nếu cần hiển thị thì thêm vào đây
+
+        // Bind social URLs
+        binding.etGithub.setText(user.githubUrl ?: "")
+        binding.etLinkedin.setText(user.linkedinUrl ?: "")
+        binding.etWebsite.setText(user.websiteUrl ?: "")
 
         // Load Avatar từ server URL
         if (!user.avatarUrl.isNullOrEmpty()) {
@@ -170,9 +174,22 @@ class ProfileFragment : Fragment() {
             performLogout()
         }
 
-        // 6. Change Password (Optional)
+        // 6. Change Password
         binding.btnChangePassword.setOnClickListener {
-            Toast.makeText(context, "Tính năng đang phát triển", Toast.LENGTH_SHORT).show()
+            findNavController().navigate(R.id.action_profile_to_changePassword)
+        }
+
+        // 7. Social icons click handlers
+        binding.btnGithub.setOnClickListener {
+            openUrl(currentUser?.githubUrl, "GitHub")
+        }
+
+        binding.btnLinkedin.setOnClickListener {
+            openUrl(currentUser?.linkedinUrl, "LinkedIn")
+        }
+
+        binding.btnWeb.setOnClickListener {
+            openUrl(currentUser?.websiteUrl, "Website")
         }
     }
 
@@ -187,7 +204,15 @@ class ProfileFragment : Fragment() {
             binding.btnCancel.visibility = View.VISIBLE
             binding.btnChangeAvatar.visibility = View.VISIBLE
             binding.btnChangePassword.visibility = View.VISIBLE
-            binding.socialIconsContainer.visibility = View.GONE // Ẩn icon MXH cho đỡ rối (tùy chọn)
+
+            // ẨN social icons, HIỆN EditText và label cho social
+            binding.socialIconsContainer.visibility = View.GONE
+            binding.lblGithub.visibility = View.VISIBLE
+            binding.etGithub.visibility = View.VISIBLE
+            binding.lblLinkedin.visibility = View.VISIBLE
+            binding.etLinkedin.visibility = View.VISIBLE
+            binding.lblWebsite.visibility = View.VISIBLE
+            binding.etWebsite.visibility = View.VISIBLE
         } else {
             // Đang xem: Hiện nút Edit, Ẩn bộ nút Save/Cancel
             binding.ivEdit.visibility = View.VISIBLE
@@ -195,7 +220,15 @@ class ProfileFragment : Fragment() {
             binding.btnCancel.visibility = View.GONE
             binding.btnChangeAvatar.visibility = View.GONE
             binding.btnChangePassword.visibility = View.GONE
+
+            // HIỆN social icons, ẨN EditText và label cho social
             binding.socialIconsContainer.visibility = View.VISIBLE
+            binding.lblGithub.visibility = View.GONE
+            binding.etGithub.visibility = View.GONE
+            binding.lblLinkedin.visibility = View.GONE
+            binding.etLinkedin.visibility = View.GONE
+            binding.lblWebsite.visibility = View.GONE
+            binding.etWebsite.visibility = View.GONE
         }
 
         // Enable/Disable các ô nhập liệu
@@ -236,8 +269,11 @@ class ProfileFragment : Fragment() {
                 val newDisplayName = binding.etFullName.text.toString()
                 val newPhone = binding.etPhone.text.toString()
                 val newBio = binding.etBio.text.toString()
+                val newGithubUrl = binding.etGithub.text.toString()
+                val newLinkedinUrl = binding.etLinkedin.text.toString()
+                val newWebsiteUrl = binding.etWebsite.text.toString()
 
-                performSave(newDisplayName, newPhone, newBio, cloudinaryLink)
+                performSave(newDisplayName, newPhone, newBio, cloudinaryLink, newGithubUrl, newLinkedinUrl, newWebsiteUrl)
             }.onFailure { error ->
                 Toast.makeText(context, "Lỗi upload: ${error.message}", Toast.LENGTH_LONG).show()
 
@@ -252,6 +288,9 @@ class ProfileFragment : Fragment() {
         val newDisplayName = binding.etFullName.text.toString()
         val newPhone = binding.etPhone.text.toString()
         val newBio = binding.etBio.text.toString()
+        val newGithubUrl = binding.etGithub.text.toString()
+        val newLinkedinUrl = binding.etLinkedin.text.toString()
+        val newWebsiteUrl = binding.etWebsite.text.toString()
 
         if (newDisplayName.isBlank()) {
             Toast.makeText(context, "Tên hiển thị không được để trống", Toast.LENGTH_SHORT).show()
@@ -266,13 +305,13 @@ class ProfileFragment : Fragment() {
         }
 
         // Save profile (with or without Cloudinary link)
-        performSave(newDisplayName, newPhone, newBio, uploadedCloudinaryLink)
+        performSave(newDisplayName, newPhone, newBio, uploadedCloudinaryLink, newGithubUrl, newLinkedinUrl, newWebsiteUrl)
     }
 
     /**
      * Save profile with optional Cloudinary avatar URL
      */
-    private fun performSave(displayName: String, phone: String, bio: String, avatarUrl: String?) {
+    private fun performSave(displayName: String, phone: String, bio: String, avatarUrl: String?, githubUrl: String, linkedinUrl: String, websiteUrl: String) {
         // Hiện loading
         binding.btnSave.isEnabled = false
         binding.btnSave.text = "Đang lưu..."
@@ -285,7 +324,10 @@ class ProfileFragment : Fragment() {
                 displayName = displayName,
                 phone = if (phone.isBlank()) null else phone,
                 bio = if (bio.isBlank()) null else bio,
-                avatarUrl = avatarUrl
+                avatarUrl = avatarUrl,
+                githubUrl = if (githubUrl.isBlank()) null else githubUrl,
+                linkedinUrl = if (linkedinUrl.isBlank()) null else linkedinUrl,
+                websiteUrl = if (websiteUrl.isBlank()) null else websiteUrl
             )
 
             result.onSuccess { response ->
@@ -333,6 +375,35 @@ class ProfileFragment : Fragment() {
             .setPopUpTo(R.id.main_nav, true)
             .build()
         findNavController().navigate(R.id.login_fragment, null, navOptions)
+    }
+
+    /**
+     * Utility function to ensure URL has protocol
+     */
+    private fun ensureUrlProtocol(url: String): String {
+        return if (!url.startsWith("http://") && !url.startsWith("https://")) {
+            "https://$url"
+        } else {
+            url
+        }
+    }
+
+    /**
+     * Open URL in browser with error handling
+     */
+    private fun openUrl(url: String?, platformName: String) {
+        if (url.isNullOrBlank()) {
+            Toast.makeText(context, "Chưa cập nhật thông tin $platformName", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        try {
+            val validUrl = ensureUrlProtocol(url)
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(validUrl))
+            startActivity(intent)
+        } catch (e: Exception) {
+            Toast.makeText(context, "Không thể mở link $platformName", Toast.LENGTH_SHORT).show()
+        }
     }
 
     override fun onDestroyView() {

@@ -154,7 +154,7 @@ class MainActivity : AppCompatActivity() {
                 R.id.verify_reset_otp_fragment,
                 R.id.reset_password_fragment,
                 R.id.reset_password_success_fragment,
-                R.id.taskFragment  -> bottomNav.visibility = View.GONE
+                R.id.taskFragment,
                 R.id.create_new_team_fragment,
                 R.id.teamDetailFragment -> bottomNav.visibility = View.GONE
                 else -> bottomNav.visibility = View.VISIBLE

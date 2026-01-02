@@ -744,18 +744,104 @@ async function resetPassword(req, res) {
 }
 
 // ============================================
-// 9. UPDATE PROFILE - Cập nhật thông tin User (Cloudinary only)
+// 9. CHANGE PASSWORD - Đổi mật khẩu (yêu cầu mật khẩu cũ)
+// ============================================
+async function changePassword(req, res) {
+    try {
+        const userId = req.user.id;
+        const { oldPassword, newPassword } = req.body;
+
+        // Validate input
+        if (!oldPassword || !newPassword) {
+            return res.status(400).json({
+                success: false,
+                message: 'Old password and new password are required'
+            });
+        }
+
+        if (newPassword.length < 8) {
+            return res.status(400).json({
+                success: false,
+                message: 'New password must be at least 8 characters'
+            });
+        }
+
+        if (oldPassword === newPassword) {
+            return res.status(400).json({
+                success: false,
+                message: 'New password must be different from old password'
+            });
+        }
+
+        // Find user
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        // Verify old password
+        const isMatch = await bcrypt.compare(oldPassword, user.hashedPassword);
+        if (!isMatch) {
+            return res.status(400).json({
+                success: false,
+                message: 'Old password is incorrect'
+            });
+        }
+
+        // Hash new password
+        const newPasswordHash = await bcrypt.hash(newPassword, 10);
+
+        // Update password in database
+        await User.updatePassword(userId, newPasswordHash);
+
+        // ✅ SECURITY: Send email notification (async, don't wait)
+        const timestamp = new Date().toLocaleString('en-US', {
+            timeZone: 'Asia/Ho_Chi_Minh',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+
+        const ipAddress = req.ip || req.connection?.remoteAddress;
+
+        sendPasswordChangedEmail(user.email, user.displayName, timestamp, ipAddress)
+            .catch(err => console.error('Error sending password changed notification:', err.message));
+
+        res.status(200).json({
+            success: true,
+            message: 'Password changed successfully'
+        });
+
+    } catch (error) {
+        console.error('Change password error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'An error occurred while changing password'
+        });
+    }
+}
+
+// ============================================
+// 10. UPDATE PROFILE - Cập nhật thông tin User (Cloudinary only)
 // ============================================
 async function updateProfile(req, res) {
     try {
         const userId = req.user.id;
-        const { displayName, phone, bio, avatarUrl } = req.body;
+        const { displayName, phone, bio, avatarUrl, githubUrl, linkedinUrl, websiteUrl } = req.body;
 
         // Whitelist các field được phép update
         const updateData = {};
         if (displayName !== undefined) updateData.displayName = displayName;
         if (phone !== undefined) updateData.phone = phone;
         if (bio !== undefined) updateData.bio = bio;
+        if (githubUrl !== undefined) updateData.githubUrl = githubUrl;
+        if (linkedinUrl !== undefined) updateData.linkedinUrl = linkedinUrl;
+        if (websiteUrl !== undefined) updateData.websiteUrl = websiteUrl;
 
         // Chỉ nhận avatarUrl từ Cloudinary (link HTTPS trực tiếp)
         if (avatarUrl !== undefined) {
@@ -847,6 +933,7 @@ module.exports = {
     verifyResetOTP,
     resendResetOTP,
     resetPassword,
+    changePassword,
     getProfile,
     updateProfile
 };
