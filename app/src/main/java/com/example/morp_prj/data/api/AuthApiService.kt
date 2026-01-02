@@ -53,4 +53,10 @@ interface AuthApiService {
     suspend fun updateProfile(
         @Body request: UpdateProfileWithDriveLinkRequest
     ): Response<User>
+
+    @POST("api/auth/change-password")
+    suspend fun changePassword(
+        @Header("Authorization") token: String,
+        @Body request: Map<String, String>
+    ): Response<AuthResponse>
 }

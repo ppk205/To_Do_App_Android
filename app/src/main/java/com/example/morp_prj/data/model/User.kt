@@ -1,8 +1,14 @@
 package com.example.morp_prj.data.model
 
+import androidx.room.Entity
+import androidx.room.PrimaryKey
 import com.google.gson.annotations.SerializedName
 
+// 1. Thêm @Entity để Room biết đây là một bảng
+@Entity(tableName = "users")
 data class User(
+    // 2. Thêm @PrimaryKey để xác định khóa chính
+    @PrimaryKey
     @SerializedName("id")
     val id: String,
 

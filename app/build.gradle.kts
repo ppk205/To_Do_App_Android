@@ -122,4 +122,7 @@ dependencies {
     // Cloudinary SDK for image upload
     implementation(libs.cloudinary.android)
     implementation(libs.google.http.client.gson)
+
+    // BCrypt for password hashing
+    implementation("org.mindrot:jbcrypt:0.4")
 }

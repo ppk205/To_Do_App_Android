@@ -174,9 +174,9 @@ class ProfileFragment : Fragment() {
             performLogout()
         }
 
-        // 6. Change Password (Optional)
+        // 6. Change Password
         binding.btnChangePassword.setOnClickListener {
-            Toast.makeText(context, "Tính năng đang phát triển", Toast.LENGTH_SHORT).show()
+            findNavController().navigate(R.id.action_profile_to_changePassword)
         }
 
         // 7. Social icons click handlers

@@ -253,7 +253,21 @@
         <action
             android:id="@+id/action_profile_to_guestPrompt"
             app:destination="@id/guest_prompt_fragment" />
+        <action
+            android:id="@+id/action_profile_to_changePassword"
+            app:destination="@id/change_password_fragment" />
     </fragment>
+
+    <fragment
+        android:id="@+id/change_password_fragment"
+        android:name="com.example.morp_prj.ui.ChangePasswordFragment"
+        android:label="Change Password"
+        tools:layout="@layout/fragment_change_password">
+        <action
+            android:id="@+id/action_changePassword_to_forgotPassword"
+            app:destination="@id/forgot_password_fragment" />
+    </fragment>
+
     <fragment
         android:id="@+id/taskFragment"
         android:name="com.example.morp_prj.ui.TaskFragment"

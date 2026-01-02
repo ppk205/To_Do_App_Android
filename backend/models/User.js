@@ -69,6 +69,13 @@ class User {
         return result;
     }
 
+    // Update password
+    static async updatePassword(userId, newPasswordHash) {
+        const query = 'UPDATE users SET hashedPassword = ?, updatedAt = CURRENT_TIMESTAMP WHERE id = ?';
+        const [result] = await pool.execute(query, [newPasswordHash, userId]);
+        return result;
+    }
+
     // Update user (generic)
     static async update(userId, updateData) {
         const fields = [];
