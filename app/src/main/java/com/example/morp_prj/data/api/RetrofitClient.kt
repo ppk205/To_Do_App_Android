@@ -23,7 +23,7 @@ import com.google.gson.GsonBuilder
 object RetrofitClient {
 
     // Base URL - Use your actual domain in production
-    private const val BASE_URL = "http://10.0.2.2:3001/"
+    private const val BASE_URL = "https://surgery-contemporary-vegetation-backup.trycloudflare.com/"
 
     // ✅ Production domain for certificate pinning
     // Replace with your actual domain when deploying to production
@@ -82,6 +82,11 @@ object RetrofitClient {
 
     var teamTaskApiService: TeamTaskApiService = retrofit.create(TeamTaskApiService::class.java)
         private set
+
+    @Volatile
+    var notificationApiService: NotificationApiService = retrofit.create(NotificationApiService::class.java)
+        private set
+
     private fun buildRetrofit(builder: OkHttpClient.Builder?): Retrofit {
         val clientBuilder = builder ?: OkHttpClient.Builder()
             .addInterceptor(loggingInterceptor)
@@ -139,6 +144,7 @@ object RetrofitClient {
             taskApiService = retrofit.create(TaskApiService::class.java)
             teamApiService = retrofit.create(TeamApiService::class.java)
             teamTaskApiService = retrofit.create(TeamTaskApiService::class.java)
+            notificationApiService = retrofit.create(NotificationApiService::class.java)
         } catch (e: Exception) {
             // Fail gracefully - keep existing retrofit without auth interceptor
             if (isDebugBuild()) android.util.Log.e("RetrofitClient", "Failed to set auth interceptor", e)

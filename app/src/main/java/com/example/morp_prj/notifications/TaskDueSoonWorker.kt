@@ -12,6 +12,7 @@ import androidx.core.content.ContextCompat
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.example.morp_prj.R
+import com.example.morp_prj.constants.AppFlags
 import com.example.morp_prj.data.db.AppDatabase
 import com.example.morp_prj.data.repository.NotificationRepository
 import com.example.morp_prj.utils.PreferenceManager
@@ -20,7 +21,8 @@ import com.example.morp_prj.utils.PreferenceManager
  * Background worker that shows notifications for tasks due soon.
  *
  * Rules:
- * - Only for logged-in users (not guest)
+ * - Logged-in users always get reminders
+ * - Guest users get reminders when [AppFlags.ENABLE_GUEST_TASK_REMINDERS] is true
  * - Due within next [WINDOW_MINUTES]
  * - Status != DONE
  *
@@ -34,9 +36,10 @@ class TaskDueSoonWorker(
     override suspend fun doWork(): Result {
         try {
             val prefs = PreferenceManager(applicationContext)
-            if (!prefs.isLoggedIn() || prefs.isGuest()) return Result.success()
+            if (prefs.isGuest() && !AppFlags.ENABLE_GUEST_TASK_REMINDERS) return Result.success()
 
-            val userId = prefs.getUserId() ?: return Result.success()
+            val userId = prefs.getCurrentUserIdOrGuest()
+
             val notifRepo = NotificationRepository(applicationContext)
 
             NotificationChannels.ensureCreated(applicationContext)
@@ -81,7 +84,7 @@ class TaskDueSoonWorker(
                     applicationContext,
                     2000 + idx,
                     intent,
-                    PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= 23) PendingIntent.FLAG_IMMUTABLE else 0)
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
                 )
 
                 val notification = NotificationCompat.Builder(applicationContext, NotificationChannels.CHANNEL_TASKS)

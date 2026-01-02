@@ -1,5 +1,7 @@
 const pool = require('../config/database');
 const crypto = require('crypto');
+const { createNotificationsBulk } = require('../services/notificationService');
+const { getIO } = require('../services/realtime');
 
 const createTeamTask = async (req, res) => {
     const { teamId, title, description, dueDate, priority, assignees, createdBy, tagsCsv } = req.body;
@@ -31,6 +33,34 @@ const createTeamTask = async (req, res) => {
         }
 
         await conn.commit();
+
+        // Realtime notify + persist notifications for each assignee
+        const uniqueAssignees = Array.from(new Set(assignees.map(String)));
+        const notifs = uniqueAssignees.map((userId) => ({
+            userId,
+            channel: 'teams',
+            title: 'New team task',
+            message: `You have been assigned to the task "${title}".`,
+            dedupeKey: `teamTask:${taskId}:assigned:${userId}`,
+            createdAt,
+        }));
+        await createNotificationsBulk(notifs);
+
+        const io = getIO();
+        if (io) {
+            io.to(`team:${teamId}`).emit('teamTaskCreated', {
+                teamId,
+                taskId,
+                title,
+                description,
+                dueDate,
+                priority,
+                createdBy,
+                createdAt,
+                assignees: uniqueAssignees,
+                tagsCsv: tagsCsv || null,
+            });
+        }
 
         res.status(201).json({ success: true, message: 'Task created successfully', taskId });
 

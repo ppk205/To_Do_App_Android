@@ -1,11 +1,13 @@
 package com.example.morp_prj.ui
 
 import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
+import android.view.*
 import android.widget.TextView
+import androidx.appcompat.app.AlertDialog
+import androidx.core.view.MenuHost
+import androidx.core.view.MenuProvider
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -34,26 +36,62 @@ class NotificationsFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        // Menu (modern API)
+        val menuHost: MenuHost = requireActivity()
+        menuHost.addMenuProvider(object : MenuProvider {
+            override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
+                menuInflater.inflate(R.menu.notifications_menu, menu)
+            }
+
+            override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
+                return when (menuItem.itemId) {
+                    R.id.action_clear_notifications -> {
+                        confirmClearAll()
+                        true
+                    }
+                    else -> false
+                }
+            }
+        }, viewLifecycleOwner, Lifecycle.State.RESUMED)
+
         repo = NotificationRepository(requireContext())
 
         val rv = view.findViewById<RecyclerView>(R.id.rvNotifications)
         val btnLoadMore = view.findViewById<TextView>(R.id.btnLoadMore)
 
-        adapter = NotificationsAdapter()
+        adapter = NotificationsAdapter(onAction = { item, actionId ->
+            when (actionId) {
+                R.id.action_delete -> {
+                    viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+                        repo.deleteOne(item.id, item.dedupeKey)
+                    }
+                    adapter?.removeById(item.id)
+                }
+                // R.id.action_more -> future actions
+            }
+        })
         rv.layoutManager = LinearLayoutManager(requireContext())
         rv.adapter = adapter
 
-        // Mark as read once user opens this screen
+        // Mark as read once user opens this screen (local-only for guest)
         viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
             repo.markAllRead()
         }
 
         // initial load
         pageIndex = 0
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+            // Pull latest from server before showing (no-op in guest mode)
+            repo.syncFromServer()
+        }
         loadPage(reset = true)
 
         btnLoadMore.setOnClickListener {
             pageIndex += 1
+            viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+                // no-op in guest mode
+                repo.syncFromServer()
+            }
             loadPage(reset = false)
         }
     }
@@ -77,5 +115,22 @@ class NotificationsFragment : Fragment() {
     override fun onDestroyView() {
         super.onDestroyView()
         adapter = null
+    }
+
+
+    private fun confirmClearAll() {
+        AlertDialog.Builder(requireContext())
+            .setTitle("Clear notifications")
+            .setMessage("This will remove all notifications on this device. Continue?")
+            .setNegativeButton("Cancel", null)
+            .setPositiveButton("Clear") { _, _ ->
+                viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+                    repo.clear()
+                }
+                // reset UI
+                pageIndex = 0
+                loadPage(reset = true)
+            }
+            .show()
     }
 }

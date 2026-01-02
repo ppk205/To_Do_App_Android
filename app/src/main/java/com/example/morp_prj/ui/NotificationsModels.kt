@@ -11,6 +11,7 @@ data class UiNotification(
     val message: String,
     val time: String,
     val isNew: Boolean,
+    val dedupeKey: String,
 )
 
 /**
@@ -25,6 +26,7 @@ object NotificationUiMapper {
             message = e.message,
             time = RelativeTime.format(e.createdAt),
             isNew = e.isNew,
+            dedupeKey = e.dedupeKey,
         )
     }
 }

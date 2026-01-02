@@ -10,9 +10,9 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import com.example.morp_prj.R
 import com.example.morp_prj.data.repository.AuthRepository
+import com.example.morp_prj.data.repository.NotificationRepository
 import com.example.morp_prj.data.repository.SessionTaskManager
 import com.example.morp_prj.data.repository.TaskSyncRepository
-import com.example.morp_prj.notifications.TeamMockNotificationScript
 import com.example.morp_prj.utils.PreferenceManager
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputEditText
@@ -145,6 +145,15 @@ class LoginFragment : Fragment(R.layout.fragment_login) {
                                 Log.w("LoginFragment", "SessionTaskManager.onLoginSuccess failed", t)
                             }
 
+                            // ✅ Sync notifications after login so the Notifications tab is up-to-date
+                            try {
+                                withContext(Dispatchers.IO) {
+                                    NotificationRepository(requireContext()).syncFromServer(showDeviceNotifications = false)
+                                }
+                            } catch (t: Throwable) {
+                                Log.w("LoginFragment", "Auto notifications sync after login failed", t)
+                            }
+
                             // ✅ Auto refresh đúng 1 lần sau login để hiển thị task ngay
                             try {
                                 withContext(Dispatchers.IO) {
@@ -154,12 +163,6 @@ class LoginFragment : Fragment(R.layout.fragment_login) {
                                 Log.w("LoginFragment", "Auto syncDown after login failed", t)
                             }
 
-                            // Push a few team notifications (demo like screenshot)
-                            try {
-                                TeamMockNotificationScript.pushDemo(requireContext())
-                            } catch (t: Throwable) {
-                                Log.w("LoginFragment", "Failed to push team demo notifications", t)
-                            }
                         } catch (e: Exception) {
                             Log.e("LoginFragment", "Failed to save login data", e)
                         }
