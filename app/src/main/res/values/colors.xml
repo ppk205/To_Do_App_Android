@@ -43,4 +43,7 @@
 
     <!-- Chip background for tag chips -->
     <color name="chip_background_gray">#E0E0E0</color>
+
+    <!-- fallback color resource (team dashboard) -->
+    <color name="grey_light">#E0E0E0</color> <color name="grey_dark">#BDBDBD</color>
 </resources>

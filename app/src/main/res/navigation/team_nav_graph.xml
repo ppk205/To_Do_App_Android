@@ -7,13 +7,21 @@
 
     <fragment
         android:id="@+id/teamDashboardFragment"
-        android:name="com.example.morp_prj.ui.TeamDashboardFragment"
-        android:label="Team Dashboard"
-        tools:layout="@layout/fragment_team_dashboard">
+        android:name="com.example.morp_prj.ui.dashboard.TeamManagementDashboardFragment"
+        android:label="Team Manager Dashboard"
+        tools:layout="@layout/fragment_task_dashboard">
         <argument
             android:name="teamId"
             app:argType="string"
             android:defaultValue="" />
+        <!-- Action to open task detail from dashboard recent items -->
+        <action
+            android:id="@+id/action_teamDashboard_to_taskDetail"
+            app:destination="@id/teamTaskDetailFragment">
+            <argument
+                android:name="taskId"
+                app:argType="string" />
+        </action>
     </fragment>
 
     <fragment
@@ -61,6 +69,14 @@
             android:name="teamId"
             app:argType="string"
             android:defaultValue="" />
+        <!-- Action to open task detail from assigned tasks list -->
+        <action
+            android:id="@+id/action_assignedTasks_to_taskDetail"
+            app:destination="@id/teamTaskDetailFragment">
+            <argument
+                android:name="taskId"
+                app:argType="string" />
+        </action>
     </fragment>
 
     <fragment
