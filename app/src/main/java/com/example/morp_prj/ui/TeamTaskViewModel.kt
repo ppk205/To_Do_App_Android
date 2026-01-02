@@ -21,6 +21,9 @@ class TeamTaskViewModel : ViewModel() {
     private val _isLoading = MutableLiveData<Boolean>()
     val isLoading: LiveData<Boolean> = _isLoading
 
+    private val _errorMessage = MutableLiveData<String?>(null)
+    val errorMessage: LiveData<String?> = _errorMessage
+
     // Các biến đếm cho Summary Cards
     val overdueCount = MutableLiveData(0)
     val todayCount = MutableLiveData(0)
@@ -43,8 +46,11 @@ class TeamTaskViewModel : ViewModel() {
     fun getPendingStatus(taskId: String): String? = pendingUpdates[taskId]
 
     fun fetchTasks(teamId: String) {
+        _isLoading.postValue(true)
+        _errorMessage.postValue(null)
         apiService.getTeamTasks(teamId).enqueue(object : Callback<List<TeamTask>> {
             override fun onResponse(call: Call<List<TeamTask>>, response: Response<List<TeamTask>>) {
+                _isLoading.postValue(false)
                 if (response.isSuccessful) {
                     val taskList = response.body() ?: emptyList()
                     val now = System.currentTimeMillis()
@@ -64,11 +70,18 @@ class TeamTaskViewModel : ViewModel() {
                     confirmedUpdates.keys.retainAll { confirmedUpdates[it]?.second ?: 0L >= expiry }
                     _tasks.value = merged
                     calculateSummary(merged) // Hàm tính toán 4 ô Summary đã viết ở lượt trước
+                    _errorMessage.postValue(null)
+                } else {
+                    android.util.Log.w("TeamTaskViewModel", "fetchTasks failed: code=${response.code()}")
+                    val err = try { response.errorBody()?.string() } catch (e: Exception) { null }
+                    _errorMessage.postValue("Server error: ${response.code()} ${err ?: ""}")
                 }
             }
 
             override fun onFailure(call: Call<List<TeamTask>>, t: Throwable) {
-                // Xử lý lỗi kết nối
+                _isLoading.postValue(false)
+                android.util.Log.e("TeamTaskViewModel", "fetchTasks onFailure", t)
+                _errorMessage.postValue(t.message ?: "Network error")
             }
         })
     }
@@ -89,6 +102,7 @@ class TeamTaskViewModel : ViewModel() {
                     // Remember this confirmation briefly so we don't get clobbered by a near-simultaneous fetch
                     confirmedUpdates[taskId] = Pair(newStatus, System.currentTimeMillis())
                     calculateSummary(_tasks.value ?: emptyList())
+                    _errorMessage.postValue(null)
                     onComplete(true, null)
                 } else {
                     val err = try { response.errorBody()?.string() } catch (e: Exception) { null }
@@ -96,13 +110,14 @@ class TeamTaskViewModel : ViewModel() {
                     // On failure remove pending marker so future fetch won't keep applying it
                     pendingUpdates.remove(taskId)
                     confirmedUpdates.remove(taskId)
+                    _errorMessage.postValue("Update failed: ${response.code()} ${err ?: ""}")
                     onComplete(false, "${response.code()}: ${err ?: "Unknown error"}")
                 }
             }
 
             override fun onFailure(call: Call<Void>, t: Throwable) {
                 android.util.Log.e("TeamTaskViewModel", "updateTaskStatus onFailure", t)
-                // network failure -> keep the pending update so UI remains optimistic until retry
+                _errorMessage.postValue(t.message ?: "Network error")
                 onComplete(false, t.message)
             }
         })
