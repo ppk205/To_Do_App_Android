@@ -1,11 +1,9 @@
 <resources>
     <string name="app_name">Taskly</string>
 
-    <!-- Splash -->
-    <string name="splash_slogan">Get things done.</string>
-
     <!-- Onboarding content strings -->
     <string name="cd_logo_taskflow">TaskFlow logo</string>
+    <string name="splash_slogan">Get things done.</string>
     <string name="cd_onboarding_illustration">Onboarding illustration</string>
     <string name="cd_dot_1">Dot 1</string>
     <string name="cd_dot_2">Dot 2</string>
