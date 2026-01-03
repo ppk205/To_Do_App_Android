@@ -8,6 +8,7 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.ImageButton
+import android.widget.ImageView
 import android.widget.PopupMenu
 import android.widget.TextView
 import android.widget.Toast
@@ -50,21 +51,23 @@ class MemberManagementFragment : Fragment(R.layout.fragment_member_management) {
         preferenceManager = PreferenceManager(requireContext())
 
         view.findViewById<ImageButton>(R.id.btnBack)?.setOnClickListener {
-            findNavController().navigate(R.id.teamDashboardFragment)
+            findNavController().navigateUp()
         }
 
         view.findViewById<ImageButton>(R.id.btnAddMember)?.setOnClickListener {
             showInviteDialog()
         }
 
+        view.findViewById<ImageView>(R.id.btnCopy)?.setOnClickListener {
+            inviteCode?.let { code -> copyToClipboard(code) }
+        }
+
         val rvMembers = view.findViewById<RecyclerView>(R.id.rvMembers)
         rvMembers.layoutManager = LinearLayoutManager(context)
-        memberAdapter = MemberAdapter(emptyList()) { member ->
-            val position = memberAdapter.members.indexOf(member)
-            if (position != -1) {
-                val holder = rvMembers.findViewHolderForAdapterPosition(position)
-                holder?.itemView?.let { showMemberOptions(member, it) }
-            }
+
+        // Adapter callback nhận 2 tham số: member và view (nút 3 chấm)
+        memberAdapter = MemberAdapter(emptyList()) { member, anchorView ->
+            showMemberOptions(member, anchorView)
         }
         rvMembers.adapter = memberAdapter
 
@@ -73,60 +76,75 @@ class MemberManagementFragment : Fragment(R.layout.fragment_member_management) {
 
     private fun loadMembers() {
         val currentTeamId = teamId ?: return
-        
+
         RetrofitClient.teamApiService.getTeamMembers(currentTeamId).enqueue(object : Callback<List<TeamMember>> {
             override fun onResponse(call: Call<List<TeamMember>>, response: Response<List<TeamMember>>) {
                 if (response.isSuccessful) {
                     membersList = (response.body() ?: emptyList()).toMutableList()
-                    memberAdapter.updateData(membersList)
+                    memberAdapter.updateData(membersList) // Gọi hàm updateData mới thêm vào Adapter
                 } else {
                     Log.e("MemberManagement", "Failed to load members: ${response.code()}")
                 }
             }
-
             override fun onFailure(call: Call<List<TeamMember>>, t: Throwable) {
                 Log.e("MemberManagement", "Error loading members", t)
             }
         })
     }
 
+    private fun copyToClipboard(text: String) {
+        val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        val clip = ClipData.newPlainText("Invite Code", text)
+        clipboard.setPrimaryClip(clip)
+        Toast.makeText(context, "Copied: $text", Toast.LENGTH_SHORT).show()
+    }
+
     private fun showInviteDialog() {
         if (inviteCode.isNullOrEmpty()) {
-            Toast.makeText(context, "Invite code is not available.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "No invite code available", Toast.LENGTH_SHORT).show()
             return
         }
 
         val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_invite_code_display, null)
-        val tvInviteCode = dialogView.findViewById<TextView>(R.id.tvInviteCode)
-        tvInviteCode.text = inviteCode
 
-        val message = "Share this code with others to invite them to your team."
+        dialogView.findViewById<TextView>(R.id.tvInviteCode).text = inviteCode
 
-        AlertDialog.Builder(requireContext())
-            .setTitle("Invite Members")
-            .setMessage(message)
+        val dialog = AlertDialog.Builder(requireContext())
             .setView(dialogView)
-            .setPositiveButton("Copy Code") { _, _ ->
-                val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                val clip = ClipData.newPlainText("Team Invite Code", inviteCode)
-                clipboard.setPrimaryClip(clip)
-                Toast.makeText(context, "Invite code copied to clipboard", Toast.LENGTH_SHORT).show()
-            }
-            .setNegativeButton("Close", null)
-            .show()
+            .setPositiveButton("Close", null)
+            .create()
+
+        dialogView.findViewById<View>(R.id.btnCopy)?.setOnClickListener {
+            copyToClipboard(inviteCode!!)
+        }
+
+        dialogView.findViewById<View>(R.id.btnGoToTeam)?.setOnClickListener {
+            dialog.dismiss()
+            findNavController().navigateUp()
+        }
+
+        dialog.show()
     }
 
     private fun showMemberOptions(member: TeamMember, anchorView: View) {
-        val popup = PopupMenu(context, anchorView.findViewById(R.id.btnMore))
+        // anchorView chính là cái nút 3 chấm mà người dùng vừa bấm
+        val popup = PopupMenu(context, anchorView)
         popup.menuInflater.inflate(R.menu.member_options_menu, popup.menu)
 
-        if (!currentUserRole.equals("manager", ignoreCase = true)) {
-            popup.menu.findItem(R.id.action_remove_member).isVisible = false
-            popup.menu.findItem(R.id.action_change_role).isVisible = false
+        // Logic check quyền
+        // Chỉ hiện nút Remove nếu user hiện tại là manager
+        // Và không được xóa chính mình
+        val canManage = currentUserRole.equals("owner", ignoreCase = true) ||
+                currentUserRole.equals("admin", ignoreCase = true) ||
+                currentUserRole.equals("manager", ignoreCase = true)
+
+        if (!canManage) {
+            popup.menu.findItem(R.id.action_remove_member)?.isVisible = false
+            popup.menu.findItem(R.id.action_change_role)?.isVisible = false
         }
 
         if (member.id == preferenceManager.getUserId()) {
-             popup.menu.findItem(R.id.action_remove_member).isVisible = false
+            popup.menu.findItem(R.id.action_remove_member)?.isVisible = false
         }
 
         popup.setOnMenuItemClickListener { item ->
@@ -159,15 +177,13 @@ class MemberManagementFragment : Fragment(R.layout.fragment_member_management) {
         RetrofitClient.teamApiService.removeMember(request).enqueue(object : Callback<Void> {
             override fun onResponse(call: Call<Void>, response: Response<Void>) {
                 if (response.isSuccessful) {
-                    Toast.makeText(context, "${member.displayName} has been removed.", Toast.LENGTH_SHORT).show()
-                    // Cập nhật lại danh sách
+                    Toast.makeText(context, "${member.displayName} removed", Toast.LENGTH_SHORT).show()
                     membersList.remove(member)
                     memberAdapter.updateData(membersList)
                 } else {
                     Toast.makeText(context, "Failed to remove member", Toast.LENGTH_SHORT).show()
                 }
             }
-
             override fun onFailure(call: Call<Void>, t: Throwable) {
                 Toast.makeText(context, "Error: ${t.message}", Toast.LENGTH_SHORT).show()
             }

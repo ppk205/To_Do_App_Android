@@ -153,16 +153,6 @@ class TeamDetailFragment : Fragment(R.layout.fragment_team_detail), NavigationVi
             // For Manager
             R.id.nav_member_management -> teamNavController.navigate(R.id.memberManagementFragment, args, navOptionsBuilder.build())
             R.id.nav_join_requests -> teamNavController.navigate(R.id.joinRequestFragment, args, navOptionsBuilder.build())
-
-            // SPECIAL HANDLING FOR DASHBOARD
-            R.id.nav_manager_dashboard -> {
-                // Pop everything up to the dashboard to avoid duplicates
-                val options = navOptionsBuilder
-                    .setPopUpTo(teamNavController.graph.startDestinationId, true)
-                    .build()
-                teamNavController.navigate(R.id.teamDashboardFragment, args, options)
-            }
-
             R.id.nav_create_task -> teamNavController.navigate(R.id.createTeamTaskFragment, args, navOptionsBuilder.build())
             R.id.nav_team_task_management -> teamNavController.navigate(R.id.teamTaskManagementFragment, args, navOptionsBuilder.build())
 

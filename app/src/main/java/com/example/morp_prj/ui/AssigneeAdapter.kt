@@ -14,23 +14,24 @@ class AssigneeAdapter(private val users: List<User>) :
     RecyclerView.Adapter<AssigneeAdapter.ViewHolder>() {
 
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
-        val ivAvatar: ImageView = view.findViewById(R.id.ivAvatar)
-        val tvName: TextView = view.findViewById(R.id.tvName)
+        val ivAvatar: ImageView = view.findViewById(R.id.imgAvatar)
+        val tvName: TextView = view.findViewById(R.id.tvMemberName)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-        // Có thể dùng lại item_member nhưng ẩn nút btnMore đi
         val view = LayoutInflater.from(parent.context).inflate(R.layout.item_member, parent, false)
         return ViewHolder(view)
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val user = users[position]
-        holder.tvName.text = user.displayName ?: user.username
+        holder.tvName.text = user.displayName.takeIf { !it.isNullOrBlank() } ?: user.username
 
-        // Ẩn các thành phần không cần thiết của item_member
-        holder.itemView.findViewById<View>(R.id.btnMore).visibility = View.GONE
-        holder.itemView.findViewById<View>(R.id.tvRole).visibility = View.GONE
+        // Hide unnecessary views from item_member layout
+        holder.itemView.findViewById<View>(R.id.btnMore)?.visibility = View.GONE
+        holder.itemView.findViewById<View>(R.id.tvMemberRole)?.visibility = View.GONE
+        holder.itemView.findViewById<View>(R.id.tvMemberEmail)?.visibility = View.GONE
+        holder.itemView.findViewById<View>(R.id.viewStatus)?.visibility = View.GONE
 
         val avatarUrl = user.avatarUrl
         if (!avatarUrl.isNullOrBlank()) {
@@ -40,7 +41,6 @@ class AssigneeAdapter(private val users: List<User>) :
                 .circleCrop()
                 .into(holder.ivAvatar)
         } else {
-            // Load placeholder only
             Glide.with(holder.itemView.context)
                 .load(R.drawable.ic_avatar_placeholder)
                 .circleCrop()

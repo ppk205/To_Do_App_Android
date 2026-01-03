@@ -1,28 +1,28 @@
 package com.example.morp_prj.ui
 
+import android.annotation.SuppressLint
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.example.morp_prj.R
 import com.example.morp_prj.data.model.TeamMember
-import java.util.Locale
 
 class MemberAdapter(
-    var members: List<TeamMember>, // Đổi thành public var
-    private val onMoreClick: (TeamMember) -> Unit
+    private var members: List<TeamMember>,
+    private val onMoreClick: ((TeamMember, View) -> Unit)? = null
 ) : RecyclerView.Adapter<MemberAdapter.MemberViewHolder>() {
 
     class MemberViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        val tvName: TextView = itemView.findViewById(R.id.tvName)
-        val tvRole: TextView = itemView.findViewById(R.id.tvRole)
-        val ivAvatar: ImageView = itemView.findViewById(R.id.ivAvatar)
-        val btnMore: ImageButton = itemView.findViewById(R.id.btnMore)
-        val viewStatus: View = itemView.findViewById(R.id.viewStatus) // Trạng thái online/offline
+        val imgAvatar: ImageView = itemView.findViewById(R.id.imgAvatar)
+        val tvName: TextView = itemView.findViewById(R.id.tvMemberName)
+        val tvEmail: TextView = itemView.findViewById(R.id.tvMemberEmail)
+        val tvRole: TextView = itemView.findViewById(R.id.tvMemberRole)
+        val viewStatus: View = itemView.findViewById(R.id.viewStatus)
+        val btnMore: ImageView = itemView.findViewById(R.id.btnMore)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MemberViewHolder {
@@ -31,29 +31,58 @@ class MemberAdapter(
     }
 
     override fun onBindViewHolder(holder: MemberViewHolder, position: Int) {
-        val member = members[position]
+        val user = members[position]
 
-        holder.tvName.text = member.displayName
-        holder.tvRole.text = member.role.replaceFirstChar { it.titlecase(Locale.getDefault()) }
+        val displayName = user.displayName
+        val username = user.displayName
 
-        Glide.with(holder.itemView.context)
-            .load(member.avatarUrl)
-            .placeholder(R.drawable.ic_profile_selector) // Dùng icon profile mặc định
-            .error(R.drawable.ic_profile_selector)
-            .circleCrop()
-            .into(holder.ivAvatar)
+        holder.tvName.text = when {
+            !displayName.isNullOrBlank() -> displayName
+            !username.isNullOrBlank() -> username
+            else -> "Member"
+        }
 
-        // TODO: Xử lý trạng thái online/offline cho viewStatus
+        holder.tvEmail.text = user.email ?: "No Email"
+        holder.tvEmail.visibility = View.VISIBLE
 
+        val role = user.role
+        if (!role.isNullOrBlank()) {
+            holder.tvRole.text = role
+            // Tùy chỉnh màu nền cho Role ở đây
+        } else {
+            holder.tvRole.text = "Member"
+        }
+        holder.tvRole.visibility = View.VISIBLE
+
+        val avatarUrl = user.avatarUrl
+        if (!avatarUrl.isNullOrBlank()) {
+            Glide.with(holder.itemView.context)
+                .load(avatarUrl)
+                .placeholder(R.drawable.ic_avatar_placeholder)
+                .error(R.drawable.ic_avatar_placeholder)
+                .circleCrop()
+                .into(holder.imgAvatar)
+        } else {
+            Glide.with(holder.itemView.context)
+                .load(R.drawable.ic_avatar_placeholder)
+                .circleCrop()
+                .into(holder.imgAvatar)
+        }
+
+        // Status Dot
+        holder.viewStatus.visibility = View.VISIBLE
+
+        holder.btnMore.visibility = View.VISIBLE
         holder.btnMore.setOnClickListener {
-            onMoreClick(member)
+            onMoreClick?.invoke(user, it)
         }
     }
 
-    override fun getItemCount(): Int = members.size
+    override fun getItemCount() = members.size
 
+    @SuppressLint("NotifyDataSetChanged")
     fun updateData(newMembers: List<TeamMember>) {
-        members = newMembers
+        this.members = newMembers
         notifyDataSetChanged()
     }
 }

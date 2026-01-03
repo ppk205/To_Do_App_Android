@@ -1,18 +1,8 @@
 package com.example.morp_prj.data.api
 
-import com.example.morp_prj.data.model.CreateTeamRequest
-import com.example.morp_prj.data.model.HandleJoinRequest
-import com.example.morp_prj.data.model.JoinTeamRequest
-import com.example.morp_prj.data.model.PinTeamRequest
-import com.example.morp_prj.data.model.RemoveMemberRequest
-import com.example.morp_prj.data.model.Team
-import com.example.morp_prj.data.model.TeamMember
+import com.example.morp_prj.data.model.*
 import retrofit2.Call
-import retrofit2.http.Body
-import retrofit2.http.GET
-import retrofit2.http.POST
-import retrofit2.http.Path
-import retrofit2.http.Query
+import retrofit2.http.*
 
 interface TeamApiService {
     @GET("api/team/user/{userId}")
@@ -33,9 +23,18 @@ interface TeamApiService {
     @POST("api/team/join")
     fun joinTeam(@Body request: JoinTeamRequest): Call<Void>
 
-    @POST("api/team/handle-request")
+    @POST("api/team/request")
     fun handleJoinRequest(@Body request: HandleJoinRequest): Call<Void>
 
-    @POST("api/team/remove")
+    @POST("api/team/remove-member")
     fun removeMember(@Body request: RemoveMemberRequest): Call<Void>
+
+    @GET("api/team/{teamId}")
+    fun getTeamDetail(@Path("teamId") teamId: String): Call<Team>
+
+    @PUT("api/team/{teamId}")
+    fun updateTeam(
+        @Path("teamId") teamId: String,
+        @Body request: UpdateTeamRequest
+    ): Call<Void>
 }

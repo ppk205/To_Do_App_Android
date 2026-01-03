@@ -1,10 +1,19 @@
 package com.example.morp_prj.ui
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.os.Bundle
+import android.util.Log
+import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.*
+import android.view.inputmethod.EditorInfo
+import android.widget.ImageView
+import android.widget.TextView
+import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import com.example.morp_prj.R
@@ -12,16 +21,33 @@ import com.example.morp_prj.data.api.RetrofitClient
 import com.example.morp_prj.data.model.CreateTeamRequest
 import com.example.morp_prj.data.model.Team
 import com.example.morp_prj.utils.PreferenceManager
+import com.google.android.material.button.MaterialButton
+import com.google.android.material.chip.Chip
+import com.google.android.material.chip.ChipGroup
+import com.google.android.material.textfield.TextInputEditText
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 
 class CreateNewTeamFragment : Fragment() {
 
-    private lateinit var etTeamName: EditText
-    private lateinit var etTeamDescription: EditText
-    private lateinit var btnCreateTeam: Button
+    private lateinit var etTeamName: TextInputEditText
+    private lateinit var etDescription: TextInputEditText
+    private lateinit var etTagInput: TextInputEditText
+    private lateinit var chipGroupTags: ChipGroup
+    private lateinit var btnCreateTeam: MaterialButton
+    private lateinit var btnBack: ImageView
+    private lateinit var imgTeamAvatar: ImageView
+    private lateinit var btnChangeAvatar: ImageView
+
     private lateinit var preferenceManager: PreferenceManager
+
+    // Danh sách tags lưu trữ tạm thời
+    private val tagsList = mutableListOf<String>()
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -34,57 +60,111 @@ class CreateNewTeamFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         preferenceManager = PreferenceManager(requireContext())
+        initViews(view)
+        setupListeners()
+        setupTagInput()
+    }
 
-        val btnBack = view.findViewById<ImageButton>(R.id.btnBack)
+    private fun initViews(view: View) {
+        etTeamName = view.findViewById(R.id.etTeamName)
+        etDescription = view.findViewById(R.id.etDescription)
+        etTagInput = view.findViewById(R.id.etTagInput)
+        chipGroupTags = view.findViewById(R.id.chipGroupTags)
+        btnCreateTeam = view.findViewById(R.id.btnCreateTeam)
+        btnBack = view.findViewById(R.id.btnBack)
+        imgTeamAvatar = view.findViewById(R.id.imgTeamAvatar)
+        btnChangeAvatar = view.findViewById(R.id.btnChangeAvatar)
+    }
+
+    private fun setupListeners() {
         btnBack.setOnClickListener {
-            findNavController().popBackStack()
+            findNavController().navigateUp()
         }
 
-        etTeamName = view.findViewById(R.id.etTeamName)
-        etTeamDescription = view.findViewById(R.id.etTeamDescription)
-        val etTeamTags = view.findViewById<EditText>(R.id.etTeamTags)
-        btnCreateTeam = view.findViewById(R.id.btnCreateTeam)
+        // Xử lý nút chọn ảnh (Stub logic)
+        val imagePickerAction = View.OnClickListener {
+            Toast.makeText(context, "Open Image Picker Feature", Toast.LENGTH_SHORT).show()
+            // Phát triển gọi intent sử dụng THƯ VIỆN ẢNH Ở ĐÂY nha
+        }
+        btnChangeAvatar.setOnClickListener(imagePickerAction)
+        imgTeamAvatar.setOnClickListener(imagePickerAction)
 
         btnCreateTeam.setOnClickListener {
-            val name = etTeamName.text.toString().trim()
-            val desc = etTeamDescription.text.toString().trim()
-            val tags = etTeamTags.text.toString().trim()
-
-            if (name.isEmpty()) {
-                etTeamName.error = "Team Name is required"
-                return@setOnClickListener
-            }
-
-            createTeam(name, desc, if (tags.isEmpty()) null else tags)
+            validateAndCreateTeam()
         }
     }
 
-    private fun createTeam(name: String, description: String, tagsCsv: String?) {
-        val userId = preferenceManager.getUserId()
-        
-        if (userId.isNullOrEmpty()) {
-            Toast.makeText(context, "User not logged in!", Toast.LENGTH_SHORT).show()
+    private fun setupTagInput() {
+        etTagInput.setOnEditorActionListener { v, actionId, event ->
+            // Kiểm tra nếu người dùng nhấn Done trên bàn phím hoặc Enter cứng
+            if (actionId == EditorInfo.IME_ACTION_DONE ||
+                (event != null && event.keyCode == KeyEvent.KEYCODE_ENTER && event.action == KeyEvent.ACTION_DOWN)) {
+
+                val tagText = etTagInput.text.toString().trim()
+                if (tagText.isNotEmpty()) {
+                    addTagChip(tagText)
+                    etTagInput.text?.clear() // Xóa text sau khi add
+                }
+                return@setOnEditorActionListener true
+            }
+            return@setOnEditorActionListener false
+        }
+    }
+
+    private fun addTagChip(text: String) {
+        // Tránh trùng lặp
+        if (tagsList.contains(text)) return
+
+        val chip = Chip(requireContext())
+        chip.text = text
+        chip.isCloseIconVisible = true // Hiện nút xóa
+        chip.setOnCloseIconClickListener {
+            chipGroupTags.removeView(chip)
+            tagsList.remove(text)
+        }
+
+        chipGroupTags.addView(chip)
+        tagsList.add(text)
+    }
+
+    private fun validateAndCreateTeam() {
+        val name = etTeamName.text.toString().trim()
+        val description = etDescription.text.toString().trim()
+
+        if (name.isEmpty()) {
+            etTeamName.error = "Team name is required"
             return
         }
 
-        val request = CreateTeamRequest(name, description, userId, tagsCsv)
+        val userId = preferenceManager.getUserId() ?: return
 
-        // Vô hiệu hóa nút để tránh double click
+        // Tạo request object
+        val request = CreateTeamRequest(
+            name = name,
+            description = description,
+            createdBy = userId,
+            tags = tagsList
+        )
+        
+        // Disable button to prevent double click
         btnCreateTeam.isEnabled = false
         btnCreateTeam.text = "Creating..."
 
+        // Gọi API
         RetrofitClient.teamApiService.createTeam(request).enqueue(object : Callback<Team> {
             override fun onResponse(call: Call<Team>, response: Response<Team>) {
-                if (response.isSuccessful) {
-                    onTeamCreatedSuccess()
+                if (response.isSuccessful && response.body() != null) {
+                    val createdTeam = response.body()!!
+                    
+                    // Create group chat automatically
+                    createTeamGroupChat(createdTeam)
                 } else {
                     btnCreateTeam.isEnabled = true
                     btnCreateTeam.text = "Create Team"
-                    val errorMsg = response.errorBody()?.string() ?: "Unknown error"
-                    Toast.makeText(context, "Failed: ${response.code()} - $errorMsg", Toast.LENGTH_LONG).show()
+                    val errorBody = response.errorBody()?.string()
+                    Toast.makeText(context, "Failed to create team: $errorBody", Toast.LENGTH_SHORT).show()
                 }
             }
-
             override fun onFailure(call: Call<Team>, t: Throwable) {
                 btnCreateTeam.isEnabled = true
                 btnCreateTeam.text = "Create Team"
@@ -93,13 +173,60 @@ class CreateNewTeamFragment : Fragment() {
         })
     }
 
-    private fun onTeamCreatedSuccess() {
-        Toast.makeText(requireContext(), "Team created successfully!", Toast.LENGTH_LONG).show()
+    private fun createTeamGroupChat(team: Team) {
+        val currentUserId = preferenceManager.getUserId()
 
-        // Gửi kết quả về cho màn hình trước (TeamFragment) để nó biết cần reload
-        parentFragmentManager.setFragmentResult("team_created", Bundle.EMPTY)
-        
-        // Quay lại màn hình Team
-        findNavController().popBackStack()
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+
+                withContext(Dispatchers.Main) {
+                    Log.d("CreateNewTeamFragment", "Auto-created group chat for team: ${team.name}")
+                    val inviteCode = team.inviteCode ?: "No Code"
+                    // Gửi kết quả về fragment cha nếu cần (để refresh list)
+                    parentFragmentManager.setFragmentResult("team_created", Bundle())
+                    // Hiển thị Dialog thành công
+                    onTeamCreatedSuccess(inviteCode)
+                }
+            } catch (e: Exception) {
+                Log.e("CreateNewTeamFragment", "Failed to auto-create group chat: ${e.message}")
+                withContext(Dispatchers.Main) {
+                    val inviteCode = team.inviteCode ?: "No Code"
+                    parentFragmentManager.setFragmentResult("team_created", Bundle())
+                    onTeamCreatedSuccess(inviteCode)
+                }
+            }
+        }
+    }
+
+    private fun onTeamCreatedSuccess(inviteCode: String) {
+        // Inflate layout mới
+        val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_invite_code_display, null)
+
+        val tvCode = dialogView.findViewById<TextView>(R.id.tvInviteCode)
+        val btnCopy = dialogView.findViewById<View>(R.id.btnCopy) // Bây giờ là ImageView
+        val btnGoToTeam = dialogView.findViewById<View>(R.id.btnGoToTeam)
+
+        tvCode.text = inviteCode
+
+        val dialog = AlertDialog.Builder(requireContext())
+            .setView(dialogView)
+            .setCancelable(false)
+            .create()
+
+        btnCopy.setOnClickListener {
+            val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+            val clip = ClipData.newPlainText("Invite Code", inviteCode)
+            clipboard.setPrimaryClip(clip)
+
+            Toast.makeText(context, "Copied to clipboard!", Toast.LENGTH_SHORT).show()
+        }
+
+        btnGoToTeam.setOnClickListener {
+            dialog.dismiss()
+            findNavController().popBackStack()
+        }
+
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+        dialog.show()
     }
 }
