@@ -30,14 +30,30 @@ class AuthRepository(private val context: Context) {
                 phone = phone
             )
 
+            android.util.Log.d("AuthRepository", "Register request: $request")
+
             val response = apiService.register(request)
+
+            android.util.Log.d("AuthRepository", "Register response code: ${response.code()}")
 
             if (response.isSuccessful && response.body() != null) {
                 Result.success(response.body()!!)
             } else {
-                Result.failure(Exception(response.message() ?: "Unknown error"))
+                // Try to parse error body
+                val errorBody = response.errorBody()?.string()
+                android.util.Log.e("AuthRepository", "Register error: $errorBody")
+
+                val errorMessage = try {
+                    val jsonObject = org.json.JSONObject(errorBody ?: "{}")
+                    jsonObject.optString("message", response.message())
+                } catch (e: Exception) {
+                    response.message()
+                }
+
+                Result.failure(Exception(errorMessage))
             }
         } catch (e: Exception) {
+            android.util.Log.e("AuthRepository", "Register exception", e)
             Result.failure(e)
         }
     }

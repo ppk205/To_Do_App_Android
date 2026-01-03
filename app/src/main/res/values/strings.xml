@@ -204,7 +204,7 @@
     <string name="reset_password_req_uppercase">• Contains uppercase letter (A-Z)</string>
     <string name="reset_password_req_lowercase">• Contains lowercase letter (a-z)</string>
     <string name="reset_password_req_number">• Contains number (0-9)</string>
-    <string name="reset_password_req_special">• Contains special character (@$!%*?&amp;)</string>
+    <string name="reset_password_req_special">• Contains special character (!@#$%^&amp;*)</string>
 
     <!-- Reset Password Validation Messages -->
     <string name="reset_password_empty">Password cannot be empty</string>

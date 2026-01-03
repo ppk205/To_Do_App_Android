@@ -15,7 +15,9 @@
             app:destination="@id/login_fragment" />
         <action
             android:id="@+id/action_onboarding_to_home"
-            app:destination="@id/menu_home" />
+            app:destination="@id/menu_home"
+            app:popUpTo="@id/main_nav"
+            app:popUpToInclusive="true" />
         <action
             android:id="@+id/action_onboarding_to_register"
             app:destination="@id/register_fragment" />
@@ -31,7 +33,9 @@
             app:destination="@id/register_fragment" />
         <action
             android:id="@+id/action_login_to_home"
-            app:destination="@id/menu_home" />
+            app:destination="@id/menu_home"
+            app:popUpTo="@id/main_nav"
+            app:popUpToInclusive="true" />
         <action
             android:id="@+id/action_login_to_onboarding"
             app:destination="@id/onboarding_fragment"
@@ -113,7 +117,9 @@
             app:destination="@id/verify_otp_fragment" />
         <action
             android:id="@+id/action_register_to_home"
-            app:destination="@id/menu_home" />
+            app:destination="@id/menu_home"
+            app:popUpTo="@id/main_nav"
+            app:popUpToInclusive="true" />
     </fragment>
 
     <fragment
@@ -123,7 +129,9 @@
         tools:layout="@layout/fragment_verify_otp">
         <action
             android:id="@+id/action_verifyOtp_to_home"
-            app:destination="@id/menu_home" />
+            app:destination="@id/menu_home"
+            app:popUpTo="@id/main_nav"
+            app:popUpToInclusive="true" />
         <action
             android:id="@+id/action_verifyOtp_to_registerSuccess"
             app:destination="@id/register_success_fragment" />
@@ -197,7 +205,7 @@
         <action
             android:id="@+id/action_guestPrompt_to_home"
             app:destination="@id/menu_home"
-            app:popUpTo="@id/menu_home"
+            app:popUpTo="@id/main_nav"
             app:popUpToInclusive="true" />
     </fragment>
 

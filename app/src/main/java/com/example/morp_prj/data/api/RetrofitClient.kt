@@ -22,8 +22,9 @@ import com.google.gson.GsonBuilder
  */
 object RetrofitClient {
 
-    // Base URL - Use your actual domain in production
-    private const val BASE_URL = "http://192.168.2.247:3001/"
+    // Base URL - Use 10.0.2.2 for Android Emulator (maps to host machine's localhost)
+    // For physical device, use your computer's IP address (e.g., "http://192.168.1.100:3002/")
+    private const val BASE_URL = "http://172.20.10.4:3001/"
 
     // ✅ Production domain for certificate pinning
     // Replace with your actual domain when deploying to production
