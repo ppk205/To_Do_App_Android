@@ -152,6 +152,7 @@ class MainActivity : AppCompatActivity() {
                 R.id.register_success_fragment,
                 R.id.forgot_password_fragment,
                 R.id.verify_reset_otp_fragment,
+                R.id.reset_otp_resend_required_fragment,
                 R.id.reset_password_fragment,
                 R.id.reset_password_success_fragment,
                 R.id.taskFragment,

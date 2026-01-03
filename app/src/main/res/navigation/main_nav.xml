@@ -72,6 +72,9 @@
         <action
             android:id="@+id/action_verifyResetOTP_to_resetPassword"
             app:destination="@id/reset_password_fragment" />
+        <action
+            android:id="@+id/action_verifyResetOTP_to_resetOtpResendRequired"
+            app:destination="@id/reset_otp_resend_required_fragment" />
     </fragment>
 
     <fragment
@@ -105,6 +108,26 @@
             app:destination="@id/login_fragment"
             app:popUpTo="@id/login_fragment"
             app:popUpToInclusive="true" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/reset_otp_resend_required_fragment"
+        android:name="com.example.morp_prj.ui.ResetOtpResendRequiredFragment"
+        android:label="fragment_reset_otp_resend_required"
+        tools:layout="@layout/fragment_reset_otp_resend_required">
+        <action
+            android:id="@+id/action_resetOtpResendRequired_to_verifyResetOTP"
+            app:destination="@id/verify_reset_otp_fragment"
+            app:popUpTo="@id/verify_reset_otp_fragment"
+            app:popUpToInclusive="true" />
+        <action
+            android:id="@+id/action_resetOtpResendRequired_to_forgotPassword"
+            app:destination="@id/forgot_password_fragment"
+            app:popUpTo="@id/forgot_password_fragment"
+            app:popUpToInclusive="true" />
+        <argument
+            android:name="email"
+            app:argType="string" />
     </fragment>
 
     <fragment

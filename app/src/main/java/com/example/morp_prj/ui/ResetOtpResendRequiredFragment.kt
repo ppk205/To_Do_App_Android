@@ -11,14 +11,15 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import com.example.morp_prj.R
-import com.example.morp_prj.data.api.RetrofitClient
-import com.example.morp_prj.data.model.ResendOTPRequest
+import com.example.morp_prj.data.repository.AuthRepository
 import com.google.android.material.button.MaterialButton
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
-class OtpResendRequiredFragment : Fragment(R.layout.fragment_otp_resend_required) {
+class ResetOtpResendRequiredFragment : Fragment(R.layout.fragment_reset_otp_resend_required) {
 
-    private var userId: String? = null
+    private lateinit var authRepository: AuthRepository
     private var email: String? = null
 
     private lateinit var txtEmail: TextView
@@ -30,15 +31,16 @@ class OtpResendRequiredFragment : Fragment(R.layout.fragment_otp_resend_required
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // ✅ Ẩn bottom navigation bar
+        // Ẩn bottom navigation bar
         hideBottomNavigation()
 
+        authRepository = AuthRepository(requireContext())
+
         // Get arguments
-        userId = arguments?.getString("userId")
         email = arguments?.getString("email")
 
-        if (userId == null || email == null) {
-            Toast.makeText(requireContext(), getString(R.string.missing_user_info), Toast.LENGTH_LONG).show()
+        if (email == null) {
+            Toast.makeText(requireContext(), "Email is missing", Toast.LENGTH_LONG).show()
             findNavController().navigateUp()
             return
         }
@@ -84,11 +86,11 @@ class OtpResendRequiredFragment : Fragment(R.layout.fragment_otp_resend_required
         }
 
         btnCancel.setOnClickListener {
-            // Navigate back to register
+            // Navigate back to forgot password
             try {
-                findNavController().navigate(R.id.action_otpResendRequired_to_register)
+                findNavController().navigate(R.id.action_resetOtpResendRequired_to_forgotPassword)
             } catch (e: Exception) {
-                android.util.Log.e("OtpResendRequiredFragment", "Navigation error", e)
+                android.util.Log.e("ResetOtpResendRequiredFragment", "Navigation error", e)
                 findNavController().navigateUp()
             }
         }
@@ -101,43 +103,29 @@ class OtpResendRequiredFragment : Fragment(R.layout.fragment_otp_resend_required
 
         lifecycleScope.launch {
             try {
-                val request = ResendOTPRequest(
-                    userId = userId!!,
-                    email = email!!,
-                    purpose = "REGISTER"
-                )
-
-                val response = RetrofitClient.authApiService.resendOTP(request)
+                val result = withContext(Dispatchers.IO) {
+                    authRepository.resendResetOTP(email!!)
+                }
 
                 btnResendOtp.isEnabled = true
                 btnResendOtp.text = getString(R.string.resend_otp_button)
 
-                if (response.isSuccessful && response.body()?.success == true) {
+                if (result.isSuccess && result.getOrNull()?.success == true) {
                     Toast.makeText(requireContext(), getString(R.string.resend_success), Toast.LENGTH_LONG).show()
                     startCooldown()
 
-                    // Navigate back to verify OTP with fresh state
+                    // Navigate back to verify reset OTP with fresh state
                     try {
                         val bundle = bundleOf(
-                            "userId" to userId,
                             "email" to email
                         )
-                        findNavController().navigate(R.id.action_otpResendRequired_to_verifyOtp, bundle)
+                        findNavController().navigate(R.id.action_resetOtpResendRequired_to_verifyResetOTP, bundle)
                     } catch (e: Exception) {
-                        android.util.Log.e("OtpResendRequiredFragment", "Navigation error", e)
+                        android.util.Log.e("ResetOtpResendRequiredFragment", "Navigation error", e)
                         findNavController().navigateUp()
                     }
                 } else {
-                    btnResendOtp.isEnabled = true
-                    btnResendOtp.text = getString(R.string.resend_otp_button)
-
-                    val errorMsg = try {
-                        val errorBody = response.errorBody()?.string()
-                        val jsonError = org.json.JSONObject(errorBody ?: "{}")
-                        jsonError.optString("message", getString(R.string.resend_failed_default))
-                    } catch (e: Exception) {
-                        response.body()?.message ?: getString(R.string.resend_failed_default)
-                    }
+                    val errorMsg = result.getOrNull()?.message ?: getString(R.string.resend_failed_default)
                     Toast.makeText(requireContext(), errorMsg, Toast.LENGTH_LONG).show()
                 }
             } catch (e: Exception) {
@@ -157,17 +145,12 @@ class OtpResendRequiredFragment : Fragment(R.layout.fragment_otp_resend_required
         }
     }
 
-    override fun onResume() {
-        super.onResume()
-        hideBottomNavigation()
-    }
-
     override fun onDestroyView() {
         super.onDestroyView()
         countDownTimer?.cancel()
 
-        // ✅ Hiện lại bottom navigation khi thoát nếu đã đăng nhập
-        showBottomNavigationIfLoggedIn()
+        // ✅ Hiện lại bottom navigation khi thoát
+        showBottomNavigation()
     }
 
     private fun hideBottomNavigation() {
@@ -175,19 +158,17 @@ class OtpResendRequiredFragment : Fragment(R.layout.fragment_otp_resend_required
             val bottomNav = activity?.findViewById<View>(R.id.bottom_nav_view)
             bottomNav?.visibility = View.GONE
         } catch (e: Exception) {
-            android.util.Log.e("OtpResendRequiredFragment", "Error hiding bottom navigation", e)
+            android.util.Log.e("ResetOtpResendRequiredFragment", "Error hiding bottom navigation", e)
         }
     }
 
-    private fun showBottomNavigationIfLoggedIn() {
+    private fun showBottomNavigation() {
         try {
-            val prefs = com.example.morp_prj.utils.PreferenceManager(requireContext())
-            val tokenStorage = com.example.morp_prj.security.SecureTokenStorage(requireContext())
-            val shouldShow = prefs.isLoggedIn() || tokenStorage.hasValidRefreshToken()
             val bottomNav = activity?.findViewById<View>(R.id.bottom_nav_view)
-            bottomNav?.visibility = if (shouldShow) View.VISIBLE else View.GONE
+            bottomNav?.visibility = View.VISIBLE
         } catch (e: Exception) {
-            android.util.Log.e("OtpResendRequiredFragment", "Error showing bottom navigation", e)
+            android.util.Log.e("ResetOtpResendRequiredFragment", "Error showing bottom navigation", e)
         }
     }
 }
+

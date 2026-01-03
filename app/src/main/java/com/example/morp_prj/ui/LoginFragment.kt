@@ -31,6 +31,9 @@ class LoginFragment : Fragment(R.layout.fragment_login) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        // ✅ Ẩn bottom navigation bar
+        hideBottomNavigation()
+
         authRepository = AuthRepository(requireContext())
         preferenceManager = PreferenceManager(requireContext())
         sessionTaskManager = SessionTaskManager(requireContext())
@@ -203,6 +206,39 @@ class LoginFragment : Fragment(R.layout.fragment_login) {
                     // ignore
                 }
             }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        hideBottomNavigation()
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+
+        // ✅ Hiện lại bottom navigation khi thoát nếu đã đăng nhập
+        showBottomNavigationIfLoggedIn()
+    }
+
+    private fun hideBottomNavigation() {
+        try {
+            val bottomNav = activity?.findViewById<View>(R.id.bottom_nav_view)
+            bottomNav?.visibility = View.GONE
+        } catch (e: Exception) {
+            Log.e("LoginFragment", "Error hiding bottom navigation", e)
+        }
+    }
+
+    private fun showBottomNavigationIfLoggedIn() {
+        try {
+            val prefs = com.example.morp_prj.utils.PreferenceManager(requireContext())
+            val tokenStorage = com.example.morp_prj.security.SecureTokenStorage(requireContext())
+            val shouldShow = prefs.isLoggedIn() || tokenStorage.hasValidRefreshToken()
+            val bottomNav = activity?.findViewById<View>(R.id.bottom_nav_view)
+            bottomNav?.visibility = if (shouldShow) View.VISIBLE else View.GONE
+        } catch (e: Exception) {
+            Log.e("LoginFragment", "Error showing bottom navigation", e)
         }
     }
 }

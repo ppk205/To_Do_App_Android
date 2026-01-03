@@ -107,6 +107,7 @@
     <string name="clipboard_empty">Clipboard is empty</string>
     <string name="clipboard_invalid">Clipboard does not contain a 6-digit OTP</string>
     <string name="otp_expired">OTP expired. Please request a new one.</string>
+    <string name="otp_expired_resend">OTP đã hết hạn, vui lòng gửi lại</string>
     <string name="attempts_limit_message">You have entered the OTP incorrectly 5 times. Please request a new OTP.</string>
     <string name="resend_success">A new OTP has been sent to your email!</string>
     <string name="resend_failed_default">Unable to resend OTP. Please try again.</string>
@@ -132,6 +133,8 @@
     <!-- OTP resend cooldown -->
     <string name="resend_countdown_format">Please wait %1$d seconds before resending</string>
     <string name="resend_ready">You can resend the OTP now</string>
+    <string name="resend_cooldown_wait">Vui lòng đợi %1$d giây để gửi lại OTP</string>
+    <string name="resend_available_now">Bạn có thể gửi lại OTP ngay bây giờ</string>
     <string name="to_do_tasks">Prepare presentation for Q3 review meeting with marketing team and stakeholders</string>
 
     <!-- Home Fragment Strings -->
