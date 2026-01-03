@@ -21,9 +21,9 @@
 
         <ImageView
             android:id="@+id/img_logo"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:src="@drawable/ic_taskflow_logo"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/logotaskly"
             android:contentDescription="@string/cd_logo_taskflow" />
 
         <TextView

@@ -1,5 +1,8 @@
 <resources>
-    <string name="app_name">MORP-PRJ</string>
+    <string name="app_name">Taskly</string>
+
+    <!-- Splash -->
+    <string name="splash_slogan">Get things done.</string>
 
     <!-- Onboarding content strings -->
     <string name="cd_logo_taskflow">TaskFlow logo</string>
@@ -9,7 +12,7 @@
     <string name="cd_dot_3">Dot 3</string>
 
     <!-- Localized UI strings used in onboarding layout -->
-    <string name="taskflow_name">TaskFlow</string>
+    <string name="taskflow_name">Taskly</string>
     <string name="onboarding_title">Organize Your Personal World</string>
     <string name="onboarding_description">Manage your daily tasks, set priorities, and track progress effortlessly to boost your individual productivity.</string>
     <string name="get_started">Get Started</string>
