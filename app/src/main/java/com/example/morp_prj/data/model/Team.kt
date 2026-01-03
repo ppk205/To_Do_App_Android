@@ -13,5 +13,6 @@ data class Team(
     @SerializedName("memberCount") val memberCount: Long = 1,
     @SerializedName("role") val role: String? = "member",
     @SerializedName("isPinned") var isPinned: Boolean = false,
-    @SerializedName("status") val status: String? = "active" // Thêm trường status
+    @SerializedName("status") val status: String? = "active",
+    @SerializedName("tags") var tags: List<String> = emptyList()
 )

@@ -2,17 +2,16 @@ package com.example.morp_prj.ui
 
 import android.os.Bundle
 import android.util.Log
-import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
-import android.widget.TextView
-
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
+import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
+import androidx.recyclerview.widget.ConcatAdapter
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.morp_prj.R
@@ -21,21 +20,22 @@ import com.example.morp_prj.data.model.JoinTeamRequest
 import com.example.morp_prj.data.model.PinTeamRequest
 import com.example.morp_prj.data.model.Team
 import com.example.morp_prj.utils.PreferenceManager
+import com.google.android.material.bottomsheet.BottomSheetDialog
+import com.google.android.material.floatingactionbutton.FloatingActionButton
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 
 class TeamFragment : Fragment() {
 
-    private lateinit var pinnedTeamAdapter: TeamAdapter
     private lateinit var myTeamAdapter: TeamAdapter
+    private lateinit var headerAdapter: TeamScreenHeaderAdapter
+    private lateinit var concatAdapter: ConcatAdapter
+
     private lateinit var preferenceManager: PreferenceManager
     private var isGuestDialogShowing = false
 
     private var allTeams = mutableListOf<Team>()
-
-    private lateinit var tvPinnedTitle: TextView
-    private lateinit var tvMyTeamsTitle: TextView
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -65,34 +65,71 @@ class TeamFragment : Fragment() {
     }
 
     private fun setupUI(view: View) {
-        tvPinnedTitle = view.findViewById(R.id.tvPinnedTitle)
-        tvMyTeamsTitle = view.findViewById(R.id.tvMyTeamsTitle)
+        // set up Adapter for My Teams rv
+        myTeamAdapter = TeamAdapter(emptyList(), R.layout.item_team,
+            onItemClick = { navigateToDetail(it) },
+            onItemLongClick = { showPinDialog(it) }
+        )
 
-        // User Info
-        val tvUserName = view.findViewById<TextView>(R.id.tvUserName)
-        val tvUserEmail = view.findViewById<TextView>(R.id.tvUserEmail)
-        tvUserName.text = preferenceManager.getDisplayName()?.takeIf { it.isNotEmpty() } ?: preferenceManager.getUsername() ?: "User"
-        tvUserEmail.text = preferenceManager.getEmail() ?: "No Email"
+        // Set up Header Adapter (User Info + Pinned Teams)
+        headerAdapter = TeamScreenHeaderAdapter(
+            preferenceManager,
+            emptyList(),
+            onPinnedTeamClick = { navigateToDetail(it) },
+            onPinnedTeamLongClick = { showPinDialog(it) }
+        )
 
-        // RecyclerViews
-        val rvPinnedTeams = view.findViewById<RecyclerView>(R.id.rvPinnedTeams)
-        rvPinnedTeams.layoutManager = LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)
-        pinnedTeamAdapter = TeamAdapter(emptyList(), R.layout.item_pinned_team, onItemClick = { navigateToDetail(it) }, onItemLongClick = { showPinDialog(it) })
-        rvPinnedTeams.adapter = pinnedTeamAdapter
+        //Nối 2 Adapter lại bằng ConcatAdapter
+        concatAdapter = ConcatAdapter(headerAdapter, myTeamAdapter)
 
-        val rvMyTeams = view.findViewById<RecyclerView>(R.id.rvMyTeams)
-        rvMyTeams.layoutManager = LinearLayoutManager(context)
-        myTeamAdapter = TeamAdapter(emptyList(), R.layout.item_team, onItemClick = { navigateToDetail(it) }, onItemLongClick = { showPinDialog(it) })
-        rvMyTeams.adapter = myTeamAdapter
-        
-        // Buttons
-        view.findViewById<View>(R.id.btnCreateTeam).setOnClickListener { findNavController().navigate(R.id.create_new_team_fragment) }
-        view.findViewById<View>(R.id.btnJoinTeam).setOnClickListener { showJoinTeamDialog() }
-        
-        // Listener
+        // RecyclerView chính (rvMain)
+        val rvMain = view.findViewById<RecyclerView>(R.id.rvMain)
+        rvMain.layoutManager = LinearLayoutManager(context)
+        rvMain.adapter = concatAdapter
+
+        // Floating Action Button
+        val fabAddTeam = view.findViewById<FloatingActionButton>(R.id.fabAddTeam)
+        fabAddTeam.setOnClickListener {
+            showAddTeamBottomSheet()
+        }
+
         parentFragmentManager.setFragmentResultListener("team_created", viewLifecycleOwner) { _, _ ->
             loadMyTeams()
         }
+    }
+
+    private fun updateTeamLists() {
+        val pinned = allTeams.filter { it.isPinned }
+
+        headerAdapter = TeamScreenHeaderAdapter(
+            preferenceManager,
+            pinned,
+            onPinnedTeamClick = { navigateToDetail(it) },
+            onPinnedTeamLongClick = { showPinDialog(it) }
+        )
+
+        myTeamAdapter.updateData(allTeams)
+
+        concatAdapter = ConcatAdapter(headerAdapter, myTeamAdapter)
+        view?.findViewById<RecyclerView>(R.id.rvMain)?.adapter = concatAdapter
+    }
+
+    private fun showAddTeamBottomSheet() {
+        val bottomSheetDialog = BottomSheetDialog(requireContext())
+        val sheetView = layoutInflater.inflate(R.layout.bottom_sheet_team_options, null)
+        bottomSheetDialog.setContentView(sheetView)
+
+        sheetView.findViewById<View>(R.id.btnOptionCreate).setOnClickListener {
+            bottomSheetDialog.dismiss()
+            findNavController().navigate(R.id.create_new_team_fragment)
+        }
+
+        sheetView.findViewById<View>(R.id.btnOptionJoin).setOnClickListener {
+            bottomSheetDialog.dismiss()
+            showJoinTeamDialog()
+        }
+
+        bottomSheetDialog.show()
     }
 
     private fun checkGuestModeAndLoadData() {
@@ -137,9 +174,8 @@ class TeamFragment : Fragment() {
             override fun onResponse(call: Call<Void>, response: Response<Void>) {
                 if (response.isSuccessful) {
                     Toast.makeText(context, "Successfully joined team!", Toast.LENGTH_SHORT).show()
-                    loadMyTeams() // Refresh list
+                    loadMyTeams()
                 } else {
-                    // Cố gắng parse lỗi từ server
                     val errorMsg = response.errorBody()?.string() ?: "Failed to join team"
                     Toast.makeText(context, "Error: $errorMsg", Toast.LENGTH_LONG).show()
                 }
@@ -165,14 +201,6 @@ class TeamFragment : Fragment() {
                 Log.e("TeamFragment", "API Failure: ${t.message}", t)
             }
         })
-    }
-
-    private fun updateTeamLists() {
-        val pinned = allTeams.filter { it.isPinned }
-        tvPinnedTitle.text = "Pinned Teams (${pinned.size})"
-        tvMyTeamsTitle.text = "My Teams (${allTeams.size})"
-        pinnedTeamAdapter.updateData(pinned)
-        myTeamAdapter.updateData(allTeams)
     }
 
     private fun showPinDialog(team: Team) {
@@ -206,13 +234,13 @@ class TeamFragment : Fragment() {
             }
         })
     }
-    
+
     private fun navigateToDetail(team: Team) {
         val bundle = Bundle().apply {
             putString("teamId", team.id)
             putString("teamName", team.name)
             putString("role", team.role ?: "member")
-            putString("inviteCode", team.inviteCode ?: "") // Thêm inviteCode vào đây
+            putString("inviteCode", team.inviteCode ?: "")
         }
         findNavController().navigate(R.id.action_team_to_detail, bundle)
     }

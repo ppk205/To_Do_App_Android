@@ -79,8 +79,19 @@ class ChangePasswordFragment : Fragment() {
 
         // Forgot password button
         binding.btnGoToForgot.setOnClickListener {
-            // Navigate to forgot password flow
-            findNavController().navigate(R.id.action_changePassword_to_forgotPassword)
+            // Clear session and navigate to forgot password flow
+            // User must reset password and login again
+            PreferenceManager.clear(requireContext())
+
+            // Clear tokens in SecureTokenStorage
+            com.example.morp_prj.security.SecureTokenStorage(requireContext()).clearAll()
+
+            // Navigate to forgot password flow and clear backstack
+            // This prevents user from going back to ChangePassword screen after clearing session
+            val navOptions = androidx.navigation.NavOptions.Builder()
+                .setPopUpTo(R.id.main_nav, true)
+                .build()
+            findNavController().navigate(R.id.action_changePassword_to_forgotPassword, null, navOptions)
         }
 
         // Back to profile button

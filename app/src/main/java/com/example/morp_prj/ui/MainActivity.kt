@@ -157,7 +157,8 @@ class MainActivity : AppCompatActivity() {
                 R.id.reset_password_success_fragment,
                 R.id.taskFragment,
                 R.id.create_new_team_fragment,
-                R.id.teamDetailFragment -> bottomNav.visibility = View.GONE
+                R.id.teamDetailFragment,
+                R.id.change_password_fragment -> bottomNav.visibility = View.GONE
                 else -> bottomNav.visibility = View.VISIBLE
             }
         }
