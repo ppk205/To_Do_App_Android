@@ -106,9 +106,6 @@ dependencies {
     // Security - Encrypted SharedPreferences
     implementation(libs.androidx.security.crypto)
 
-    // Biometric Authentication
-    implementation(libs.androidx.biometric)
-
     // Donut Chart
     implementation(libs.mp.android.chart)
 

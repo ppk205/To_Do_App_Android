@@ -110,7 +110,7 @@ class ResetPasswordFragment : Fragment(R.layout.fragment_reset_password) {
         val hasUpper = password.any { it.isUpperCase() }
         val hasLower = password.any { it.isLowerCase() }
         val hasDigit = password.any { it.isDigit() }
-        val hasSpecial = password.any { it in "@\$!%*?&" }
+        val hasSpecial = password.any { it in "!@#\$%^&*" }
 
         updateRequirement(txtLength, hasLength)
         updateRequirement(txtUppercase, hasUpper)
@@ -148,7 +148,7 @@ class ResetPasswordFragment : Fragment(R.layout.fragment_reset_password) {
             !newPassword.any { it.isUpperCase() } ||
             !newPassword.any { it.isLowerCase() } ||
             !newPassword.any { it.isDigit() } ||
-            !newPassword.any { it in "@\$!%*?&" }
+            !newPassword.any { it in "!@#\$%^&*" }
         ) {
             layoutNewPassword.error = getString(R.string.reset_password_weak)
             return false
