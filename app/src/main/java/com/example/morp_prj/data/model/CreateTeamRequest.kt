@@ -9,6 +9,6 @@ data class CreateTeamRequest(
     val description: String,
     @SerializedName("createdBy")
     val createdBy: String,
-    @SerializedName("tagsCsv")
-    val tagsCsv: String? = null
+    @SerializedName("tags")
+    var tags: List<String> = emptyList()
 )

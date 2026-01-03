@@ -1,3 +1,4 @@
+// models/Team.js
 const db = require('../config/database');
 
 const Team = {
@@ -9,6 +10,7 @@ const Team = {
       LEFT JOIN (SELECT teamId, COUNT(*) AS memberCount FROM teammember WHERE status = 'active' GROUP BY teamId) AS sub
       ON t.id = sub.teamId
       WHERE tm.userId = ?
+      ORDER BY tm.isPinned DESC, t.createdAt DESC
     `;
     const [rows] = await db.query(query, [userId]);
     return rows.map(row => ({ ...row, isPinned: Boolean(row.isPinned) }));
@@ -32,6 +34,18 @@ const Team = {
     return rows[0];
   },
 
+  findById: async (teamId) => {
+    const query = 'SELECT * FROM team WHERE id = ?';
+    const [rows] = await db.query(query, [teamId]);
+    return rows[0];
+  },
+
+  findMember: async (teamId, userId) => {
+    const query = 'SELECT * FROM teammember WHERE teamId = ? AND userId = ?';
+    const [rows] = await db.query(query, [teamId, userId]);
+    return rows[0];
+  },
+
   updateMemberStatus: (teamId, userId, newStatus) => {
       const query = 'UPDATE teammember SET status = ? WHERE teamId = ? AND userId = ?';
       return db.query(query, [newStatus, teamId, userId]);
@@ -49,14 +63,27 @@ const Team = {
   },
 
   create: (teamData) => {
-    const { id, name, description, createdBy, inviteCode } = teamData;
-    const query = 'INSERT INTO team (id, name, description, createdBy, inviteCode, avatarUrl) VALUES (?, ?, ?, ?, ?, ?)';
-    return db.query(query, [id, name, description, createdBy, inviteCode, null]);
+    const { id, name, description, tags, createdBy, inviteCode, avatarUrl } = teamData;
+    const tagsJson = Array.isArray(tags) ? JSON.stringify(tags) : tags;
+
+    const query = `
+        INSERT INTO team (id, name, description, tags, createdBy, inviteCode, avatarUrl, createdAt)
+        VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
+    `;
+    return db.query(query, [id, name, description, tagsJson, createdBy, inviteCode, avatarUrl || null]);
+  },
+
+  update: (teamId, teamData) => {
+    const { name, description, tags } = teamData;
+    const tagsJson = Array.isArray(tags) ? JSON.stringify(tags) : tags;
+
+    const query = 'UPDATE team SET name = ?, description = ?, tags = ? WHERE id = ?';
+    return db.query(query, [name, description, tagsJson, teamId]);
   },
 
   addMember: (memberData) => {
     const { id, teamId, userId, role, status = 'pending' } = memberData;
-    const query = 'INSERT INTO teammember (id, teamId, userId, role, status, isPinned) VALUES (?, ?, ?, ?, ?, 0)';
+    const query = 'INSERT INTO teammember (id, teamId, userId, role, status, isPinned, joinedAt) VALUES (?, ?, ?, ?, ?, 0, NOW())';
     return db.query(query, [id, teamId, userId, role, status]);
   }
 };

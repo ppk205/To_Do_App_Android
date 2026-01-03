@@ -61,13 +61,13 @@ class TeamAdapter(
         }
 
         holder.itemView.setOnClickListener {
-            if (team.status != "pending") { // Chỉ cho phép vào team khi đã active
+            if (team.status != "pending") {
                 onItemClick?.invoke(team)
             }
         }
 
         holder.itemView.setOnLongClickListener {
-            if (team.status != "pending") { // Chỉ cho phép pin team đã active
+            if (team.status != "pending") {
                 onItemLongClick?.invoke(team)
             }
             true

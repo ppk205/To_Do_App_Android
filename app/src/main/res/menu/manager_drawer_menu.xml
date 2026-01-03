@@ -17,10 +17,6 @@
             android:id="@+id/nav_team_task_management"
             android:icon="@drawable/ic_task_alt"
             android:title="Team Task Management" />
-        <item
-            android:id="@+id/nav_manager_dashboard"
-            android:icon="@drawable/ic_dashboard"
-            android:title="Team Manager Dashboard" />
     </group>
     <group android:checkableBehavior="single">
         <item

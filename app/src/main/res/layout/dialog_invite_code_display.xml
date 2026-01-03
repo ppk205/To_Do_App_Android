@@ -1,20 +1,75 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="24dp">
+    android:padding="24dp"
+    android:gravity="center"
+    android:background="@color/white">
+
+    <ImageView
+        android:layout_width="64dp"
+        android:layout_height="64dp"
+        android:src="@drawable/ic_success"
+        app:tint="#4CAF50"
+        android:layout_marginBottom="16dp"/>
 
     <TextView
-        android:id="@+id/tvInviteCode"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Team Created!"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        android:textColor="#212121"
+        android:layout_marginBottom="8dp"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Share this invite code with your members:"
+        android:textSize="14sp"
+        android:textColor="#757575"
+        android:gravity="center"
+        android:layout_marginBottom="24dp"/>
+
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@drawable/bg_edittext"
-        android:padding="16dp"
-        android:text="ABC-123"
-        android:textIsSelectable="true"
-        android:textSize="20sp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="@drawable/bg_input_field"
+        android:padding="16dp">
+        <TextView
+            android:id="@+id/tvInviteCode"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="X8J9-2M"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:textColor="#212121"
+            android:letterSpacing="0.1"
+            android:gravity="center"/>
+
+        <ImageView
+            android:id="@+id/btnCopy"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:padding="8dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_copy"
+            app:tint="@color/primary_500"
+            android:contentDescription="Copy Code"/>
+    </LinearLayout>
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnGoToTeam"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:layout_marginTop="32dp"
+        android:text="Go to Team Dashboard"
         android:textStyle="bold"
-        android:gravity="center"/>
+        app:cornerRadius="12dp"/>
 
 </LinearLayout>
