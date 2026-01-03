@@ -16,7 +16,8 @@ class TeamAdapter(
     var members: List<Team>,
     private val layoutResId: Int,
     private val onItemClick: ((Team) -> Unit)? = null,
-    private val onItemLongClick: ((Team) -> Unit)? = null
+    private val onItemLongClick: ((Team) -> Unit)? = null,
+    private val onChatClick: ((Team) -> Unit)? = null
 ) : RecyclerView.Adapter<TeamAdapter.TeamViewHolder>() {
 
     class TeamViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
@@ -25,6 +26,7 @@ class TeamAdapter(
         val tvRole: TextView? = itemView.findViewById(R.id.tvRole)
         val tvMemberCount: TextView? = itemView.findViewById(R.id.tvMemberCount)
         val tvPendingStatus: TextView? = itemView.findViewById(R.id.tvPendingStatus)
+        val btnChat: ImageView? = itemView.findViewById(R.id.btnChat)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): TeamViewHolder {
@@ -64,6 +66,19 @@ class TeamAdapter(
             if (team.status != "pending") {
                 onItemClick?.invoke(team)
             }
+        }
+
+        holder.btnChat?.setOnClickListener {
+            if (team.status != "pending") {
+                onChatClick?.invoke(team)
+            }
+        }
+
+        // Ẩn nút chat nếu là pending
+        if (team.status == "pending") {
+            holder.btnChat?.visibility = View.GONE
+        } else {
+            holder.btnChat?.visibility = View.VISIBLE
         }
 
         holder.itemView.setOnLongClickListener {

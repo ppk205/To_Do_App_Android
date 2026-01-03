@@ -23,7 +23,7 @@ import com.google.gson.GsonBuilder
 object RetrofitClient {
 
     // Base URL - Use your actual domain in production
-    private const val BASE_URL = "http://10.0.2.2:3001/"
+    private const val BASE_URL = "http://10.0.2.2:3001/" // Không dùng 10.0.2.2 khi sử dụng máy thật. Với cả, thay SERVER_URL ở data\remote\SocketManager.kt nữa nhe ae :>
 
     // ✅ Production domain for certificate pinning
     // Replace with your actual domain when deploying to production

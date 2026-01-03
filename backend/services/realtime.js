@@ -55,6 +55,21 @@ function initRealtime(httpServer) {
       if (!teamId) return;
       socket.leave(`team:${teamId}`);
     });
+
+    socket.on('sendTeamMessage', (data) => {
+      console.log("Server nhận tin nhắn:", data);
+      // { teamId, senderId, senderName, content, type (text/image) }
+      if (!data.teamId || !data.content) return;
+
+      const messageData = {
+        ...data,
+        id: Date.now().toString(),
+        createdAt: new Date().toISOString()
+      };
+      io.to(`team:${data.teamId}`).emit('receiveTeamMessage', messageData);
+    });
+
+
   });
 
   return io;

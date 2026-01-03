@@ -122,4 +122,7 @@ dependencies {
     // Cloudinary SDK for image upload
     implementation(libs.cloudinary.android)
     implementation(libs.google.http.client.gson)
+
+    // SocketIO Client
+    implementation("io.socket:socket.io-client:2.1.1")
 }
