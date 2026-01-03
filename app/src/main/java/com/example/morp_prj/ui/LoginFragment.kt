@@ -5,6 +5,7 @@ import android.util.Log
 import android.view.View
 import android.widget.TextView
 import android.widget.Toast
+import androidx.constraintlayout.motion.widget.MotionLayout
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
@@ -33,6 +34,8 @@ class LoginFragment : Fragment(R.layout.fragment_login) {
 
         // ✅ Ẩn bottom navigation bar
         hideBottomNavigation()
+
+        view.findViewById<MotionLayout?>(R.id.login_motion_layout)?.transitionToEnd()
 
         authRepository = AuthRepository(requireContext())
         preferenceManager = PreferenceManager(requireContext())
@@ -212,6 +215,7 @@ class LoginFragment : Fragment(R.layout.fragment_login) {
     override fun onResume() {
         super.onResume()
         hideBottomNavigation()
+        view?.findViewById<MotionLayout?>(R.id.login_motion_layout)?.transitionToEnd()
     }
 
     override fun onDestroyView() {

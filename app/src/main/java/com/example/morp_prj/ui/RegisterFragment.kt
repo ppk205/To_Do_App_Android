@@ -6,6 +6,7 @@ import android.text.TextWatcher
 import android.view.View
 import android.widget.TextView
 import android.widget.Toast
+import androidx.constraintlayout.motion.widget.MotionLayout
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
@@ -27,6 +28,8 @@ class RegisterFragment : Fragment(R.layout.fragment_register) {
 
         // ✅ Ẩn bottom navigation bar
         hideBottomNavigation()
+
+        view.findViewById<MotionLayout?>(R.id.register_motion_layout)?.transitionToEnd()
 
         authRepository = AuthRepository(requireContext())
         preferenceManager = PreferenceManager(requireContext())
@@ -220,6 +223,7 @@ class RegisterFragment : Fragment(R.layout.fragment_register) {
     override fun onResume() {
         super.onResume()
         hideBottomNavigation()
+        view?.findViewById<MotionLayout?>(R.id.register_motion_layout)?.transitionToEnd()
     }
 
     override fun onDestroyView() {
