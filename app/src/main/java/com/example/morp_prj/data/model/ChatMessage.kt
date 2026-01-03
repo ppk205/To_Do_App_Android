@@ -5,6 +5,7 @@ data class ChatMessage(
     val teamId: String,
     val senderId: String,
     val senderName: String,
+    val senderAvatar: String?,
     val content: String,
     val createdAt: String,
     val type: String = "text"

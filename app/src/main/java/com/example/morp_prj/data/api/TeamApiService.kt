@@ -14,6 +14,9 @@ interface TeamApiService {
         @Query("status") status: String = "active"
     ): Call<List<TeamMember>>
 
+    @GET("api/team/{teamId}/messages")
+    fun getTeamMessages(@Path("teamId") teamId: String): Call<List<ChatMessage>>
+
     @POST("api/team/create")
     fun createTeam(@Body request: CreateTeamRequest): Call<Team>
 

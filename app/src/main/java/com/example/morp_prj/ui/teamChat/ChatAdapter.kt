@@ -3,10 +3,13 @@ package com.example.morp_prj.ui.chat
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
 import com.example.morp_prj.R
 import com.example.morp_prj.data.model.ChatMessage
+import com.example.morp_prj.utils.DateUtils
 
 class ChatAdapter(private val currentUserId: String) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
@@ -53,17 +56,31 @@ class ChatAdapter(private val currentUserId: String) : RecyclerView.Adapter<Recy
     class MeViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val content: TextView = view.findViewById(R.id.tvMessageContent)
         val time: TextView = view.findViewById(R.id.tvTime)
+
         fun bind(msg: ChatMessage) {
             content.text = msg.content
+            time.text = DateUtils.formatTime(msg.createdAt)
         }
     }
 
     class OtherViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val content: TextView = view.findViewById(R.id.tvMessageContent)
         val name: TextView = view.findViewById(R.id.tvSenderName)
+        val time: TextView = view.findViewById(R.id.tvTime)
+
+        val imgAvatar: ImageView = view.findViewById(R.id.imgAvatar)
+
         fun bind(msg: ChatMessage) {
             content.text = msg.content
             name.text = msg.senderName
+            time.text = DateUtils.formatTime(msg.createdAt)
+
+            Glide.with(itemView.context)
+                .load(msg.senderAvatar)
+                .placeholder(R.drawable.ic_avatar_placeholder)
+                .error(R.drawable.ic_avatar_placeholder)
+                .circleCrop()
+                .into(imgAvatar)
         }
     }
 }

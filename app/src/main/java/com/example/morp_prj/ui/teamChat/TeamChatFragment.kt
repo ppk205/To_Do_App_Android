@@ -18,9 +18,6 @@ class TeamChatFragment : Fragment(R.layout.fragment_team_chat) {
     private lateinit var adapter: ChatAdapter
     private lateinit var preferenceManager: PreferenceManager
 
-    // Dùng SafeArgs để nhận ID team
-    // private val args: TeamChatFragmentArgs by navArgs()
-
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         binding = FragmentTeamChatBinding.bind(view)
@@ -30,17 +27,19 @@ class TeamChatFragment : Fragment(R.layout.fragment_team_chat) {
         val currentUserId = preferenceManager.getUserId() ?: ""
         val currentUserName = preferenceManager.getDisplayName() ?: "Me"
 
-        // Nhận dữ liệu từ Bundle (do cách gọi navigate ở bài trước)
+        // Nhận dữ liệu từ Bundle
         val teamId = arguments?.getString("teamId") ?: return
         val teamName = arguments?.getString("teamName") ?: "Team Chat"
 
         binding.tvTeamNameHeader.text = teamName
 
+        viewModel.loadHistory(teamId)
+
         // Setup RecyclerView
         adapter = ChatAdapter(currentUserId)
         binding.rvChat.adapter = adapter
         binding.rvChat.layoutManager = LinearLayoutManager(context).apply {
-            stackFromEnd = true // Luôn cuộn xuống dưới cùng
+            stackFromEnd = true
         }
 
         // Quan sát tin nhắn về
@@ -56,14 +55,22 @@ class TeamChatFragment : Fragment(R.layout.fragment_team_chat) {
         // Gửi tin nhắn
         binding.btnSend.setOnClickListener {
             val content = binding.etMessage.text.toString().trim()
+            val currentAvatar = preferenceManager.getAvatarUrl()
+
             if (content.isNotEmpty()) {
-                viewModel.sendMessage(teamId, currentUserId, currentUserName, content)
+                viewModel.sendMessage(teamId, currentUserId, currentUserName, currentAvatar, content)
                 binding.etMessage.setText("")
             }
         }
 
         binding.btnBack.setOnClickListener {
             findNavController().popBackStack()
+        }
+
+        viewModel.errorMessage.observe(viewLifecycleOwner) { error ->
+            if (!error.isNullOrEmpty()) {
+                android.widget.Toast.makeText(context, error, android.widget.Toast.LENGTH_SHORT).show()
+            }
         }
     }
 }
