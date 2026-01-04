@@ -124,6 +124,9 @@ dependencies {
     implementation(libs.cloudinary.android)
     implementation(libs.google.http.client.gson)
 
+    // BCrypt for password hashing
+    implementation("org.mindrot:jbcrypt:0.4")
+
     // SocketIO Client
     implementation("io.socket:socket.io-client:2.1.1")
 }

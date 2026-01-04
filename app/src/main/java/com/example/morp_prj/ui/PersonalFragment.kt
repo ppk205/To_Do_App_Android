@@ -327,7 +327,13 @@ class PersonalFragment : Fragment() {
         return when (selectedTab) {
             StatusTab.ALL -> true
             StatusTab.TODO -> item.status == TaskStatus.TODO
-            StatusTab.IN_PROGRESS -> item.status == TaskStatus.IN_PROGRESS
+            StatusTab.IN_PROGRESS -> {
+                // In Progress tab = active tasks (not DONE) that are still before (future) deadline.
+                // If no deadline -> NOT included.
+                if (item.status == TaskStatus.DONE) return false
+                val deadline = item.deadlineAt ?: return false
+                deadline > System.currentTimeMillis()
+            }
             StatusTab.DONE -> item.status == TaskStatus.DONE
         }
     }
@@ -375,11 +381,12 @@ class PersonalFragment : Fragment() {
             item.tags.any { it.lowercase().contains(query) }
     }
 
-    private fun handleRowClick(anchor: View, item: ToDoItem) {
+    private fun handleRowClick(unusedAnchor: View, item: ToDoItem) {
         if (selectionMode) {
             toggleSelection(item.id)
         } else {
-            showItemMenu(anchor, item)
+            // Tap = view details (description). Delete stays on the row '...' menu.
+            showTaskDetail(item)
         }
     }
 
@@ -524,5 +531,15 @@ class PersonalFragment : Fragment() {
     private fun hideKeyboard(view: View) {
         val imm = requireContext().getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
         imm.hideSoftInputFromWindow(view.windowToken, 0)
+    }
+
+    private fun showTaskDetail(item: ToDoItem) {
+        val description = item.description.trim().ifBlank { "No description" }
+
+        AlertDialog.Builder(requireContext())
+            .setTitle(item.title)
+            .setMessage(description)
+            .setPositiveButton("OK", null)
+            .show()
     }
 }
