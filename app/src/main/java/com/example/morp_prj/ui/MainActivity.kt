@@ -10,7 +10,6 @@ import android.os.Bundle
 import android.view.View
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.splashscreen.SplashScreen
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -23,10 +22,12 @@ import com.example.morp_prj.utils.PreferenceManager
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.example.morp_prj.security.SecureTokenStorage
 import com.example.morp_prj.data.remote.SocketManager
+import com.example.morp_prj.data.repository.NotificationRealtimeRepository
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var bottomNav: BottomNavigationView
+    private var notificationRealtimeRepository: NotificationRealtimeRepository? = null
     private val sessionExpiredReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             // When session expires, navigate to onboarding and clear backstack
@@ -87,6 +88,11 @@ class MainActivity : AppCompatActivity() {
         val token = secureStorage.getAccessToken()
         if (!token.isNullOrEmpty()) {
             SocketManager.connect(token)
+
+            // Start realtime notifications (persist to Room + show device notification)
+            notificationRealtimeRepository = NotificationRealtimeRepository(this).also {
+                it.start(showDeviceNotifications = true)
+            }
         }
 
         // Navigation logic:
@@ -183,9 +189,10 @@ class MainActivity : AppCompatActivity() {
         super.onDestroy()
         try {
             unregisterReceiver(sessionExpiredReceiver)
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             // ignore
         }
         SocketManager.disconnect()
+        notificationRealtimeRepository = null
     }
 }
