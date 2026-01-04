@@ -22,6 +22,7 @@ import com.example.morp_prj.R
 import com.example.morp_prj.utils.PreferenceManager
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.example.morp_prj.security.SecureTokenStorage
+import com.example.morp_prj.data.remote.SocketManager
 
 class MainActivity : AppCompatActivity() {
 
@@ -37,6 +38,10 @@ class MainActivity : AppCompatActivity() {
                     .build()
                 // Navigate to onboarding when session expires (NOT login)
                 navController.navigate(R.id.onboarding_fragment, null, navOptions)
+
+                SecureTokenStorage(context!!).clearTokens()
+                SocketManager.disconnect()
+
                 android.widget.Toast.makeText(this@MainActivity, "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.", android.widget.Toast.LENGTH_LONG).show()
             } catch (e: Exception) {
                 android.util.Log.e("MainActivity", "Error handling session expired broadcast", e)
@@ -76,6 +81,12 @@ class MainActivity : AppCompatActivity() {
                 filter,
                 androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED
             )
+        }
+
+        val secureStorage = SecureTokenStorage(this)
+        val token = secureStorage.getAccessToken()
+        if (!token.isNullOrEmpty()) {
+            SocketManager.connect(token)
         }
 
         // Navigation logic:
@@ -156,11 +167,11 @@ class MainActivity : AppCompatActivity() {
                 R.id.register_success_fragment,
                 R.id.forgot_password_fragment,
                 R.id.verify_reset_otp_fragment,
-                R.id.reset_otp_resend_required_fragment,
                 R.id.reset_password_fragment,
                 R.id.reset_password_success_fragment,
                 R.id.taskFragment,
                 R.id.create_new_team_fragment,
+                R.id.teamChatFragment,
                 R.id.teamDetailFragment,
                 R.id.change_password_fragment -> bottomNav.visibility = View.GONE
                 else -> bottomNav.visibility = View.VISIBLE
@@ -175,5 +186,6 @@ class MainActivity : AppCompatActivity() {
         } catch (e: Exception) {
             // ignore
         }
+        SocketManager.disconnect()
     }
 }

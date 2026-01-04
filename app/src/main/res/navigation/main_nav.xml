@@ -312,6 +312,13 @@
         <action
             android:id="@+id/action_team_to_detail"
             app:destination="@id/teamDetailFragment" />
+        <action
+            android:id="@+id/action_team_to_chat"
+            app:destination="@id/teamChatFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
     </fragment>
     <fragment
         android:id="@+id/menu_home"
@@ -382,5 +389,19 @@
             android:name="teamName"
             app:argType="string"
             android:defaultValue="Team Detail" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/teamChatFragment"
+        android:name="com.example.morp_prj.ui.chat.TeamChatFragment"
+        android:label="Team Chat"
+        tools:layout="@layout/fragment_team_chat">
+        <argument
+            android:name="teamId"
+            app:argType="string" />
+        <argument
+            android:name="teamName"
+            app:argType="string"
+            android:defaultValue="Team Chat" />
     </fragment>
 </navigation>

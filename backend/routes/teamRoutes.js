@@ -6,42 +6,46 @@ const { authenticateToken } = require('../middleware/authMiddleware');
 // --- CÁC ROUTE CHỨC NĂNG ---
 
 // 1. Tạo team mới
-// POST /teams/create
+// POST /team/create
 router.post('/create', authenticateToken, teamController.createTeam);
 
 // 2. Tham gia team bằng mã code
-// POST /teams/join
+// POST /team/join
 router.post('/join', authenticateToken, teamController.joinTeam);
 
 // 3. Ghim/Bỏ ghim team
-// POST /teams/pin
+// POST /team/pin
 router.post('/pin', authenticateToken, teamController.togglePinTeam);
 
 // 4. Xóa thành viên (Kick)
-// POST /teams/remove-member
+// POST /team/remove-member
 router.post('/remove-member', authenticateToken, teamController.removeMember);
 
 // 5. Duyệt hoặc Từ chối yêu cầu tham gia
-// POST /teams/request
+// POST /team/request
 router.post('/request', authenticateToken, teamController.handleJoinRequest);
 
 // 6. Lấy danh sách team của User
-// GET /teams/user/:userId
+// GET /team/user/:userId
 router.get('/user/:userId', authenticateToken, teamController.getMyTeams);
 
 
 // --- CÁC ROUTE CÓ PARAM DYNAMIC (ID) ---
 
 // 7. Lấy danh sách thành viên trong team - [MỚI BỔ SUNG]
-// GET /teams/:teamId/members
+// GET /team/:teamId/members
 router.get('/:teamId/members', authenticateToken, teamController.getMembersByTeamId);
 
 // 8. Cập nhật thông tin team
-// PUT /teams/:teamId
+// PUT /team/:teamId
 router.put('/:teamId', authenticateToken, teamController.updateTeam);
 
 // 9. Lấy chi tiết team
-// GET /teams/:teamId
+// GET /team/:teamId
 router.get('/:teamId', authenticateToken, teamController.getTeamDetail);
+
+// 10. Lấy chi tiết tin nhắn của team
+// GET /team/:teamId/messages
+router.get('/:teamId/messages', authenticateToken, teamController.getTeamMessages);
 
 module.exports = router;
