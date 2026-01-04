@@ -22,8 +22,9 @@ import com.google.gson.GsonBuilder
  */
 object RetrofitClient {
 
-    // Base URL - Use your actual domain in production
-    private const val BASE_URL = "http://10.0.2.2:3001/" // Không dùng 10.0.2.2 khi sử dụng máy thật. Với cả, thay SERVER_URL ở data\remote\SocketManager.kt nữa nhe ae :>
+    // Base URL - Use 10.0.2.2 for Android Emulator (maps to host machine's localhost)
+    // For physical device, use your computer's IP address (e.g., "http://192.168.1.100:3002/")
+    private const val BASE_URL = "https://remix-athletes-inch-courier.trycloudflare.com/"
 
     // ✅ Production domain for certificate pinning
     // Replace with your actual domain when deploying to production

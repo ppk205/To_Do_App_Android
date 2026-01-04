@@ -79,6 +79,7 @@ kotlin {
 
 dependencies {
     implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.core.splashscreen)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
     implementation(libs.androidx.activity)
@@ -122,6 +123,9 @@ dependencies {
     // Cloudinary SDK for image upload
     implementation(libs.cloudinary.android)
     implementation(libs.google.http.client.gson)
+
+    // BCrypt for password hashing
+    implementation("org.mindrot:jbcrypt:0.4")
 
     // SocketIO Client
     implementation("io.socket:socket.io-client:2.1.1")

@@ -35,7 +35,12 @@ class VerifyOtpFragment : Fragment(R.layout.fragment_verify_otp) {
     private var userId: String? = null
     private var email: String? = null
     private var username: String? = null
-    private var countDownTimer: CountDownTimer? = null
+
+    // ✅ TÁCH 2 TIMER RÕ RÀNG
+    private var otpExpireTimer: CountDownTimer? = null
+    private var resendCooldownTimer: CountDownTimer? = null
+    private var isOtpExpired = false
+
     private var initialExpiresInSeconds: Int = 120
     private var resendAvailableInSeconds: Int = 60
     private var otpAttempts = 0
@@ -53,9 +58,13 @@ class VerifyOtpFragment : Fragment(R.layout.fragment_verify_otp) {
     private lateinit var btnResend: TextView
     private lateinit var btnPaste: TextView
     private lateinit var tvAttempts: TextView
+    private lateinit var tvResendCooldown: TextView
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        // ✅ Ẩn bottom navigation bar
+        hideBottomNavigation()
 
         preferenceManager = PreferenceManager(requireContext())
 
@@ -79,7 +88,10 @@ class VerifyOtpFragment : Fragment(R.layout.fragment_verify_otp) {
         try {
             initViews(view)
             setupOtpInputs()
-            startTimer()
+
+            // ✅ GỌI TIMER ĐÚNG CHỖ - KHI VÀO MÀN HÌNH
+            startOtpExpireTimer(initialExpiresInSeconds)
+            startResendCooldown(resendAvailableInSeconds)
 
             tvEmail.text = email
 
@@ -110,6 +122,7 @@ class VerifyOtpFragment : Fragment(R.layout.fragment_verify_otp) {
          btnResend = view.findViewById(R.id.btnResend)
          btnPaste = view.findViewById(R.id.btnPaste)
          tvAttempts = view.findViewById(R.id.tvAttempts)
+         tvResendCooldown = view.findViewById(R.id.tvResendCooldown)
     }
 
     private fun setupOtpInputs() {
@@ -214,12 +227,12 @@ class VerifyOtpFragment : Fragment(R.layout.fragment_verify_otp) {
         }
     }
 
-    private fun startTimer() {
-        btnResend.isEnabled = false
-        countDownTimer?.cancel()
+    // ✅ TIMER OTP – CHỈ DÙNG ĐỂ HIỂN THỊ HẾT HẠN
+    private fun startOtpExpireTimer(seconds: Int) {
+        isOtpExpired = false
+        otpExpireTimer?.cancel()
 
-        val millis = initialExpiresInSeconds * 1000L
-        countDownTimer = object : CountDownTimer(millis, 1000) {
+        otpExpireTimer = object : CountDownTimer(seconds * 1000L, 1000) {
             override fun onTick(millisUntilFinished: Long) {
                 val minutes = millisUntilFinished / 1000 / 60
                 val seconds = millisUntilFinished / 1000 % 60
@@ -227,26 +240,59 @@ class VerifyOtpFragment : Fragment(R.layout.fragment_verify_otp) {
             }
 
             override fun onFinish() {
+                isOtpExpired = true
                 tvTimer.text = "00:00"
                 tvTimer.setTextColor(ContextCompat.getColor(requireContext(), R.color.error))
-                btnResend.isEnabled = true
                 Toast.makeText(requireContext(), getString(R.string.otp_expired), Toast.LENGTH_SHORT).show()
+                // ⛔ KHÔNG enable resend ở đây
             }
         }.start()
+    }
 
-        // Disable resend for resendAvailableInSeconds
+    // ✅ TIMER RESEND – QUYẾT ĐỊNH KHI NÀO ĐƯỢC RESEND
+    private fun startResendCooldown(seconds: Int) {
         btnResend.isEnabled = false
-        if (resendAvailableInSeconds > 0) {
-            object : CountDownTimer(resendAvailableInSeconds * 1000L, 1000) {
-                override fun onTick(millisUntilFinished: Long) {}
-                override fun onFinish() { btnResend.isEnabled = true }
+        resendCooldownTimer?.cancel()
+
+        if (seconds > 0) {
+            // Hiển thị cooldown message
+            tvResendCooldown.visibility = View.VISIBLE
+
+            // Làm mờ nút resend khi disabled
+            btnResend.alpha = 0.5f
+
+            resendCooldownTimer = object : CountDownTimer(seconds * 1000L, 1000) {
+                override fun onTick(millisUntilFinished: Long) {
+                    val remainingSeconds = (millisUntilFinished / 1000).toInt()
+                    tvResendCooldown.text = getString(R.string.resend_cooldown_wait, remainingSeconds)
+                }
+
+                override fun onFinish() {
+                    btnResend.isEnabled = true
+                    btnResend.alpha = 1.0f
+                    tvResendCooldown.text = getString(R.string.resend_available_now)
+                    tvResendCooldown.setTextColor(ContextCompat.getColor(requireContext(), R.color.success))
+
+                    // Ẩn message sau 2 giây
+                    tvResendCooldown.postDelayed({
+                        tvResendCooldown.visibility = View.GONE
+                    }, 2000)
+                }
             }.start()
         } else {
             btnResend.isEnabled = true
+            btnResend.alpha = 1.0f
+            tvResendCooldown.visibility = View.GONE
         }
     }
 
     private fun verifyOTP() {
+        // ✅ CHECK OTP EXPIRED TRƯỚC KHI GỌI API
+        if (isOtpExpired) {
+            Toast.makeText(requireContext(), getString(R.string.otp_expired), Toast.LENGTH_SHORT).show()
+            return
+        }
+
         val otp = "${etOtp1.text}${etOtp2.text}${etOtp3.text}" +
                 "${etOtp4.text}${etOtp5.text}${etOtp6.text}"
 
@@ -365,6 +411,8 @@ class VerifyOtpFragment : Fragment(R.layout.fragment_verify_otp) {
                     Toast.makeText(requireContext(), errorMsg, Toast.LENGTH_LONG).show()
                     clearOtpInputs()
 
+                    // ❌ LOẠI BỎ LOGIC SAI - KHÔNG BẬT RESEND CHỈ VÌ VERIFY FAIL
+                    // Resend CHỈ được bật bởi cooldown timer
                     if (otpAttempts >= 5) {
                         // Navigate to OTP resend required fragment
                         try {
@@ -375,12 +423,8 @@ class VerifyOtpFragment : Fragment(R.layout.fragment_verify_otp) {
                             findNavController().navigate(R.id.action_verifyOtp_to_otpResendRequired, bundle)
                         } catch (e: Exception) {
                             android.util.Log.e("VerifyOtpFragment", "Navigation to resend required error", e)
-                            btnResend.isEnabled = true
                             Toast.makeText(requireContext(), getString(R.string.attempts_limit_message), Toast.LENGTH_LONG).show()
                         }
-                    } else {
-                        // allow resend after a failed attempt when not exceeding limit
-                        btnResend.isEnabled = true
                     }
                 }
             } catch (e: Exception) {
@@ -431,11 +475,14 @@ class VerifyOtpFragment : Fragment(R.layout.fragment_verify_otp) {
                 if (response.isSuccessful && response.body()?.success == true) {
                     Toast.makeText(requireContext(), getString(R.string.resend_success), Toast.LENGTH_LONG).show()
 
-                    // Reset attempts and timer
+                    // ✅ RESET ATTEMPTS VÀ CLEAR OTP
                     otpAttempts = 0
                     tvAttempts.text = getString(R.string.attempts_format, 0)
                     tvAttempts.setTextColor(ContextCompat.getColor(requireContext(), R.color.text_secondary))
                     tvTimer.setTextColor(ContextCompat.getColor(requireContext(), R.color.text_secondary))
+
+                    // Reset resend cooldown UI
+                    tvResendCooldown.setTextColor(ContextCompat.getColor(requireContext(), R.color.text_secondary))
 
                     // Clear OTP inputs
                     clearOtpInputs()
@@ -445,8 +492,9 @@ class VerifyOtpFragment : Fragment(R.layout.fragment_verify_otp) {
                     respBody?.expiresIn?.let { initialExpiresInSeconds = it }
                     respBody?.resendAvailableIn?.let { resendAvailableInSeconds = it }
 
-                    // Restart timer
-                    startTimer()
+                    // ✅ KHỞI ĐỘNG LẠI 2 TIMER RIÊNG BIỆT
+                    startOtpExpireTimer(initialExpiresInSeconds)
+                    startResendCooldown(resendAvailableInSeconds)
 
                     android.util.Log.d("VerifyOtpFragment", "OTP resent successfully")
                 } else {
@@ -481,6 +529,31 @@ class VerifyOtpFragment : Fragment(R.layout.fragment_verify_otp) {
 
     override fun onDestroyView() {
         super.onDestroyView()
-        countDownTimer?.cancel()
+        otpExpireTimer?.cancel()
+        resendCooldownTimer?.cancel()
+
+        // ✅ Hiện lại bottom navigation khi thoát nếu đã đăng nhập
+        showBottomNavigationIfLoggedIn()
+    }
+
+    private fun hideBottomNavigation() {
+        try {
+            val bottomNav = activity?.findViewById<View>(R.id.bottom_nav_view)
+            bottomNav?.visibility = View.GONE
+        } catch (e: Exception) {
+            android.util.Log.e("VerifyOtpFragment", "Error hiding bottom navigation", e)
+        }
+    }
+
+    private fun showBottomNavigationIfLoggedIn() {
+        try {
+            val prefs = com.example.morp_prj.utils.PreferenceManager(requireContext())
+            val tokenStorage = com.example.morp_prj.security.SecureTokenStorage(requireContext())
+            val shouldShow = prefs.isLoggedIn() || tokenStorage.hasValidRefreshToken()
+            val bottomNav = activity?.findViewById<View>(R.id.bottom_nav_view)
+            bottomNav?.visibility = if (shouldShow) View.VISIBLE else View.GONE
+        } catch (e: Exception) {
+            android.util.Log.e("VerifyOtpFragment", "Error showing bottom navigation", e)
+        }
     }
 }

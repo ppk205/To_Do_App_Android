@@ -1,6 +1,6 @@
 const { Server } = require('socket.io');
 const jwt = require('jsonwebtoken');
-const db = require('../config/database');
+const pool = require('../config/database');
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
@@ -16,6 +16,8 @@ function initRealtime(httpServer) {
     if (io) return io;
 
     io = new Server(httpServer, {
+        // Keep default Socket.IO path to match Android socket.io-client
+        path: '/socket.io',
         cors: {
             origin: '*',
             methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE'],
@@ -38,7 +40,7 @@ function initRealtime(httpServer) {
                 username: payload.username,
             };
             return next();
-        } catch (e) {
+        } catch (_e) {
             return next(new Error('TOKEN_INVALID'));
         }
     });
@@ -59,29 +61,31 @@ function initRealtime(httpServer) {
 
         socket.on('sendTeamMessage', async (data) => {
             // { teamId, senderId, senderName, content, type (text/image) }
-            if (!data.teamId || !data.content) return;
+            if (!data?.teamId || !data?.content) return;
 
+            const conn = await pool.getConnection();
             try {
-                const [convRows] = await db.execute(
+                const [convRows] = await conn.query(
                     `SELECT id
                     FROM conversations
                     WHERE team_id = ? AND type = 'team'
-                    LIMIT 1`, [data.teamId]
+                    LIMIT 1`,
+                    [data.teamId]
                 );
                 let conversationId;
 
-                if (convRows.length > 0) {
+                if (Array.isArray(convRows) && convRows.length > 0) {
                     conversationId = convRows[0].id;
                 } else {
                     // if no conversation exists, create a new one
-                    const [newConv] = await db.execute(
+                    const [newConv] = await conn.query(
                         `INSERT INTO conversations (team_id, type, created_by) VALUES (?, 'team', ?)`,
                         [data.teamId, data.senderId]
                     );
                     conversationId = newConv.insertId;
                 }
 
-                const [msgResult] = await db.execute(
+                const [msgResult] = await conn.query(
                     `INSERT INTO messages (conversation_id, sender_id, body, created_at) VALUES (?, ?, ?, NOW())`,
                     [conversationId, data.senderId, data.content]
                 );
@@ -90,19 +94,20 @@ function initRealtime(httpServer) {
                     id: msgResult.insertId.toString(),
                     teamId: data.teamId,
                     senderId: data.senderId,
-                    senderName: data.senderName, // Client gửi lên để hiển thị nhanh
+                    senderName: data.senderName,
                     senderAvatar: data.senderAvatar,
                     content: data.content,
-                    createdAt: new Date().toISOString(), // Lấy giờ hiện tại chuẩn ISO
-                    type: 'text'
+                    createdAt: new Date().toISOString(),
+                    type: data.type || 'text',
                 };
 
                 io.to(`team:${data.teamId}`).emit('receiveTeamMessage', savedMessage);
             } catch (err) {
-                console.error("Lỗi lưu tin nhắn:", err);
+                console.error('[realtime] failed to save team message:', err);
+            } finally {
+                conn.release();
             }
         });
-
     });
 
     return io;

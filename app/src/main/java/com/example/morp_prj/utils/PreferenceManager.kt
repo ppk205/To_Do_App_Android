@@ -25,6 +25,7 @@ class PreferenceManager(context: Context) {
         private const val KEY_IS_GUEST = "is_guest"
         private const val KEY_HAS_SEEN_ONBOARDING = "has_seen_onboarding"
         private const val KEY_JUST_LOGGED_OUT = "just_logged_out"
+        private const val KEY_PASSWORD_FAIL_COUNT = "password_fail_count"
 
         const val GUEST_USER_ID = "guest_local"
 
@@ -196,6 +197,23 @@ class PreferenceManager(context: Context) {
 
     fun getToken(): String? {
         return sharedPreferences.getString(KEY_TOKEN, null)
+    }
+
+    fun getPasswordFailCount(): Int {
+        return sharedPreferences.getInt(KEY_PASSWORD_FAIL_COUNT, 0)
+    }
+
+    fun setPasswordFailCount(count: Int) {
+        sharedPreferences.edit().putInt(KEY_PASSWORD_FAIL_COUNT, count).apply()
+    }
+
+    fun incrementPasswordFailCount() {
+        val current = getPasswordFailCount()
+        setPasswordFailCount(current + 1)
+    }
+
+    fun resetPasswordFailCount() {
+        sharedPreferences.edit().remove(KEY_PASSWORD_FAIL_COUNT).apply()
     }
 
     fun clearLoginData() {

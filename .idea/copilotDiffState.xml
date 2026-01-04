@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CopilotDiffPersistence">
+    <option name="pendingDiffs">
+      <map>
+        <entry key="$PROJECT_DIR$/app/src/main/java/com/example/morp_prj/data/db/UserEntity.kt">
+          <value>
+            <PendingDiffInfo>
+              <option name="filePath" value="$PROJECT_DIR$/app/src/main/java/com/example/morp_prj/data/db/UserEntity.kt" />
+              <option name="updatedContent" value="package com.example.morp_prj.data.db&#10;&#10;import androidx.room.ColumnInfo&#10;import androidx.room.Entity&#10;import androidx.room.PrimaryKey&#10;&#10;@Entity(tableName = &quot;users&quot;)&#10;data class UserEntity(&#10;    @PrimaryKey&#10;    @ColumnInfo(name = &quot;id&quot;)&#10;    val id: String,&#10;&#10;    @ColumnInfo(name = &quot;username&quot;)&#10;    val username: String,&#10;&#10;    @ColumnInfo(name = &quot;hashed_password&quot;)&#10;    val hashedPassword: String,&#10;&#10;    @ColumnInfo(name = &quot;display_name&quot;)&#10;    val displayName: String,&#10;&#10;    @ColumnInfo(name = &quot;email&quot;)&#10;    val email: String,&#10;&#10;    @ColumnInfo(name = &quot;avatar_url&quot;)&#10;    val avatarUrl: String? = null,&#10;&#10;    @ColumnInfo(name = &quot;avatar_id&quot;)&#10;    val avatarId: String? = null,&#10;&#10;    @ColumnInfo(name = &quot;bio&quot;)&#10;    val bio: String? = null,&#10;&#10;    @ColumnInfo(name = &quot;phone&quot;)&#10;    val phone: String? = null,&#10;&#10;    @ColumnInfo(name = &quot;verified&quot;)&#10;    val verified: Boolean = false,&#10;&#10;    @ColumnInfo(name = &quot;created_at&quot;)&#10;    val createdAt: String? = null,&#10;&#10;    @ColumnInfo(name = &quot;updated_at&quot;)&#10;    val updatedAt: String? = null,&#10;&#10;    @ColumnInfo(name = &quot;github_url&quot;)&#10;    val githubUrl: String? = null,&#10;&#10;    @ColumnInfo(name = &quot;linkedin_url&quot;)&#10;    val linkedinUrl: String? = null,&#10;&#10;    @ColumnInfo(name = &quot;website_url&quot;)&#10;    val websiteUrl: String? = null&#10;)&#10;" />
+            </PendingDiffInfo>
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+</project>

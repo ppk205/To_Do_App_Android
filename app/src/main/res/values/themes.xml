@@ -1,16 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
-    <style name="Base.Theme.MORPPRJ" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Customize your light theme here. -->
-        <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
+    <style name="Theme.MORPPRJ" parent="Theme.Material3.Light.NoActionBar">
+        <!-- Base app theme -->
     </style>
 
-    <style name="Theme.MORPPRJ" parent="Base.Theme.MORPPRJ" />
-
-    <style name="ActiveTextStyle" parent="TextAppearance.MaterialComponents.Caption">
-        <item name="android:textSize">12sp</item>
+    <!-- Android 12+ splash API -->
+    <style name="Theme.Taskly.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/white</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/logotaskly</item>
+        <item name="windowSplashScreenIconBackgroundColor">@color/white</item>
+        <item name="postSplashScreenTheme">@style/Theme.MORPPRJ</item>
     </style>
 
+    <!-- Backward-compatible splash for pre-Android 12 -->
+    <style name="Theme.Taskly.Splash.Compat" parent="Theme.MaterialComponents.Light.NoActionBar">
+        <item name="android:windowBackground">@drawable/splash_screen_background</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
 
     <style name="InactiveTextStyle" parent="TextAppearance.MaterialComponents.Caption">
         <item name="android:textSize">12sp</item>

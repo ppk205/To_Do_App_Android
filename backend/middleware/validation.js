@@ -23,8 +23,10 @@ const registerValidation = [
         .withMessage('Username chỉ được chứa chữ cái, số và dấu gạch dưới'),
 
     body('password')
-        .isLength({ min: 6 })
-        .withMessage('Mật khẩu phải có ít nhất 6 ký tự'),
+        .isLength({ min: 8 })
+        .withMessage('Mật khẩu phải có ít nhất 8 ký tự')
+        .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])/)
+        .withMessage('Mật khẩu phải có ít nhất 1 chữ hoa, 1 chữ thường, 1 số và 1 ký tự đặc biệt (!@#$%^&*)'),
 
     body('displayName')
         .trim()
@@ -163,8 +165,10 @@ const resetPasswordValidation = [
         .withMessage('OTP phải là số'),
 
     body('newPassword')
-        .isLength({ min: 6 })
-        .withMessage('Mật khẩu phải có ít nhất 6 ký tự'),
+        .isLength({ min: 8 })
+        .withMessage('Mật khẩu phải có ít nhất 8 ký tự')
+        .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])/)
+        .withMessage('Mật khẩu phải có ít nhất 1 chữ hoa, 1 chữ thường, 1 số và 1 ký tự đặc biệt (!@#$%^&*)'),
 
     body('confirmPassword')
         .custom((value, { req }) => {

@@ -1,6 +1,7 @@
 package com.example.morp_prj.ui
 
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
@@ -11,6 +12,10 @@ class ResetPasswordSuccessFragment : Fragment(R.layout.fragment_reset_password_s
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        // ✅ Ẩn bottom navigation bar
+        hideBottomNavigation()
+
         initViews(view)
     }
 
@@ -26,6 +31,31 @@ class ResetPasswordSuccessFragment : Fragment(R.layout.fragment_reset_password_s
                 findNavController().popBackStack(R.id.onboarding_fragment, false)
                 findNavController().navigate(R.id.action_onboarding_to_login)
             }
+        }
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+
+        // ✅ Hiện lại bottom navigation khi thoát
+        showBottomNavigation()
+    }
+
+    private fun hideBottomNavigation() {
+        try {
+            val bottomNav = activity?.findViewById<View>(R.id.bottom_nav_view)
+            bottomNav?.visibility = View.GONE
+        } catch (e: Exception) {
+            Log.e("ResetPasswordSuccessFragment", "Error hiding bottom navigation", e)
+        }
+    }
+
+    private fun showBottomNavigation() {
+        try {
+            val bottomNav = activity?.findViewById<View>(R.id.bottom_nav_view)
+            bottomNav?.visibility = View.VISIBLE
+        } catch (e: Exception) {
+            Log.e("ResetPasswordSuccessFragment", "Error showing bottom navigation", e)
         }
     }
 }

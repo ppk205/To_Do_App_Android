@@ -29,8 +29,14 @@ class VerifyResetOTPFragment : Fragment(R.layout.fragment_verify_reset_otp) {
 
     private lateinit var authRepository: AuthRepository
     private var email: String = ""
-    private var countDownTimer: CountDownTimer? = null
+
+    // ✅ TÁCH 2 TIMER RÕ RÀNG
+    private var otpExpireTimer: CountDownTimer? = null
     private var resendCooldownTimer: CountDownTimer? = null
+    private var isOtpExpired = false
+
+    private var initialExpiresInSeconds: Int = 120  // 2 minutes (same as register)
+    private var resendAvailableInSeconds: Int = 60  // 60 seconds default
     private var otpAttempts = 0
 
     private lateinit var otpInputs: List<TextInputEditText>
@@ -55,7 +61,7 @@ class VerifyResetOTPFragment : Fragment(R.layout.fragment_verify_reset_otp) {
         val progressBar = view.findViewById<ProgressBar>(R.id.progress_bar)
         val tvTimer = view.findViewById<TextView>(R.id.tvTimer)
         val btnResend = view.findViewById<TextView>(R.id.btnResend)
-        val txtResendCooldown = view.findViewById<TextView>(R.id.txt_resend_cooldown)
+        val tvResendCooldown = view.findViewById<TextView>(R.id.txt_resend_cooldown)
         val btnPaste = view.findViewById<TextView>(R.id.btnPaste)
         val tvAttempts = view.findViewById<TextView>(R.id.tvAttempts)
 
@@ -75,8 +81,9 @@ class VerifyResetOTPFragment : Fragment(R.layout.fragment_verify_reset_otp) {
         // Setup OTP inputs
         setupOTPInputs()
 
-        // Start countdown timer (10 minutes = 600 seconds)
-        startCountdownTimer(tvTimer, 600)
+        // ✅ GỌI TIMER ĐÚNG CHỖ - KHI VÀO MÀN HÌNH
+        startOtpExpireTimer(tvTimer, initialExpiresInSeconds)
+        startResendCooldown(btnResend, tvResendCooldown, resendAvailableInSeconds)
 
         // Initialize attempts display
         tvAttempts.text = getString(R.string.attempts_format, otpAttempts)
@@ -106,7 +113,7 @@ class VerifyResetOTPFragment : Fragment(R.layout.fragment_verify_reset_otp) {
         // Resend OTP
         btnResend.setOnClickListener {
             if (btnResend.isEnabled) {
-                resendOTP(btnResend, txtResendCooldown, tvTimer)
+                resendOTP(btnResend, tvResendCooldown, tvTimer, tvAttempts)
             }
         }
     }
@@ -192,10 +199,12 @@ class VerifyResetOTPFragment : Fragment(R.layout.fragment_verify_reset_otp) {
         return otpInputs.joinToString("") { it.text.toString() }
     }
 
-    private fun startCountdownTimer(tvTimer: TextView, seconds: Int) {
-        countDownTimer?.cancel()
+    // ✅ TIMER OTP – CHỈ DÙNG ĐỂ HIỂN THỊ HẾT HẠN
+    private fun startOtpExpireTimer(tvTimer: TextView, seconds: Int) {
+        isOtpExpired = false
+        otpExpireTimer?.cancel()
 
-        countDownTimer = object : CountDownTimer(seconds * 1000L, 1000) {
+        otpExpireTimer = object : CountDownTimer(seconds * 1000L, 1000) {
             override fun onTick(millisUntilFinished: Long) {
                 val minutes = (millisUntilFinished / 1000) / 60
                 val secs = (millisUntilFinished / 1000) % 60
@@ -203,15 +212,59 @@ class VerifyResetOTPFragment : Fragment(R.layout.fragment_verify_reset_otp) {
             }
 
             override fun onFinish() {
+                isOtpExpired = true
                 tvTimer.text = "OTP expired"
                 tvTimer.setTextColor(ContextCompat.getColor(requireContext(), R.color.error))
-                // Enable resend when OTP expires
-                view?.findViewById<TextView>(R.id.btnResend)?.isEnabled = true
+                Toast.makeText(requireContext(), getString(R.string.otp_expired), Toast.LENGTH_SHORT).show()
+                // ⛔ KHÔNG enable resend ở đây
             }
         }.start()
     }
 
+    // ✅ TIMER RESEND – QUYẾT ĐỊNH KHI NÀO ĐƯỢC RESEND
+    private fun startResendCooldown(btnResend: TextView, tvResendCooldown: TextView, seconds: Int) {
+        btnResend.isEnabled = false
+        resendCooldownTimer?.cancel()
+
+        if (seconds > 0) {
+            // Hiển thị cooldown message
+            tvResendCooldown.visibility = View.VISIBLE
+
+            // Làm mờ nút resend khi disabled
+            btnResend.alpha = 0.5f
+
+            resendCooldownTimer = object : CountDownTimer(seconds * 1000L, 1000) {
+                override fun onTick(millisUntilFinished: Long) {
+                    val remainingSeconds = (millisUntilFinished / 1000).toInt()
+                    tvResendCooldown.text = getString(R.string.resend_cooldown_wait, remainingSeconds)
+                }
+
+                override fun onFinish() {
+                    btnResend.isEnabled = true
+                    btnResend.alpha = 1.0f
+                    tvResendCooldown.text = getString(R.string.resend_available_now)
+                    tvResendCooldown.setTextColor(ContextCompat.getColor(requireContext(), R.color.success))
+
+                    // Ẩn message sau 2 giây
+                    tvResendCooldown.postDelayed({
+                        tvResendCooldown.visibility = View.GONE
+                    }, 2000)
+                }
+            }.start()
+        } else {
+            btnResend.isEnabled = true
+            btnResend.alpha = 1.0f
+            tvResendCooldown.visibility = View.GONE
+        }
+    }
+
     private fun verifyOTP(otp: String, btnVerify: MaterialButton, progressBar: ProgressBar, tvAttempts: TextView) {
+        // ✅ CHECK OTP EXPIRED TRƯỚC KHI GỌI API
+        if (isOtpExpired) {
+            Toast.makeText(requireContext(), getString(R.string.otp_expired), Toast.LENGTH_SHORT).show()
+            return
+        }
+
         otpAttempts++
         tvAttempts.text = getString(R.string.attempts_format, otpAttempts)
 
@@ -251,6 +304,27 @@ class VerifyResetOTPFragment : Fragment(R.layout.fragment_verify_reset_otp) {
                     // Clear OTP inputs on error
                     otpInputs.forEach { it.text?.clear() }
                     otpInputs[0].requestFocus()
+                    
+                    // ❌ LOẠI BỎ LOGIC SAI - KHÔNG BẬT RESEND CHỈ VÌ VERIFY FAIL
+                    // Resend CHỈ được bật bởi cooldown timer
+                    
+                    // ✅ Navigate to resend required nếu quá 5 attempts
+                    if (otpAttempts >= 5) {
+                        try {
+                            val bundle = Bundle().apply {
+                                putString("email", email)
+                            }
+                            if (isAdded) {
+                                findNavController().navigate(
+                                    R.id.action_verifyResetOTP_to_resetOtpResendRequired,
+                                    bundle
+                                )
+                            }
+                        } catch (e: Exception) {
+                            android.util.Log.e("VerifyResetOTP", "Navigation to resend required error", e)
+                            Toast.makeText(requireContext(), getString(R.string.attempts_limit_message), Toast.LENGTH_LONG).show()
+                        }
+                    }
                 }
 
             } catch (e: Exception) {
@@ -266,9 +340,9 @@ class VerifyResetOTPFragment : Fragment(R.layout.fragment_verify_reset_otp) {
         }
     }
 
-    private fun resendOTP(btnResend: TextView, txtResendCooldown: TextView, tvTimer: TextView) {
+    private fun resendOTP(btnResend: TextView, tvResendCooldown: TextView, tvTimer: TextView, tvAttempts: TextView) {
         btnResend.isEnabled = false
-        txtResendCooldown.visibility = View.VISIBLE
+        tvResendCooldown.visibility = View.VISIBLE
 
         viewLifecycleOwner.lifecycleScope.launch {
             try {
@@ -277,60 +351,48 @@ class VerifyResetOTPFragment : Fragment(R.layout.fragment_verify_reset_otp) {
                 }
 
                 if (result.isSuccess && result.getOrNull()?.success == true) {
-                    Toast.makeText(requireContext(), "OTP resent successfully", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), getString(R.string.resend_success), Toast.LENGTH_SHORT).show()
 
-                    // Reset attempts
+                    // ✅ RESET ATTEMPTS VÀ CLEAR OTP
                     otpAttempts = 0
-                    view?.findViewById<TextView>(R.id.tvAttempts)?.let { tvAttempts ->
-                        tvAttempts.text = getString(R.string.attempts_format, 0)
-                        tvAttempts.setTextColor(ContextCompat.getColor(requireContext(), R.color.text_secondary))
-                    }
+                    tvAttempts.text = getString(R.string.attempts_format, 0)
+                    tvAttempts.setTextColor(ContextCompat.getColor(requireContext(), R.color.text_secondary))
+                    tvTimer.setTextColor(ContextCompat.getColor(requireContext(), R.color.text_secondary))
+
+                    // Reset resend cooldown UI
+                    tvResendCooldown.setTextColor(ContextCompat.getColor(requireContext(), R.color.text_secondary))
 
                     // Clear OTP inputs
                     otpInputs.forEach { it.text?.clear() }
                     otpInputs[0].requestFocus()
 
-                    // Restart countdown
-                    tvTimer.setTextColor(ContextCompat.getColor(requireContext(), R.color.text_secondary))
-                    startCountdownTimer(tvTimer, 600)
+                    // Get TTLs from server response if available
+                    val respBody = result.getOrNull()
+                    respBody?.expiresIn?.let { initialExpiresInSeconds = it }
+                    respBody?.resendAvailableIn?.let { resendAvailableInSeconds = it }
 
-                    // Start 60s cooldown
-                    startResendCooldown(btnResend, txtResendCooldown, 60)
+                    // ✅ KHỞI ĐỘNG LẠI 2 TIMER RIÊNG BIỆT
+                    startOtpExpireTimer(tvTimer, initialExpiresInSeconds)
+                    startResendCooldown(btnResend, tvResendCooldown, resendAvailableInSeconds)
                 } else {
-                    val errorMessage = result.getOrNull()?.message ?: "Failed to resend OTP"
+                    val errorMessage = result.getOrNull()?.message ?: getString(R.string.resend_failed_default)
                     Toast.makeText(requireContext(), errorMessage, Toast.LENGTH_SHORT).show()
                     btnResend.isEnabled = true
-                    txtResendCooldown.visibility = View.GONE
+                    tvResendCooldown.visibility = View.GONE
                 }
 
             } catch (e: Exception) {
                 Log.e("VerifyResetOTP", "Error resending OTP", e)
                 Toast.makeText(requireContext(), "Error: ${e.message}", Toast.LENGTH_SHORT).show()
                 btnResend.isEnabled = true
-                txtResendCooldown.visibility = View.GONE
+                tvResendCooldown.visibility = View.GONE
             }
         }
     }
 
-    private fun startResendCooldown(btnResend: TextView, txtResendCooldown: TextView, seconds: Int) {
-        resendCooldownTimer?.cancel()
-
-        resendCooldownTimer = object : CountDownTimer(seconds * 1000L, 1000) {
-            override fun onTick(millisUntilFinished: Long) {
-                val secs = (millisUntilFinished / 1000).toInt()
-                txtResendCooldown.text = "Resend available in ${secs}s"
-            }
-
-            override fun onFinish() {
-                btnResend.isEnabled = true
-                txtResendCooldown.visibility = View.GONE
-            }
-        }.start()
-    }
-
     override fun onDestroyView() {
         super.onDestroyView()
-        countDownTimer?.cancel()
+        otpExpireTimer?.cancel()
         resendCooldownTimer?.cancel()
     }
 }

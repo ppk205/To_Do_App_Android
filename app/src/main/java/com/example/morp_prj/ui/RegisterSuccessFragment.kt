@@ -1,6 +1,7 @@
 package com.example.morp_prj.ui
 
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.widget.TextView
 import androidx.fragment.app.Fragment
@@ -15,6 +16,9 @@ class RegisterSuccessFragment : Fragment(R.layout.fragment_register_success) {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        // ✅ Ẩn bottom navigation bar
+        hideBottomNavigation()
 
         // Get arguments
         username = arguments?.getString("username")
@@ -44,5 +48,29 @@ class RegisterSuccessFragment : Fragment(R.layout.fragment_register_success) {
             }
         }
     }
-}
 
+    override fun onDestroyView() {
+        super.onDestroyView()
+
+        // ✅ Hiện lại bottom navigation khi thoát
+        showBottomNavigation()
+    }
+
+    private fun hideBottomNavigation() {
+        try {
+            val bottomNav = activity?.findViewById<View>(R.id.bottom_nav_view)
+            bottomNav?.visibility = View.GONE
+        } catch (e: Exception) {
+            Log.e("RegisterSuccessFragment", "Error hiding bottom navigation", e)
+        }
+    }
+
+    private fun showBottomNavigation() {
+        try {
+            val bottomNav = activity?.findViewById<View>(R.id.bottom_nav_view)
+            bottomNav?.visibility = View.VISIBLE
+        } catch (e: Exception) {
+            Log.e("RegisterSuccessFragment", "Error showing bottom navigation", e)
+        }
+    }
+}

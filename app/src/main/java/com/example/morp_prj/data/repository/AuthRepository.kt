@@ -30,14 +30,30 @@ class AuthRepository(private val context: Context) {
                 phone = phone
             )
 
+            android.util.Log.d("AuthRepository", "Register request: $request")
+
             val response = apiService.register(request)
+
+            android.util.Log.d("AuthRepository", "Register response code: ${response.code()}")
 
             if (response.isSuccessful && response.body() != null) {
                 Result.success(response.body()!!)
             } else {
-                Result.failure(Exception(response.message() ?: "Unknown error"))
+                // Try to parse error body
+                val errorBody = response.errorBody()?.string()
+                android.util.Log.e("AuthRepository", "Register error: $errorBody")
+
+                val errorMessage = try {
+                    val jsonObject = org.json.JSONObject(errorBody ?: "{}")
+                    jsonObject.optString("message", response.message())
+                } catch (e: Exception) {
+                    response.message()
+                }
+
+                Result.failure(Exception(errorMessage))
             }
         } catch (e: Exception) {
+            android.util.Log.e("AuthRepository", "Register exception", e)
             Result.failure(e)
         }
     }
@@ -237,6 +253,42 @@ class AuthRepository(private val context: Context) {
                 Result.success(authResponse)
             } else {
                 Result.failure(Exception(response.message() ?: "Update failed"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Change password (requires old password verification)
+     */
+    suspend fun changePassword(
+        oldPassword: String,
+        newPassword: String
+    ): Result<AuthResponse> = withContext(Dispatchers.IO) {
+        try {
+            val token = tokenStorage.getAccessToken()
+            if (token.isNullOrEmpty()) {
+                return@withContext Result.failure(Exception("No access token"))
+            }
+
+            val requestBody = mapOf(
+                "oldPassword" to oldPassword,
+                "newPassword" to newPassword
+            )
+            val response = apiService.changePassword("Bearer $token", requestBody)
+
+            if (response.isSuccessful && response.body() != null) {
+                Result.success(response.body()!!)
+            } else {
+                // Parse error message from response body
+                val errorBody = response.errorBody()?.string()
+                val errorMessage = try {
+                    org.json.JSONObject(errorBody ?: "").optString("message", "Change password failed")
+                } catch (e: Exception) {
+                    response.message() ?: "Change password failed"
+                }
+                Result.failure(Exception(errorMessage))
             }
         } catch (e: Exception) {
             Result.failure(e)
