@@ -10,6 +10,8 @@ import android.os.Bundle
 import android.view.View
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.splashscreen.SplashScreen
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.navigation.NavOptions
@@ -44,6 +46,8 @@ class MainActivity : AppCompatActivity() {
 
     @SuppressLint("UnprotectedBroadcastReceiver")
     override fun onCreate(savedInstanceState: Bundle?) {
+        installSplashScreen()
+        setTheme(R.style.Theme_MORPPRJ)
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContentView(R.layout.activity_main)
@@ -152,6 +156,7 @@ class MainActivity : AppCompatActivity() {
                 R.id.register_success_fragment,
                 R.id.forgot_password_fragment,
                 R.id.verify_reset_otp_fragment,
+                R.id.reset_otp_resend_required_fragment,
                 R.id.reset_password_fragment,
                 R.id.reset_password_success_fragment,
                 R.id.taskFragment,

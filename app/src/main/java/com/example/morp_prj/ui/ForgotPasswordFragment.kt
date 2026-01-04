@@ -25,6 +25,9 @@ class ForgotPasswordFragment : Fragment(R.layout.fragment_forgot_password) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        // Ẩn bottom navigation bar
+        hideBottomNavigation()
+
         authRepository = AuthRepository(requireContext())
 
         val inputEmail = view.findViewById<TextInputEditText>(R.id.input_email)
@@ -157,5 +160,35 @@ class ForgotPasswordFragment : Fragment(R.layout.fragment_forgot_password) {
         // Show success card
         cardSuccess.visibility = View.VISIBLE
     }
-}
 
+    override fun onDestroyView() {
+        super.onDestroyView()
+        showBottomNavigationIfLoggedIn()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        hideBottomNavigation()
+    }
+
+    private fun hideBottomNavigation() {
+        try {
+            val bottomNav = activity?.findViewById<View>(R.id.bottom_nav_view)
+            bottomNav?.visibility = View.GONE
+        } catch (e: Exception) {
+            android.util.Log.e("ForgotPasswordFragment", "Error hiding bottom navigation", e)
+        }
+    }
+
+    private fun showBottomNavigationIfLoggedIn() {
+        try {
+            val prefs = com.example.morp_prj.utils.PreferenceManager(requireContext())
+            val tokenStorage = com.example.morp_prj.security.SecureTokenStorage(requireContext())
+            val shouldShow = prefs.isLoggedIn() || tokenStorage.hasValidRefreshToken()
+            val bottomNav = activity?.findViewById<View>(R.id.bottom_nav_view)
+            bottomNav?.visibility = if (shouldShow) View.VISIBLE else View.GONE
+        } catch (e: Exception) {
+            android.util.Log.e("ForgotPasswordFragment", "Error showing bottom navigation", e)
+        }
+    }
+}

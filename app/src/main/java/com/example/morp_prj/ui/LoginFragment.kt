@@ -5,6 +5,7 @@ import android.util.Log
 import android.view.View
 import android.widget.TextView
 import android.widget.Toast
+import androidx.constraintlayout.motion.widget.MotionLayout
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
@@ -30,6 +31,11 @@ class LoginFragment : Fragment(R.layout.fragment_login) {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        // ✅ Ẩn bottom navigation bar
+        hideBottomNavigation()
+
+        view.findViewById<MotionLayout?>(R.id.login_motion_layout)?.transitionToEnd()
 
         authRepository = AuthRepository(requireContext())
         preferenceManager = PreferenceManager(requireContext())
@@ -203,6 +209,40 @@ class LoginFragment : Fragment(R.layout.fragment_login) {
                     // ignore
                 }
             }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        hideBottomNavigation()
+        view?.findViewById<MotionLayout?>(R.id.login_motion_layout)?.transitionToEnd()
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+
+        // ✅ Hiện lại bottom navigation khi thoát nếu đã đăng nhập
+        showBottomNavigationIfLoggedIn()
+    }
+
+    private fun hideBottomNavigation() {
+        try {
+            val bottomNav = activity?.findViewById<View>(R.id.bottom_nav_view)
+            bottomNav?.visibility = View.GONE
+        } catch (e: Exception) {
+            Log.e("LoginFragment", "Error hiding bottom navigation", e)
+        }
+    }
+
+    private fun showBottomNavigationIfLoggedIn() {
+        try {
+            val prefs = com.example.morp_prj.utils.PreferenceManager(requireContext())
+            val tokenStorage = com.example.morp_prj.security.SecureTokenStorage(requireContext())
+            val shouldShow = prefs.isLoggedIn() || tokenStorage.hasValidRefreshToken()
+            val bottomNav = activity?.findViewById<View>(R.id.bottom_nav_view)
+            bottomNav?.visibility = if (shouldShow) View.VISIBLE else View.GONE
+        } catch (e: Exception) {
+            Log.e("LoginFragment", "Error showing bottom navigation", e)
         }
     }
 }

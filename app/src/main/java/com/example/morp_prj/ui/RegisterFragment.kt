@@ -6,6 +6,7 @@ import android.text.TextWatcher
 import android.view.View
 import android.widget.TextView
 import android.widget.Toast
+import androidx.constraintlayout.motion.widget.MotionLayout
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
@@ -24,6 +25,11 @@ class RegisterFragment : Fragment(R.layout.fragment_register) {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        // ✅ Ẩn bottom navigation bar
+        hideBottomNavigation()
+
+        view.findViewById<MotionLayout?>(R.id.register_motion_layout)?.transitionToEnd()
 
         authRepository = AuthRepository(requireContext())
         preferenceManager = PreferenceManager(requireContext())
@@ -211,6 +217,40 @@ class RegisterFragment : Fragment(R.layout.fragment_register) {
                     Toast.LENGTH_LONG
                 ).show()
             }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        hideBottomNavigation()
+        view?.findViewById<MotionLayout?>(R.id.register_motion_layout)?.transitionToEnd()
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+
+        // ✅ Chỉ hiển thị lại nếu user đã đăng nhập
+        showBottomNavigationIfLoggedIn()
+    }
+
+    private fun hideBottomNavigation() {
+        try {
+            val bottomNav = activity?.findViewById<View>(R.id.bottom_nav_view)
+            bottomNav?.visibility = View.GONE
+        } catch (e: Exception) {
+            android.util.Log.e("RegisterFragment", "Error hiding bottom navigation", e)
+        }
+    }
+
+    private fun showBottomNavigationIfLoggedIn() {
+        try {
+            val prefs = com.example.morp_prj.utils.PreferenceManager(requireContext())
+            val tokenStorage = com.example.morp_prj.security.SecureTokenStorage(requireContext())
+            val shouldShow = prefs.isLoggedIn() || tokenStorage.hasValidRefreshToken()
+            val bottomNav = activity?.findViewById<View>(R.id.bottom_nav_view)
+            bottomNav?.visibility = if (shouldShow) View.VISIBLE else View.GONE
+        } catch (e: Exception) {
+            android.util.Log.e("RegisterFragment", "Error showing bottom navigation", e)
         }
     }
 }

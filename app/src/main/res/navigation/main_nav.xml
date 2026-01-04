@@ -12,7 +12,11 @@
         tools:layout="@layout/fragment_onboarding">
         <action
             android:id="@+id/action_onboarding_to_login"
-            app:destination="@id/login_fragment" />
+            app:destination="@id/login_fragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/fade_out"
+            app:popEnterAnim="@anim/fade_in"
+            app:popExitAnim="@anim/slide_out_right" />
         <action
             android:id="@+id/action_onboarding_to_home"
             app:destination="@id/menu_home"
@@ -20,7 +24,11 @@
             app:popUpToInclusive="true" />
         <action
             android:id="@+id/action_onboarding_to_register"
-            app:destination="@id/register_fragment" />
+            app:destination="@id/register_fragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/fade_out"
+            app:popEnterAnim="@anim/fade_in"
+            app:popExitAnim="@anim/slide_out_right" />
     </fragment>
 
     <fragment
@@ -30,7 +38,11 @@
         tools:layout="@layout/fragment_login">
         <action
             android:id="@+id/action_login_to_register"
-            app:destination="@id/register_fragment" />
+            app:destination="@id/register_fragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/fade_out"
+            app:popEnterAnim="@anim/fade_in"
+            app:popExitAnim="@anim/slide_out_right" />
         <action
             android:id="@+id/action_login_to_home"
             app:destination="@id/menu_home"
@@ -43,7 +55,11 @@
             app:popUpToInclusive="true" />
         <action
             android:id="@+id/action_login_to_forgotPassword"
-            app:destination="@id/forgot_password_fragment" />
+            app:destination="@id/forgot_password_fragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/fade_out"
+            app:popEnterAnim="@anim/fade_in"
+            app:popExitAnim="@anim/slide_out_right" />
     </fragment>
 
     <fragment
@@ -58,7 +74,11 @@
             app:popUpToInclusive="true" />
         <action
             android:id="@+id/action_forgotPassword_to_verifyResetOTP"
-            app:destination="@id/verify_reset_otp_fragment" />
+            app:destination="@id/verify_reset_otp_fragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/fade_out"
+            app:popEnterAnim="@anim/fade_in"
+            app:popExitAnim="@anim/slide_out_right" />
     </fragment>
 
     <fragment
@@ -71,7 +91,18 @@
             app:argType="string" />
         <action
             android:id="@+id/action_verifyResetOTP_to_resetPassword"
-            app:destination="@id/reset_password_fragment" />
+            app:destination="@id/reset_password_fragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/fade_out"
+            app:popEnterAnim="@anim/fade_in"
+            app:popExitAnim="@anim/slide_out_right" />
+        <action
+            android:id="@+id/action_verifyResetOTP_to_resetOtpResendRequired"
+            app:destination="@id/reset_otp_resend_required_fragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/fade_out"
+            app:popEnterAnim="@anim/fade_in"
+            app:popExitAnim="@anim/slide_out_right" />
     </fragment>
 
     <fragment
@@ -92,7 +123,11 @@
             app:popUpToInclusive="true" />
         <action
             android:id="@+id/action_resetPassword_to_resetSuccess"
-            app:destination="@id/reset_password_success_fragment" />
+            app:destination="@id/reset_password_success_fragment"
+            app:enterAnim="@anim/fade_in"
+            app:exitAnim="@anim/fade_out"
+            app:popEnterAnim="@anim/fade_in"
+            app:popExitAnim="@anim/fade_out" />
     </fragment>
 
     <fragment
@@ -104,7 +139,35 @@
             android:id="@+id/action_resetSuccess_to_login"
             app:destination="@id/login_fragment"
             app:popUpTo="@id/login_fragment"
+            app:popUpToInclusive="true"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/fade_out"
+            app:popEnterAnim="@anim/fade_in"
+            app:popExitAnim="@anim/slide_out_right" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/reset_otp_resend_required_fragment"
+        android:name="com.example.morp_prj.ui.ResetOtpResendRequiredFragment"
+        android:label="fragment_reset_otp_resend_required"
+        tools:layout="@layout/fragment_reset_otp_resend_required">
+        <action
+            android:id="@+id/action_resetOtpResendRequired_to_verifyResetOTP"
+            app:destination="@id/verify_reset_otp_fragment"
+            app:popUpTo="@id/verify_reset_otp_fragment"
             app:popUpToInclusive="true" />
+        <action
+            android:id="@+id/action_resetOtpResendRequired_to_forgotPassword"
+            app:destination="@id/forgot_password_fragment"
+            app:popUpTo="@id/forgot_password_fragment"
+            app:popUpToInclusive="true"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/fade_out"
+            app:popEnterAnim="@anim/fade_in"
+            app:popExitAnim="@anim/slide_out_right" />
+        <argument
+            android:name="email"
+            app:argType="string" />
     </fragment>
 
     <fragment
@@ -114,7 +177,11 @@
         tools:layout="@layout/fragment_register">
         <action
             android:id="@+id/action_register_to_verifyOtp"
-            app:destination="@id/verify_otp_fragment" />
+            app:destination="@id/verify_otp_fragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/fade_out"
+            app:popEnterAnim="@anim/fade_in"
+            app:popExitAnim="@anim/slide_out_right" />
         <action
             android:id="@+id/action_register_to_home"
             app:destination="@id/menu_home"
@@ -134,10 +201,18 @@
             app:popUpToInclusive="true" />
         <action
             android:id="@+id/action_verifyOtp_to_registerSuccess"
-            app:destination="@id/register_success_fragment" />
+            app:destination="@id/register_success_fragment"
+            app:enterAnim="@anim/fade_in"
+            app:exitAnim="@anim/fade_out"
+            app:popEnterAnim="@anim/fade_in"
+            app:popExitAnim="@anim/fade_out" />
         <action
             android:id="@+id/action_verifyOtp_to_otpResendRequired"
-            app:destination="@id/otp_resend_required_fragment" />
+            app:destination="@id/otp_resend_required_fragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/fade_out"
+            app:popEnterAnim="@anim/fade_in"
+            app:popExitAnim="@anim/slide_out_right" />
         <argument
             android:name="userId"
             app:argType="string" />
@@ -159,7 +234,11 @@
         <action
             android:id="@+id/action_registerSuccess_to_login"
             app:destination="@id/login_fragment"
-            app:popUpTo="@id/onboarding_fragment" />
+            app:popUpTo="@id/onboarding_fragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/fade_out"
+            app:popEnterAnim="@anim/fade_in"
+            app:popExitAnim="@anim/slide_out_right" />
         <argument
             android:name="username"
             app:argType="string" />
@@ -182,7 +261,11 @@
             android:id="@+id/action_otpResendRequired_to_register"
             app:destination="@id/register_fragment"
             app:popUpTo="@id/register_fragment"
-            app:popUpToInclusive="true" />
+            app:popUpToInclusive="true"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/fade_out"
+            app:popEnterAnim="@anim/fade_in"
+            app:popExitAnim="@anim/slide_out_right" />
         <argument
             android:name="userId"
             app:argType="string" />
