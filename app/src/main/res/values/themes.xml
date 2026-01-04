@@ -16,14 +16,6 @@
     <style name="Theme.Taskly.Splash.Compat" parent="Theme.MaterialComponents.Light.NoActionBar">
         <item name="android:windowBackground">@drawable/splash_screen_background</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
-
-    <style name="InactiveTextStyle" parent="TextAppearance.MaterialComponents.Caption">
-        <item name="android:textSize">12sp</item>
-    </style>
-
-    <style name="CircleImage">
-        <item name="cornerFamily">rounded</item>
-        <item name="cornerSize">50%</item>
     </style>
 
     <style name="CalendarDayHeader">
