@@ -5,6 +5,7 @@ import com.example.morp_prj.data.model.MarkReadRequest
 import com.example.morp_prj.data.model.MarkReadResponse
 import com.example.morp_prj.data.model.DeleteNotificationRequest
 import com.example.morp_prj.data.model.DeleteNotificationResponse
+import com.example.morp_prj.data.model.ClearNotificationsResponse
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
@@ -20,4 +21,7 @@ interface NotificationApiService {
 
     @POST("api/notifications/delete")
     suspend fun deleteNotification(@Body request: DeleteNotificationRequest): Response<DeleteNotificationResponse>
+
+    @POST("api/notifications/clear")
+    suspend fun clearAll(): Response<ClearNotificationsResponse>
 }
