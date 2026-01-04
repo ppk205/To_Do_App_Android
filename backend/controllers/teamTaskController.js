@@ -164,17 +164,85 @@ const updateTaskStatus = async (req, res) => {
     }
 
     const allowed = ['TODO', 'IN_PROGRESS', 'DONE', 'COMPLETED', 'OVERDUE'];
-    if (!allowed.includes(status.toUpperCase())) {
+    const nextStatus = status.toUpperCase();
+    if (!allowed.includes(nextStatus)) {
         return res.status(400).json({ message: 'Invalid status' });
     }
 
     const conn = await pool.getConnection();
     try {
+        // Load task info + current status + assignees for notification decision
+        const [taskRows] = await conn.query(
+            `SELECT id, teamId, title, status
+             FROM team_tasks
+             WHERE id = ?
+             LIMIT 1`,
+            [taskId]
+        );
+        if (!Array.isArray(taskRows) || taskRows.length === 0) {
+            return res.status(404).json({ message: 'Task not found' });
+        }
+
+        const task = taskRows[0];
+        const prevStatus = String(task.status || '').toUpperCase();
+
         const updateQuery = `UPDATE team_tasks SET status = ? WHERE id = ?`;
-        const [result] = await conn.query(updateQuery, [status.toUpperCase(), taskId]);
+        const [result] = await conn.query(updateQuery, [nextStatus, taskId]);
 
         if (result.affectedRows === 0) {
             return res.status(404).json({ message: 'Task not found' });
+        }
+
+        // Realtime (best-effort) for screens currently inside the team
+        const io = getIO();
+        if (io) {
+            io.to(`team:${task.teamId}`).emit('teamTask:statusChanged', {
+                teamId: task.teamId,
+                taskId: task.id,
+                prevStatus,
+                status: nextStatus,
+                changedAt: Date.now(),
+            });
+        }
+
+        // Notify on completion transition
+        const isCompletedTransition = (nextStatus === 'DONE' || nextStatus === 'COMPLETED') &&
+            !(prevStatus === 'DONE' || prevStatus === 'COMPLETED');
+
+        if (isCompletedTransition) {
+            try {
+                const [assigneeRows] = await conn.query(
+                    `SELECT userId FROM team_task_assignees WHERE taskId = ?`,
+                    [taskId]
+                );
+                const assigneeIds = Array.from(new Set((assigneeRows || []).map(r => String(r.userId)).filter(Boolean)));
+
+                // If no assignees, notify all active members.
+                let recipients = assigneeIds;
+                if (recipients.length === 0) {
+                    const [memberRows] = await conn.query(
+                        `SELECT userId FROM teammember WHERE teamId = ? AND status = 'active'`,
+                        [task.teamId]
+                    );
+                    recipients = Array.from(new Set((memberRows || []).map(r => String(r.userId)).filter(Boolean)));
+                }
+
+                const createdAt = Date.now();
+                if (recipients.length > 0) {
+                    await createNotificationsBulk(
+                        recipients.map((userId) => ({
+                            userId,
+                            channel: 'teams',
+                            title: 'Team task completed',
+                            message: `Task "${task.title}" was completed.`,
+                            dedupeKey: `teamTask:${taskId}:completed`,
+                            createdAt,
+                        }))
+                    );
+                }
+            } catch (err) {
+                console.error('[teamTaskController] completion notifications failed:', err);
+            }
         }
 
         res.status(200).json({ success: true });
