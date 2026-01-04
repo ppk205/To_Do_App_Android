@@ -25,6 +25,7 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+import com.example.morp_prj.data.repository.TeamRealtimeRepository
 
 class TeamFragment : Fragment() {
 
@@ -34,8 +35,9 @@ class TeamFragment : Fragment() {
 
     private lateinit var preferenceManager: PreferenceManager
     private var isGuestDialogShowing = false
-
     private var allTeams = mutableListOf<Team>()
+    private lateinit var adapter: TeamAdapter
+    private val realtimeRepo = TeamRealtimeRepository()
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -68,7 +70,10 @@ class TeamFragment : Fragment() {
         // set up Adapter for My Teams rv
         myTeamAdapter = TeamAdapter(emptyList(), R.layout.item_team,
             onItemClick = { navigateToDetail(it) },
-            onItemLongClick = { showPinDialog(it) }
+            onItemLongClick = { showPinDialog(it) },
+            onChatClick = { team ->
+                handleChatClick(team)
+            }
         )
 
         // Set up Header Adapter (User Info + Pinned Teams)
@@ -201,6 +206,16 @@ class TeamFragment : Fragment() {
                 Log.e("TeamFragment", "API Failure: ${t.message}", t)
             }
         })
+    }
+
+    private fun handleChatClick(team: com.example.morp_prj.data.model.Team) {
+        realtimeRepo.joinTeamRoom(team.id)
+
+        val bundle = Bundle().apply {
+            putString("teamId", team.id)
+            putString("teamName", team.name)
+        }
+        findNavController().navigate(R.id.teamChatFragment, bundle)
     }
 
     private fun showPinDialog(team: Team) {

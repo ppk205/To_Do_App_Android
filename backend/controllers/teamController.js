@@ -1,6 +1,7 @@
 // controllers/teamController.js
 const teamModel = require('../models/team');
 const crypto = require('crypto');
+const db = require('../config/database');
 
 // Helper function: Parse tags an toàn
 const parseTags = (tagsData) => {
@@ -219,6 +220,34 @@ exports.getMembersByTeamId = async (req, res) => {
         res.json(members);
     } catch (error) {
         console.error('Error fetching members:', error);
+        res.status(500).json({ message: 'Database error' });
+    }
+};
+
+exports.getTeamMessages = async (req, res) => {
+    const { teamId } = req.params;
+
+    try {
+        // JOIN 3 table: conversations -> messages -> users
+        const [messages] = await db.execute(`
+            SELECT
+            m.id,
+            c.team_id as teamId,
+            m.sender_id as senderId,
+            u.username as senderName,
+            u.avatarUrl as senderAvatar,
+            m.body as content,
+            m.created_at as createdAt
+            FROM messages m
+            JOIN conversations c ON m.conversation_id = c.id
+            LEFT JOIN users u ON m.sender_id = u.id
+            WHERE c.team_id = ? AND c.type = 'team'
+            ORDER BY m.created_at ASC
+            `, [teamId]);
+
+        res.json(messages);
+    } catch (error) {
+        console.error('Error fetching team messages:', error);
         res.status(500).json({ message: 'Database error' });
     }
 };

@@ -41,7 +41,8 @@ class TeamScreenHeaderAdapter(
             pinnedTeams,
             R.layout.item_pinned_team,
             onItemClick = onPinnedTeamClick,
-            onItemLongClick = onPinnedTeamLongClick
+            onItemLongClick = onPinnedTeamLongClick,
+            onChatClick = null
         )
 
         holder.rvPinnedTeamsInternal.layoutManager = LinearLayoutManager(holder.itemView.context, LinearLayoutManager.HORIZONTAL, false)
