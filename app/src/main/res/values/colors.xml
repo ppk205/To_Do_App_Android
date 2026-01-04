@@ -46,4 +46,15 @@
 
     <!-- fallback color resource (team dashboard) -->
     <color name="grey_light">#E0E0E0</color> <color name="grey_dark">#BDBDBD</color>
+
+    <color name="pastel_yellow">#FFF9C4</color>
+    <color name="pastel_gray">#F5F5F5</color>
+    <color name="pastel_green">#C8E6C9</color>
+    <color name="pastel_purple">#E1BEE7</color>
+    <color name="pastel_text_dark">#424242</color>
+
+    <color name="calendar_date_selected">#212121</color> <color name="calendar_date_unselected">#F5F5F5</color>
+    <color name="timeline_line_color">#E0E0E0</color>
+
+    <color name="status_in_progress">#FF9800</color>
 </resources>

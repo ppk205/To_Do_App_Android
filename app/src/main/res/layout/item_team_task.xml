@@ -110,13 +110,6 @@
                 app:drawableStartCompat="@drawable/ic_calendar"
                 app:drawableTint="#757575" />
 
-            <com.google.android.material.chip.ChipGroup
-                android:id="@+id/chip_group_tags"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                app:chipSpacing="8dp" />
-
         </LinearLayout>
 
         <ImageView
