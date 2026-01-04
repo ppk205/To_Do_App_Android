@@ -4,7 +4,7 @@ const { createNotificationsBulk } = require('../services/notificationService');
 const { getIO } = require('../services/realtime');
 
 const createTeamTask = async (req, res) => {
-    const { teamId, title, description, dueDate, priority, assignees, createdBy, tagsCsv } = req.body;
+    const { teamId, title, description, dueDate, priority, assignees, createdBy, tags } = req.body;
 
     if (!teamId || !title || !createdBy || !Array.isArray(assignees)) {
         return res.status(400).json({ message: 'Missing required fields.' });
@@ -15,17 +15,17 @@ const createTeamTask = async (req, res) => {
         await conn.beginTransaction();
 
         const taskId = crypto.randomUUID();
-
         const createdAt = Date.now();
 
-        // 1. Insert vào bảng team_tasks
         const taskQuery = `
-            INSERT INTO team_tasks (id, teamId, title, description, dueDate, priority, status, createdBy, createdAt, tagsCsv)
+            INSERT INTO team_tasks (id, teamId, title, description, dueDate, priority, status, createdBy, createdAt, tags)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
-        await conn.query(taskQuery, [taskId, teamId, title, description, dueDate, priority, 'TODO', createdBy, createdAt, tagsCsv || null]);
 
-        // 2. Insert vào bảng team_task_assignees
+        const tagsJson = tags ? JSON.stringify(tags) : JSON.stringify([]);
+
+        await conn.query(taskQuery, [taskId, teamId, title, description, dueDate, priority, 'TODO', createdBy, createdAt, tagsJson]);
+
         if (assignees.length > 0) {
             const assigneeValues = assignees.map(userId => [taskId, userId]);
             const assigneeQuery = 'INSERT INTO team_task_assignees (taskId, userId) VALUES ?';
@@ -58,7 +58,7 @@ const createTeamTask = async (req, res) => {
                 createdBy,
                 createdAt,
                 assignees: uniqueAssignees,
-                tagsCsv: tagsCsv || null,
+                tags: tags || [],
             });
         }
 
@@ -84,19 +84,18 @@ const getTeamTasks = async (req, res) => {
         const now = Date.now();
 
         const updateQuery = `
-            UPDATE team_tasks 
-            SET status = 'OVERDUE' 
-            WHERE teamId = ? 
+            UPDATE team_tasks
+            SET status = 'OVERDUE'
+            WHERE teamId = ?
             AND dueDate < ?
             AND status NOT IN ('DONE', 'COMPLETED', 'OVERDUE')
         `;
         await conn.query(updateQuery, [teamId, now]);
-        // --------------------------------------------
 
         // Query tasks and their assignees via JOIN
         const query = `
-            SELECT 
-                t.id, t.teamId, t.title, t.description, t.dueDate, t.priority, t.status, t.createdAt, t.createdBy, t.tagsCsv,
+            SELECT
+                t.id, t.teamId, t.title, t.description, t.dueDate, t.priority, t.status, t.createdAt, t.createdBy, t.tags,
                 u.id as assigneeId, u.username, u.avatarUrl, u.email
             FROM team_tasks t
             LEFT JOIN team_task_assignees ta ON t.id = ta.taskId
@@ -104,12 +103,12 @@ const getTeamTasks = async (req, res) => {
             WHERE t.teamId = ?
             ORDER BY t.dueDate ASC, t.createdAt DESC
         `;
-        
+
         const [rows] = await conn.query(query, [teamId]);
 
         // Group rows by task ID since one task can have multiple assignees
         const tasksMap = new Map();
-        
+
         for (const row of rows) {
             if (!tasksMap.has(row.id)) {
                 tasksMap.set(row.id, {
@@ -120,13 +119,13 @@ const getTeamTasks = async (req, res) => {
                     dueDate: row.dueDate,
                     priority: row.priority,
                     status: row.status,
-                    tagsCsv: row.tagsCsv,
+                    tags: row.tags,
                     createdAt: row.createdAt,
                     createdBy: row.createdBy,
                     assignees: []
                 });
             }
-            
+
             if (row.assigneeId) {
                 // Check uniqueness
                 const task = tasksMap.get(row.id);
