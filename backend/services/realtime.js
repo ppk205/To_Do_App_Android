@@ -34,8 +34,14 @@ function initRealtime(httpServer) {
             if (!token) return next(new Error('TOKEN_MISSING'));
 
             const payload = jwt.verify(token, JWT_SECRET);
+
+            // Align with REST authMiddleware which typically uses payload.id.
+            // Accept both `sub` and `id` for backward/forward compatibility.
+            const userId = payload?.sub || payload?.id || payload?.userId;
+            if (!userId) return next(new Error('TOKEN_NO_USER_ID'));
+
             socket.user = {
-                id: payload.sub,
+                id: String(userId),
                 email: payload.email,
                 username: payload.username,
             };

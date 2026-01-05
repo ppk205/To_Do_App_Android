@@ -13,11 +13,26 @@ class TeamRealtimeRepository {
     val teamEvents: LiveData<JSONObject> = _teamEvents
 
     init {
-        // Lắng nghe các sự kiện chung của Team
-        socket?.on("team_update") { args ->
-            if (args.isNotEmpty()) {
-                val data = args[0] as JSONObject
-                _teamEvents.postValue(data)
+        // Backend emits: teamTaskCreated, receiveTeamMessage, teamTask:statusChanged, team:memberJoined, team:joinRequest
+        val events = listOf(
+            "teamTaskCreated",
+            "receiveTeamMessage",
+            "teamTask:statusChanged",
+            "team:memberJoined",
+            "team:joinRequest",
+        )
+
+        events.forEach { eventName ->
+            socket?.on(eventName) { args ->
+                if (args.isNotEmpty()) {
+                    val payload = when (val first = args[0]) {
+                        is JSONObject -> first
+                        else -> JSONObject(first.toString())
+                    }
+                    // Attach event name for UI routing if needed
+                    payload.put("_event", eventName)
+                    _teamEvents.postValue(payload)
+                }
             }
         }
     }
