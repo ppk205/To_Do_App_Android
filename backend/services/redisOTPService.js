@@ -4,39 +4,36 @@ const crypto = require('crypto');
 
 /**
  * ========================================
- * REDIS OTP SERVICE - ADJUSTED TIMING
+ * REDIS OTP SERVICE - FULLY FIXED
  * ========================================
  *
  * Flow:
  * 1. Gửi OTP: TTL 2 phút, Resend cooldown 60s
  * 2. Nhập sai ≥5 lần:
  *    - OTP bị hủy
- *    - Cooldown 60s (không verify, không resend)
+ *    - Xóa resend cooldown (tránh cooldown kép)
+ *    - Set fail cooldown 60s
  * 3. Sau 60s: Cho resend OTP mới với attempts reset
+ *
+ * FIX:
+ * - Xóa resend cooldown khi verify thành công
+ * - Kiểm tra OTP có tồn tại trước khi check resend cooldown
  */
 
 class RedisOTPService {
-    // ⏱️ Cấu hình thời gian
     static config = {
         OTP_LENGTH: 6,
-        OTP_TTL_MINUTES: 2,              // TTL OTP: 2 phút
-        RESEND_COOLDOWN_SECONDS: 60,     // Cooldown giữa các lần gửi: 60s
-        MAX_ATTEMPTS: 5,                 // Số lần nhập tối đa: 5
-        FAIL_COOLDOWN_SECONDS: 60,       // Cooldown sau khi nhập sai ≥5: 60s
+        OTP_TTL_MINUTES: 2,
+        RESEND_COOLDOWN_SECONDS: 30,
+        MAX_ATTEMPTS: 5,
+        FAIL_COOLDOWN_SECONDS: 60,
         HMAC_SECRET: process.env.OTP_HMAC_SECRET || 'your-secret-key-here'
     };
 
-    /**
-     * Sinh OTP 6 chữ số
-     */
     static generateOTP() {
-        // crypto.randomInt is exclusive on upper bound, use 1000000 to include 999999
         return crypto.randomInt(100000, 1000000).toString().padStart(this.config.OTP_LENGTH, '0');
     }
 
-    /**
-     * Tạo HMAC cho OTP
-     */
     static hashOTP(otpCode) {
         return crypto
             .createHmac('sha256', this.config.HMAC_SECRET)
@@ -44,9 +41,6 @@ class RedisOTPService {
             .digest('hex');
     }
 
-    /**
-     * Redis keys
-     */
     static getOTPKey(email, purpose) {
         return `otp:${email.toLowerCase()}:${purpose}`;
     }
@@ -69,14 +63,13 @@ class RedisOTPService {
 
     /**
      * ✅ Tạo OTP với rate limiting
-     * pendingData: optional object sẽ được lưu tạm trong Redis để tạo user sau khi verify
      */
     static async createOTP(email, purpose = 'REGISTER', ttlMinutes = null, pendingData = null) {
         try {
             ensureRedisConnected();
-             ttlMinutes = ttlMinutes || this.config.OTP_TTL_MINUTES;
+            ttlMinutes = ttlMinutes || this.config.OTP_TTL_MINUTES;
 
-            // 1. Kiểm tra fail cooldown (sau khi nhập sai ≥5 lần)
+            // 1. Kiểm tra fail cooldown
             const failCooldownKey = this.getFailCooldownKey(email, purpose);
             const failCooldownTTL = await redisClient.ttl(failCooldownKey);
 
@@ -89,25 +82,34 @@ class RedisOTPService {
                 };
             }
 
-            // 2. Kiểm tra resend cooldown (60s giữa các lần gửi)
-            const resendCooldownKey = this.getResendCooldownKey(email, purpose);
-            const resendTTL = await redisClient.ttl(resendCooldownKey);
+            // 2. 🔧 FIX: Kiểm tra OTP có tồn tại không
+            const otpKey = this.getOTPKey(email, purpose);
+            const otpExists = await redisClient.exists(otpKey);
 
-            if (resendTTL > 0) {
-                return {
-                    success: false,
-                    message: `Vui lòng đợi ${resendTTL} giây trước khi gửi lại OTP`,
-                    remainingSeconds: resendTTL,
-                    reason: 'RESEND_COOLDOWN'
-                };
+            // 3. Chỉ check resend cooldown nếu OTP còn tồn tại
+            const resendCooldownKey = this.getResendCooldownKey(email, purpose);
+
+            if (otpExists) {
+                // OTP còn tồn tại → check resend cooldown
+                const resendTTL = await redisClient.ttl(resendCooldownKey);
+                if (resendTTL > 0) {
+                    return {
+                        success: false,
+                        message: `Vui lòng đợi ${resendTTL} giây trước khi gửi lại OTP`,
+                        remainingSeconds: resendTTL,
+                        reason: 'RESEND_COOLDOWN'
+                    };
+                }
+            } else {
+                // 🔧 FIX: OTP không tồn tại (hết hạn/đã xóa) → xóa resend cooldown cũ
+                await redisClient.del(resendCooldownKey);
             }
 
-            // 3. Sinh OTP
+            // 4. Sinh OTP
             const otpCode = this.generateOTP();
             const otpHash = this.hashOTP(otpCode);
 
-            // 4. Lưu vào Redis (dùng pipeline)
-            const otpKey = this.getOTPKey(email, purpose);
+            // 5. Lưu vào Redis
             const attemptsKey = this.getAttemptsKey(email, purpose);
             const ttlSeconds = ttlMinutes * 60;
 
@@ -116,10 +118,8 @@ class RedisOTPService {
             pipeline.setEx(attemptsKey, ttlSeconds, '0');
             pipeline.setEx(resendCooldownKey, this.config.RESEND_COOLDOWN_SECONDS, '1');
 
-            // Nếu có pendingData, lưu để dùng khi verify thành công
             if (pendingData) {
                 const pendingKey = this.getPendingRegKey(email);
-                // Lưu TTL dài hơn OTP một chút (OTP TTL + 5 phút) để tránh mất data khi user chờ
                 const pendingTTL = ttlSeconds + 300;
                 pipeline.setEx(pendingKey, pendingTTL, JSON.stringify(pendingData));
             }
@@ -127,12 +127,10 @@ class RedisOTPService {
             await pipeline.exec();
 
             const expiresAt = new Date(Date.now() + ttlMinutes * 60 * 1000);
-
             console.log(`✅ OTP created for ${email} (${purpose}), expires: ${expiresAt.toISOString()}`);
 
             return {
                 success: true,
-                // Lưu ý: otpCode chỉ nên trả trong môi trường dev; production không trả
                 otpCode,
                 expiresAt,
                 ttl: ttlMinutes
@@ -148,17 +146,15 @@ class RedisOTPService {
 
     /**
      * ✅ Xác thực OTP
-     * @param {boolean} deleteOnVerify - If true, delete OTP after successful verification (default: true)
-     *                                   For RESET_PASSWORD, should be false (only delete after password change)
      */
     static async verifyOTP(email, otpCode, purpose = 'REGISTER', deleteOnVerify = true) {
         try {
             ensureRedisConnected();
-             const otpKey = this.getOTPKey(email, purpose);
+            const otpKey = this.getOTPKey(email, purpose);
             const attemptsKey = this.getAttemptsKey(email, purpose);
             const failCooldownKey = this.getFailCooldownKey(email, purpose);
 
-            // 1. Kiểm tra fail cooldown (đang trong 60s sau khi nhập sai ≥5)
+            // 1. Kiểm tra fail cooldown
             const failCooldownTTL = await redisClient.ttl(failCooldownKey);
             if (failCooldownTTL > 0) {
                 return {
@@ -181,23 +177,18 @@ class RedisOTPService {
                 };
             }
 
-            // 3. Kiểm tra và tăng attempts (atomic via INCR)
-            // Note: attemptsKey should already exist with TTL set in createOTP
+            // 3. Tăng attempts
             const newAttempts = await redisClient.incr(attemptsKey);
 
-            // Restore TTL on attemptsKey if it was missing TTL (edge case)
+            // Restore TTL nếu bị mất
             const attemptsTTL = await redisClient.ttl(attemptsKey);
             if (attemptsTTL < 0) {
-                // set expire to OTP TTL
                 const otpTTL = await redisClient.ttl(otpKey);
                 if (otpTTL > 0) await redisClient.expire(attemptsKey, otpTTL);
             }
 
             if (newAttempts > this.config.MAX_ATTEMPTS) {
-                // Đã vượt quá max attempts → Hủy OTP và set cooldown
-                await this.invalidateOTP(email, purpose);
-                await redisClient.setEx(failCooldownKey, this.config.FAIL_COOLDOWN_SECONDS, '1');
-
+                await this.invalidateOTPWithCooldown(email, purpose);
                 return {
                     success: false,
                     message: 'Bạn đã nhập sai quá nhiều. Vui lòng đợi 60 giây để gửi lại OTP',
@@ -217,18 +208,14 @@ class RedisOTPService {
                     Buffer.from(inputHash)
                 );
             } catch (e) {
-                // timingSafeEqual throws if buffers lengths differ; fallback to false
                 isValid = false;
             }
 
             if (!isValid) {
                 const remainingAttempts = this.config.MAX_ATTEMPTS - newAttempts;
 
-                // Nếu đây là lần thử cuối cùng
                 if (remainingAttempts === 0) {
-                    await this.invalidateOTP(email, purpose);
-                    await redisClient.setEx(failCooldownKey, this.config.FAIL_COOLDOWN_SECONDS, '1');
-
+                    await this.invalidateOTPWithCooldown(email, purpose);
                     return {
                         success: false,
                         message: 'Bạn đã nhập sai 5 lần. Vui lòng đợi 60 giây để gửi lại OTP',
@@ -247,7 +234,7 @@ class RedisOTPService {
                 };
             }
 
-            // 5. OTP đúng → Lấy pendingData trước khi xóa
+            // 5. OTP đúng → Lấy pendingData
             let pendingData = null;
             const pendingKey = this.getPendingRegKey(email);
             const pendingDataStr = await redisClient.get(pendingKey);
@@ -260,20 +247,21 @@ class RedisOTPService {
                 }
             }
 
-            // Chỉ xóa OTP nếu deleteOnVerify = true (REGISTER flow)
-            // RESET_PASSWORD flow: giữ OTP để verify lần nữa khi reset password
             if (deleteOnVerify) {
-                // Xóa OTP và attempts
+                // REGISTER flow: Xóa tất cả
                 await this.invalidateOTP(email, purpose);
-
-                // Xóa pendingData
                 if (pendingKey) {
                     await redisClient.del(pendingKey);
                 }
                 console.log(`✅ OTP verified and deleted for ${email} (${purpose})`);
             } else {
-                // Chỉ reset attempts về 0 để cho phép verify lại
-                await redisClient.set(attemptsKey, '0');
+                // 🔧 FIX: RESET_PASSWORD flow: Reset attempts + XÓA resend cooldown
+                const pipeline = redisClient.multi();
+                pipeline.set(attemptsKey, '0');
+                pipeline.del(this.getResendCooldownKey(email, purpose));
+                await pipeline.exec();
+
+                // Restore TTL cho attempts
                 const otpTTL = await redisClient.ttl(otpKey);
                 if (otpTTL > 0) {
                     await redisClient.expire(attemptsKey, otpTTL);
@@ -302,7 +290,7 @@ class RedisOTPService {
     static async invalidateOTP(email, purpose) {
         try {
             ensureRedisConnected();
-             const pipeline = redisClient.multi();
+            const pipeline = redisClient.multi();
             pipeline.del(this.getOTPKey(email, purpose));
             pipeline.del(this.getAttemptsKey(email, purpose));
             pipeline.del(this.getResendCooldownKey(email, purpose));
@@ -315,15 +303,32 @@ class RedisOTPService {
     }
 
     /**
+     * 🛡️ Xóa OTP + Set fail cooldown (dùng khi nhập sai ≥5 lần)
+     */
+    static async invalidateOTPWithCooldown(email, purpose) {
+        try {
+            ensureRedisConnected();
+            const pipeline = redisClient.multi();
+            pipeline.del(this.getOTPKey(email, purpose));
+            pipeline.del(this.getAttemptsKey(email, purpose));
+            pipeline.del(this.getResendCooldownKey(email, purpose));
+            pipeline.setEx(this.getFailCooldownKey(email, purpose), this.config.FAIL_COOLDOWN_SECONDS, '1');
+            await pipeline.exec();
+
+            console.log(`🛡️ OTP invalidated with fail cooldown for ${email} (${purpose})`);
+        } catch (error) {
+            console.error('❌ Error invalidating OTP with cooldown:', error);
+        }
+    }
+
+    /**
      * 🔄 Resend OTP
-     * - Trong 60s fail cooldown: ❌ không được resend
-     * - Trong 60s resend cooldown: ❌ không được resend
-     * - Sau 60s: ✅ cho resend với attempts reset
      */
     static async resendOTP(email, purpose = 'REGISTER', ttlMinutes = null, pendingData = null) {
         try {
             ensureRedisConnected();
-             // 1. Kiểm tra fail cooldown
+
+            // Kiểm tra fail cooldown
             const failCooldownKey = this.getFailCooldownKey(email, purpose);
             const failCooldownTTL = await redisClient.ttl(failCooldownKey);
 
@@ -336,7 +341,7 @@ class RedisOTPService {
                 };
             }
 
-            // 2. Tạo OTP mới (hàm createOTP đã check resend cooldown)
+            // Tạo OTP mới
             const result = await this.createOTP(email, purpose, ttlMinutes, pendingData);
 
             if (result.success) {
@@ -360,7 +365,7 @@ class RedisOTPService {
     static async getOTPStatus(email, purpose) {
         try {
             ensureRedisConnected();
-             const otpKey = this.getOTPKey(email, purpose);
+            const otpKey = this.getOTPKey(email, purpose);
             const attemptsKey = this.getAttemptsKey(email, purpose);
             const failCooldownKey = this.getFailCooldownKey(email, purpose);
             const resendCooldownKey = this.getResendCooldownKey(email, purpose);
@@ -394,13 +399,10 @@ class RedisOTPService {
         }
     }
 
-    /**
-     * Lấy pending registration (nếu có)
-     */
     static async getPendingRegistration(email) {
         try {
             ensureRedisConnected();
-             const pendingKey = this.getPendingRegKey(email);
+            const pendingKey = this.getPendingRegKey(email);
             const raw = await redisClient.get(pendingKey);
             if (!raw) return null;
             try {
@@ -414,26 +416,20 @@ class RedisOTPService {
         }
     }
 
-    /**
-     * Xóa pending registration
-     */
     static async clearPendingRegistration(email) {
         try {
             ensureRedisConnected();
-             const pendingKey = this.getPendingRegKey(email);
+            const pendingKey = this.getPendingRegKey(email);
             await redisClient.del(pendingKey);
         } catch (error) {
             console.error('❌ Error clearing pending registration:', error);
         }
     }
 
-    /**
-     * 🧹 Xóa tất cả (bao gồm cả fail_cooldown) - dùng khi cần reset hoàn toàn
-     */
     static async clearAll(email, purpose) {
         try {
             ensureRedisConnected();
-             const pipeline = redisClient.multi();
+            const pipeline = redisClient.multi();
             pipeline.del(this.getOTPKey(email, purpose));
             pipeline.del(this.getAttemptsKey(email, purpose));
             pipeline.del(this.getFailCooldownKey(email, purpose));
@@ -449,4 +445,3 @@ class RedisOTPService {
 }
 
 module.exports = RedisOTPService;
-
