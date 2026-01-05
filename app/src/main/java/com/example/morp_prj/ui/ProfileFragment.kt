@@ -179,6 +179,7 @@ class ProfileFragment : Fragment() {
 
         // 5. Logout
         binding.btnLogout.setOnClickListener {
+            (requireActivity() as? MainActivity)?.disconnectSocket()
             performLogout()
         }
 

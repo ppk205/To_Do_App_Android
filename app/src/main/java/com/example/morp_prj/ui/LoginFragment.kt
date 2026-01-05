@@ -144,6 +144,8 @@ class LoginFragment : Fragment(R.layout.fragment_login) {
                             // ✅ Đánh dấu đã xem onboarding sau khi đăng nhập thành công
                             preferenceManager.setHasSeenOnboarding(true)
 
+                            (requireActivity() as? MainActivity)?.connectSocket()
+
                             // Apply session task rules (show this user's tasks; later can trigger sync-down)
                             try {
                                 sessionTaskManager.onLoginSuccess(user.id)

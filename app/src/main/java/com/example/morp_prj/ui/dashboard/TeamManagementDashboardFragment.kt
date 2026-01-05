@@ -8,27 +8,24 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
 import android.widget.AutoCompleteTextView
-import android.widget.ImageButton
+import android.widget.TextView
 import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.core.view.GravityCompat
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.morp_prj.R
-import com.example.morp_prj.data.TaskRepository
 import com.example.morp_prj.data.api.RetrofitClient
-import com.example.morp_prj.data.db.AppDatabase
 import com.example.morp_prj.data.model.TeamMember
 import com.example.morp_prj.ui.NotificationsAdapter
-import com.example.morp_prj.ui.TeamTaskViewModel
 import com.example.morp_prj.ui.UiNotification
+import com.example.morp_prj.utils.PreferenceManager
 import com.github.mikephil.charting.charts.PieChart
 import com.github.mikephil.charting.data.Entry
 import com.github.mikephil.charting.data.PieData
@@ -57,6 +54,10 @@ class TeamManagementDashboardFragment : Fragment() {
     private var remoteTasks: List<com.example.morp_prj.data.model.TeamTask> = emptyList()
     private var teamMembers: List<TeamMember> = emptyList()
 
+    // User State
+    private var currentUserId: String? = null
+    private var isManager: Boolean = false
+
     // Filter State
     private var selectedAssigneeId: String? = null
     private var selectedTimeGranularity: String = "ALL"
@@ -75,17 +76,12 @@ class TeamManagementDashboardFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         try {
+            val prefs = PreferenceManager(requireContext())
+            currentUserId = prefs.getUserId()
+
             setupHeaderEvents(view)
 
-            val db = AppDatabase.getInstance(requireContext())
-            val repo = TaskRepository(db.taskDao())
-            val factory = object : ViewModelProvider.Factory {
-                override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                    @Suppress("UNCHECKED_CAST")
-                    return TaskDashboardViewModel(repo) as T
-                }
-            }
-            viewModel = ViewModelProvider(this, factory).get(TaskDashboardViewModel::class.java)
+            viewModel = ViewModelProvider(this).get(TaskDashboardViewModel::class.java)
 
             // Views
             val rvRecent = view.findViewById<RecyclerView>(R.id.rvRecent)
@@ -116,15 +112,14 @@ class TeamManagementDashboardFragment : Fragment() {
             val teamIdArg = resolvedTeamId?.trim()
 
             if (!teamIdArg.isNullOrBlank()) {
-                val remoteVm = ViewModelProvider(requireActivity()).get(TeamTaskViewModel::class.java)
-
                 fetchTeamMembers(teamIdArg) {
-                    remoteVm.fetchTasks(teamIdArg)
+                    determineUserRole(view)
+                    viewModel.fetchTasks(teamIdArg)
                 }
 
-                remoteVm.tasks.observe(viewLifecycleOwner, Observer { list ->
+                viewModel.tasks.observe(viewLifecycleOwner, Observer { list ->
                     remoteTasks = list
-                    populateAssigneesDropdown()
+                    populateAssigneesDropdown(view)
                     applyFiltersAndUpdateDashboard(view)
                     generateTeamActivity()
                 })
@@ -152,15 +147,41 @@ class TeamManagementDashboardFragment : Fragment() {
         }
     }
 
+    private fun determineUserRole(view: View) {
+        if (currentUserId == null) return
+
+        val me = teamMembers.find { it.id == currentUserId }
+
+        isManager = me?.role?.lowercase() in listOf("manager", "co-manager")
+
+        val actAssignee = view.findViewById<AutoCompleteTextView>(R.id.actAssignee)
+        val tvLabel = view.findViewById<TextView>(R.id.tvFilterMemberLabel)
+
+        if (!isManager) {
+            actAssignee?.visibility = View.GONE
+            tvLabel?.visibility = View.GONE
+        } else {
+            actAssignee?.visibility = View.VISIBLE
+            tvLabel?.visibility = View.VISIBLE
+        }
+    }
+
     private fun applyFiltersAndUpdateDashboard(view: View) {
         val rvSummary = view.findViewById<RecyclerView>(R.id.rvSummary)
         val pieChart = view.findViewById<PieChart>(R.id.pieChart)
 
         val filtered = remoteTasks.filter { task ->
-            // Filter Assignee
-            val assigneeOk = selectedAssigneeId?.let { id ->
-                task.assignees.any { it.id == id }
-            } ?: true
+            val assigneeOk: Boolean
+            if (isManager) {
+                assigneeOk = selectedAssigneeId?.let { id ->
+                    task.assignees.any { it.id == id }
+                } ?: true
+            } else {
+                assigneeOk = currentUserId?.let { myId ->
+                    task.assignees.any { it.id == myId }
+                } ?: false
+            }
+
             if (!assigneeOk) return@filter false
 
             // Filter Time
@@ -184,16 +205,15 @@ class TeamManagementDashboardFragment : Fragment() {
         val now = System.currentTimeMillis()
         val total = filtered.size
 
-        val done = filtered.count { it.status.equals("DONE", true) }
-
+        val done = filtered.count { it.status.equals("DONE", true) || it.status.equals("COMPLETED", true) }
         val todo = filtered.count { it.status.equals("TODO", true) }
 
         val overdue = filtered.count {
-            val isNotDone = !it.status.equals("DONE", true)
-            val isNotTodo = !it.status.equals("TODO", true)
-            val isExplicitOverdue = it.status.equals("OVERDUE", true)
+            val status = it.status.uppercase()
+            val isNotDone = status != "DONE" && status != "COMPLETED"
+            val isExplicitOverdue = status == "OVERDUE"
             val isExpired = it.dueDate != null && it.dueDate < now
-            isNotDone && isNotTodo && (isExplicitOverdue || isExpired)
+            isNotDone && (isExplicitOverdue || isExpired)
         }
 
         val inProgress = total - done - overdue - todo
@@ -366,11 +386,14 @@ class TeamManagementDashboardFragment : Fragment() {
         }
     }
 
-    private fun populateAssigneesDropdown() {
+    private fun populateAssigneesDropdown(view: View) {
+        if (!isManager) return
+
         val allMemberNames = mutableSetOf<Pair<String, String>>()
         teamMembers.forEach {
             val name = it.displayName ?: it.email ?: "Unknown"
-            allMemberNames.add(Pair(name, it.id))
+            val id = it.id
+            allMemberNames.add(Pair(name, id))
         }
         val displayList = ArrayList<String>()
         displayList.add("All Members")
@@ -381,8 +404,9 @@ class TeamManagementDashboardFragment : Fragment() {
             assigneeDisplayToId[name] = id
         }
         val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, displayList)
-        val actAssignee = view?.findViewById<AutoCompleteTextView>(R.id.actAssignee)
+        val actAssignee = view.findViewById<AutoCompleteTextView>(R.id.actAssignee)
         actAssignee?.setAdapter(adapter)
+
         val current = assigneeDisplayToId.entries.find { it.value == selectedAssigneeId }?.key
         actAssignee?.setText(current ?: "All Members", false)
     }

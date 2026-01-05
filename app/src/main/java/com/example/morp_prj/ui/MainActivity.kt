@@ -7,6 +7,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
@@ -41,7 +42,7 @@ class MainActivity : AppCompatActivity() {
                 navController.navigate(R.id.onboarding_fragment, null, navOptions)
 
                 SecureTokenStorage(context!!).clearTokens()
-                SocketManager.disconnect()
+                disconnectSocket()
 
                 android.widget.Toast.makeText(this@MainActivity, "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.", android.widget.Toast.LENGTH_LONG).show()
             } catch (e: Exception) {
@@ -84,16 +85,7 @@ class MainActivity : AppCompatActivity() {
             )
         }
 
-        val secureStorage = SecureTokenStorage(this)
-        val token = secureStorage.getAccessToken()
-        if (!token.isNullOrEmpty()) {
-            SocketManager.connect(token)
-
-            // Start realtime notifications (persist to Room + show device notification)
-            notificationRealtimeRepository = NotificationRealtimeRepository(this).also {
-                it.start(showDeviceNotifications = true)
-            }
-        }
+        connectSocket()
 
         // Navigation logic:
         // 1. If user is guest -> clear guest mode and stay on onboarding (guest must see onboarding each time)
@@ -192,7 +184,24 @@ class MainActivity : AppCompatActivity() {
         } catch (_: Exception) {
             // ignore
         }
-        SocketManager.disconnect()
         notificationRealtimeRepository = null
+    }
+
+    fun connectSocket() {
+        val secureStorage = SecureTokenStorage(this)
+        val token = secureStorage.getAccessToken()
+        if (!token.isNullOrEmpty()) {
+            SocketManager.connect(token)
+
+            // Start realtime notifications (persist to Room + show device notification)
+            notificationRealtimeRepository = NotificationRealtimeRepository(this).also {
+                it.start(showDeviceNotifications = true)
+            }
+        }
+    }
+
+    fun disconnectSocket() {
+        SocketManager.disconnect()
+        Log.d("SocketManager","Close socket")
     }
 }

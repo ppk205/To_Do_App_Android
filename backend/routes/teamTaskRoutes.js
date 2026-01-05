@@ -18,4 +18,6 @@ router.put('/:taskId', authenticateToken, teamTaskController.updateTeamTask);
 // Route xóa task: DELETE /api/team-tasks/:taskId
 router.delete('/:taskId', authenticateToken, teamTaskController.deleteTeamTask);
 
+router.get('/team/:teamId/assigned', authenticateToken, teamTaskController.getAssignedTeamTasks);
+
 module.exports = router;

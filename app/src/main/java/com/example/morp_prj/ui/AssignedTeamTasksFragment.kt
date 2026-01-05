@@ -259,7 +259,7 @@ class AssignedTeamTasksFragment : Fragment(R.layout.fragment_assigned_team_tasks
 
     private fun observeTasks(teamId: String) {
         progressBar.visibility = View.VISIBLE
-        viewModel.fetchTasks(teamId)
+        viewModel.fetchAssignedTasks(teamId)
         viewModel.tasks.observe(viewLifecycleOwner) { tasks ->
             progressBar.visibility = View.GONE
             allTasks = tasks
