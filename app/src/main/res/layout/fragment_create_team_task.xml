@@ -23,6 +23,7 @@
             app:layout_constraintTop_toTopOf="parent" />
 
         <TextView
+            android:id="@+id/tvHeaderTitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Create Task"
@@ -122,25 +123,30 @@
             <TextView
                 style="@style/LabelStyle"
                 android:layout_marginTop="16dp"
-                android:text="Tags (comma separated)" />
-            <EditText
-                android:id="@+id/etTaskTags"
-                style="@style/InputStyle"
-                android:hint="e.g. frontend,marketing,bug"
-                android:layout_height="56dp" />
+                android:text="Tags" />
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnAttachFile"
+            <com.google.android.material.chip.ChipGroup
+                android:id="@+id/chipGroupTags"
                 android:layout_width="match_parent"
-                android:layout_height="56dp"
-                android:layout_marginTop="24dp"
-                android:text="Attach File"
-                android:textAllCaps="false"
-                android:textColor="#212121"
-                app:backgroundTint="#F5F5F5"
-                app:icon="@drawable/ic_attach"
-                app:iconGravity="textStart"
-                app:iconTint="#757575" />
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="4dp" />
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilTaskTags"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Type tag &amp; press Enter"
+                app:startIconDrawable="@drawable/ic_tag">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etTaskTags"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="text"
+                    android:imeOptions="actionDone"
+                    android:maxLines="1" />
+            </com.google.android.material.textfield.TextInputLayout>
 
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>

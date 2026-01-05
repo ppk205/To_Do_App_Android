@@ -359,3 +359,44 @@ exports.getTeamMessages = async (req, res) => {
         res.status(500).json({ message: 'Database error' });
     }
 };
+
+exports.regenerateInviteCode = async (req, res) => {
+    try {
+        const { teamId } = req.params;
+        // Logic tạo code ngẫu nhiên
+        const newInviteCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+
+        // Cập nhật vào DB (Giờ sẽ gọi hàm update Dynamic, không bị lỗi NULL nữa)
+        await teamModel.update(teamId, { inviteCode: newInviteCode });
+
+        // Trả về thông tin team mới nhất
+        const updatedTeam = await teamModel.findById(teamId);
+        res.json(updatedTeam);
+    } catch (error) {
+        console.error('Regenerate Code Error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+// --- 9. Xóa Team (Đã đưa ra ngoài) ---
+exports.deleteTeam = async (req, res) => {
+    try {
+        const { teamId } = req.params;
+        const userId = req.user ? req.user.id : req.body.userId;
+
+        const team = await teamModel.findById(teamId);
+        if (!team) {
+            return res.status(404).json({ message: 'Team not found' });
+        }
+
+        if (team.createdBy !== userId) {
+            return res.status(403).json({ message: 'Access denied. Only team owner can delete.' });
+        }
+
+        await teamModel.delete(teamId);
+        res.json({ success: true, message: 'Team deleted successfully' });
+    } catch (error) {
+        console.error('Delete Team Error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};

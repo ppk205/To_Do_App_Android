@@ -39,5 +39,11 @@ interface TeamApiService {
     fun updateTeam(
         @Path("teamId") teamId: String,
         @Body request: UpdateTeamRequest
-    ): Call<Void>
+    ): Call<Team>
+
+    @PUT("api/team/{teamId}/invite-code")
+    fun regenerateInviteCode(@Path("teamId") teamId: String): Call<Team>
+
+    @DELETE("api/team/{teamId}")
+    fun deleteTeam(@Path("teamId") teamId: String): Call<Void>
 }

@@ -14,6 +14,8 @@ import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.example.morp_prj.R
 import com.example.morp_prj.data.model.TeamTask
+// UPDATED: Import Color để sử dụng R.color.text_primary đúng cách nếu cần ContextCompat
+import androidx.core.content.ContextCompat
 
 class TeamTaskRecentAdapter(
     private val onArrowClick: (TeamTask, View) -> Unit,
@@ -42,17 +44,17 @@ class TeamTaskRecentAdapter(
             cb.isChecked = item.status.equals("DONE", true)
             pb?.visibility = View.GONE
 
-            // tagsCsv -> chips
             chipGroupTags?.removeAllViews()
-            val tagsCsv = item.tagsCsv ?: ""
-            val tags = tagsCsv.split(',').map { it.trim() }.filter { it.isNotEmpty() }
-            for (tag in tags) {
-                val chip = Chip(itemView.context)
-                chip.text = tag
-                chip.isClickable = false
-                chip.isCheckable = false
-                chip.setTextColor(itemView.context.getColor(R.color.text_primary))
-                chipGroupTags?.addView(chip)
+            item.tags?.forEach { tag ->
+                if (tag.isNotEmpty()) {
+                    val chip = Chip(itemView.context)
+                    chip.text = tag
+                    chip.isClickable = false
+                    chip.isCheckable = false
+                    chip.setTextColor(ContextCompat.getColor(itemView.context, android.R.color.black))
+
+                    chipGroupTags?.addView(chip)
+                }
             }
 
             ivArrow.setOnClickListener { onArrowClick(item, ivArrow) }
@@ -74,4 +76,3 @@ class TeamTaskRecentAdapter(
         holder.bind(getItem(position))
     }
 }
-

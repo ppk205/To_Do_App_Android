@@ -25,7 +25,7 @@ class SummaryAdapter : androidx.recyclerview.widget.RecyclerView.Adapter<Summary
         when (position) {
             0 -> holder.bind(s.total, ctx.getString(R.string.total_tasks))
             1 -> holder.bind(s.done, "Done")
-            2 -> holder.bind(s.pending, "Pending")
+            2 -> holder.bind(s.inProgress, "In Progress")
             3 -> holder.bind(s.overdue, "Overdue")
         }
     }

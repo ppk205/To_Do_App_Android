@@ -1,90 +1,111 @@
 package com.example.morp_prj.ui.dashboard
 
+import android.graphics.Color
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
 import android.widget.AutoCompleteTextView
+import android.widget.ImageButton
+import android.widget.Toast
+import androidx.core.content.ContextCompat
+import androidx.core.view.GravityCompat
+import androidx.drawerlayout.widget.DrawerLayout
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.repeatOnLifecycle
+import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.GridLayoutManager
+import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import androidx.core.content.ContextCompat
 import com.example.morp_prj.R
 import com.example.morp_prj.data.TaskRepository
+import com.example.morp_prj.data.api.RetrofitClient
 import com.example.morp_prj.data.db.AppDatabase
+import com.example.morp_prj.data.model.TeamMember
+import com.example.morp_prj.ui.NotificationsAdapter
+import com.example.morp_prj.ui.TeamTaskViewModel
+import com.example.morp_prj.ui.UiNotification
+import com.github.mikephil.charting.charts.PieChart
+import com.github.mikephil.charting.data.Entry
 import com.github.mikephil.charting.data.PieData
 import com.github.mikephil.charting.data.PieDataSet
 import com.github.mikephil.charting.data.PieEntry
-import com.github.mikephil.charting.charts.PieChart
+import com.github.mikephil.charting.highlight.Highlight
+import com.github.mikephil.charting.listener.OnChartValueSelectedListener
 import com.google.android.material.chip.ChipGroup
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
-import androidx.core.os.bundleOf
-import androidx.navigation.Navigation
-import android.util.Log
-import android.widget.Toast
-import androidx.lifecycle.Observer
-import com.example.morp_prj.ui.TeamTaskViewModel
-import androidx.navigation.fragment.findNavController
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
 import java.text.SimpleDateFormat
 import java.util.Calendar
+import java.util.Date
 import java.util.Locale
+import java.util.TimeZone
 
 class TeamManagementDashboardFragment : Fragment() {
 
     private lateinit var viewModel: TaskDashboardViewModel
-    private lateinit var recentAdapter: TaskRecentAdapter
 
-    // --- fields for remote filtering ---
+    // Adapter cho Recent Activity
+    private lateinit var recentActivityAdapter: NotificationsAdapter
+
+    // Dữ liệu Remote
     private var remoteTasks: List<com.example.morp_prj.data.model.TeamTask> = emptyList()
-    private var selectedAssigneeId: String? = null // null means All
-    private var selectedTimeGranularity: String = "DAY" // HOUR/DAY/MONTH/YEAR
+    private var teamMembers: List<TeamMember> = emptyList()
+
+    // Filter State
+    private var selectedAssigneeId: String? = null
+    private var selectedTimeGranularity: String = "ALL"
     private var selectedTimeValue: String? = null
+    private var selectedDateBasis: String = "DUE_DATE"
+
     private val assigneeDisplayToId = mutableMapOf<String, String?>()
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
     ): View? {
-        return inflater.inflate(R.layout.fragment_task_dashboard, container, false)
+        return inflater.inflate(R.layout.fragment_team_dashboard, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
         try {
-            // ViewModel factory using existing TaskRepository
+            setupHeaderEvents(view)
+
             val db = AppDatabase.getInstance(requireContext())
             val repo = TaskRepository(db.taskDao())
-
             val factory = object : ViewModelProvider.Factory {
                 override fun <T : ViewModel> create(modelClass: Class<T>): T {
                     @Suppress("UNCHECKED_CAST")
                     return TaskDashboardViewModel(repo) as T
                 }
             }
-
             viewModel = ViewModelProvider(this, factory).get(TaskDashboardViewModel::class.java)
 
-            // lookup views (avoid synthetic imports)
+            // Views
             val rvRecent = view.findViewById<RecyclerView>(R.id.rvRecent)
             val rvSummary = view.findViewById<RecyclerView>(R.id.rvSummary)
-            val actAssignee = view.findViewById<AutoCompleteTextView>(R.id.actAssignee)
-            val chipGroupTime = view.findViewById<ChipGroup>(R.id.chipGroupTime)
             val pieChart = view.findViewById<PieChart>(R.id.pieChart)
 
-            // Determine if we're operating inside a team (TeamDetailFragment sets argument `teamId`)
-            var resolvedTeamId = arguments?.getString("teamId")
+            // Setup Recent Activity Adapter
+            recentActivityAdapter = NotificationsAdapter(mutableListOf()) { _, _ -> }
+            rvRecent.layoutManager = LinearLayoutManager(context)
+            rvRecent.adapter = recentActivityAdapter
+            rvRecent.isNestedScrollingEnabled = false
 
+            // Setup Summary Adapter
+            rvSummary.layoutManager = GridLayoutManager(requireContext(), 2)
+            rvSummary.adapter = SummaryAdapter()
+
+            // Resolve Team ID
+            var resolvedTeamId = arguments?.getString("teamId")
             if (resolvedTeamId.isNullOrBlank()) {
-                try {
-                    resolvedTeamId = findNavController().currentBackStackEntry?.arguments?.getString("teamId")
-                } catch (e: Exception) { /* Ignore */ }
+                resolvedTeamId = findNavController().currentBackStackEntry?.arguments?.getString("teamId")
             }
             if (resolvedTeamId.isNullOrBlank()) {
                 resolvedTeamId = parentFragment?.arguments?.getString("teamId")
@@ -92,291 +113,132 @@ class TeamManagementDashboardFragment : Fragment() {
             if (resolvedTeamId.isNullOrBlank()) {
                 resolvedTeamId = requireActivity().intent.getStringExtra("teamId")
             }
-
             val teamIdArg = resolvedTeamId?.trim()
 
-            android.util.Log.d("TaskDashboardFragment", "Resolved teamIdArg=$teamIdArg (raw=$teamIdArg)")
-
             if (!teamIdArg.isNullOrBlank()) {
-                // Use remote TeamTaskViewModel to fetch tasks for the team
-                val remoteVm = androidx.lifecycle.ViewModelProvider(requireActivity()).get(TeamTaskViewModel::class.java)
+                val remoteVm = ViewModelProvider(requireActivity()).get(TeamTaskViewModel::class.java)
 
-                // Adapter for remote TeamTask model
-                val teamAdapter = TeamTaskRecentAdapter(
-                    onArrowClick = { task, v ->
-                        v.isPressed = true
-                        v.postDelayed({ v.isPressed = false }, 120)
-                        val bundle = bundleOf("taskId" to task.id)
-                        Navigation.findNavController(v).navigate(R.id.action_teamDashboard_to_taskDetail, bundle)
-                    },
-                    onStatusChange = { task, checked ->
-                        // map checked -> status string
-                        val newStatus = if (checked) "DONE" else "IN_PROGRESS"
-                        remoteVm.updateTaskStatus(task.id, newStatus) { success, err ->
-                            // onComplete: refresh or rollback handled inside the VM
-                        }
-                    }
-                )
-
-                rvRecent.adapter = teamAdapter
-
-                // helper to populate assignee selector
-                fun populateAssignees(tasks: List<com.example.morp_prj.data.model.TeamTask>) {
-                    val entries = mutableListOf("All")
-                    assigneeDisplayToId.clear()
-                    assigneeDisplayToId["All"] = null
-                    for (t in tasks) {
-                        for (a in t.assignees) {
-                            val display = a.displayName ?: a.username ?: a.email ?: a.id
-                            if (!assigneeDisplayToId.containsKey(display)) {
-                                assigneeDisplayToId[display] = a.id
-                                entries.add(display)
-                            }
-                        }
-                    }
-                    val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_list_item_1, entries)
-                    actAssignee.setAdapter(adapter)
-                    // keep current selection if possible
-                    val currentDisplay = assigneeDisplayToId.entries.find { it.value == selectedAssigneeId }?.key
-                    if (currentDisplay != null) actAssignee.setText(currentDisplay, false) else actAssignee.setText("All", false)
+                fetchTeamMembers(teamIdArg) {
+                    remoteVm.fetchTasks(teamIdArg)
                 }
 
-                // helper to populate time selector based on granularity
-                fun populateTimeOptions(granularity: String) {
-                    val list = mutableListOf<String>()
-                    val cal = Calendar.getInstance()
-                    when (granularity) {
-                        "HOUR" -> {
-                            for (h in 0..23) list.add(String.format(Locale.getDefault(), "%02d:00", h))
-                        }
-                        "DAY" -> {
-                            // last 30 days
-                            val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-                            for (i in 0..29) {
-                                val c = Calendar.getInstance()
-                                c.add(Calendar.DAY_OF_YEAR, -i)
-                                list.add(sdf.format(c.time))
-                            }
-                        }
-                        "MONTH" -> {
-                            val sdf = SimpleDateFormat("yyyy-MM", Locale.getDefault())
-                            for (i in 0..11) {
-                                val c = Calendar.getInstance()
-                                c.add(Calendar.MONTH, -i)
-                                list.add(sdf.format(c.time))
-                            }
-                        }
-                        "YEAR" -> {
-                            val year = cal.get(Calendar.YEAR)
-                            for (i in 0..4) list.add((year - i).toString())
-                        }
-                    }
-                    val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_list_item_1, list)
-                    val actTimeSelector = view.findViewById<AutoCompleteTextView>(R.id.actTimeSelector)
-                    actTimeSelector.setAdapter(adapter)
-                    if (list.isNotEmpty()) {
-                        selectedTimeValue = list[0]
-                        actTimeSelector.setText(list[0], false)
-                    } else {
-                        selectedTimeValue = null
-                        actTimeSelector.setText("", false)
-                    }
-                }
-
-                // apply filters to remoteTasks and update UI
-                fun applyFiltersAndUpdate() {
-                    val filtered = remoteTasks.filter { task ->
-                        // assignee filter
-                        val assigneeOk = selectedAssigneeId?.let { id ->
-                            task.assignees.any { it.id == id }
-                        } ?: true
-
-                        if (!assigneeOk) return@filter false
-
-                        // time filter
-                        if (selectedTimeValue.isNullOrBlank()) return@filter true
-
-                        val due = task.dueDate ?: return@filter false
-                        val cal = Calendar.getInstance()
-                        cal.timeInMillis = due
-
-                        when (selectedTimeGranularity) {
-                            "HOUR" -> {
-                                val hourStr = String.format(Locale.getDefault(), "%02d:00", cal.get(Calendar.HOUR_OF_DAY))
-                                return@filter hourStr == selectedTimeValue
-                            }
-                            "DAY" -> {
-                                val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-                                return@filter sdf.format(cal.time) == selectedTimeValue
-                            }
-                            "MONTH" -> {
-                                val sdf = SimpleDateFormat("yyyy-MM", Locale.getDefault())
-                                return@filter sdf.format(cal.time) == selectedTimeValue
-                            }
-                            "YEAR" -> {
-                                return@filter cal.get(Calendar.YEAR).toString() == selectedTimeValue
-                            }
-                            else -> return@filter true
-                        }
-                    }
-
-                    // compute summary state with OVERDUE included when status == OVERDUE OR dueDate < now and not DONE
-                    val now = System.currentTimeMillis()
-                    val total = filtered.size
-                    val done = filtered.count { it.status.equals("DONE", true) }
-                    val pending = filtered.count { it.status.equals("TODO", true) }
-                    val overdue = filtered.count { it.status.equals("OVERDUE", true) || (it.dueDate != null && it.dueDate < now && !it.status.equals("DONE", true)) }
-
-                    val state = TaskDashboardUiState(total = total, done = done, pending = pending, overdue = overdue, recent = emptyList())
-                    (rvSummary.adapter as? SummaryAdapter)?.submit(state)
-                    updateChart(pieChart, state)
-
-                    teamAdapter.submitList(filtered)
-                }
-
-                // Observe LiveData tasks from TeamTaskViewModel
-                android.util.Log.d("TaskDashboardFragment", "Fetching team tasks for teamId=$teamIdArg")
                 remoteVm.tasks.observe(viewLifecycleOwner, Observer { list ->
-                    android.util.Log.d("TaskDashboardFragment", "Remote tasks returned count=${list.size}")
                     remoteTasks = list
-
-                    // populate assignees and time options
-                    populateAssignees(list)
-                    // set granularity from current chips
-                    val checked = view.findViewById<com.google.android.material.chip.ChipGroup>(R.id.chipGroupTime).checkedChipId
-                    selectedTimeGranularity = when (checked) {
-                        R.id.chipHour -> "HOUR"
-                        R.id.chipDay -> "DAY"
-                        R.id.chipMonth -> "MONTH"
-                        R.id.chipYear -> "YEAR"
-                        else -> "DAY"
-                    }
-                    populateTimeOptions(selectedTimeGranularity)
-
-                    // set listeners for selectors
-                    actAssignee.setOnItemClickListener { parent, _, position, _ ->
-                        val sel = parent.getItemAtPosition(position) as String
-                        selectedAssigneeId = assigneeDisplayToId[sel]
-                        applyFiltersAndUpdate()
-                    }
-
-                    val actTimeSelectorView = view.findViewById<AutoCompleteTextView>(R.id.actTimeSelector)
-                    actTimeSelectorView.setOnItemClickListener { parent, _, position, _ ->
-                        selectedTimeValue = parent.getItemAtPosition(position) as String
-                        applyFiltersAndUpdate()
-                    }
-
-                    // chip change should update options
-                    val chipGroup = view.findViewById<com.google.android.material.chip.ChipGroup>(R.id.chipGroupTime)
-                    chipGroup.setOnCheckedChangeListener { _, checkedId ->
-                        selectedTimeGranularity = when (checkedId) {
-                            R.id.chipHour -> "HOUR"
-                            R.id.chipDay -> "DAY"
-                            R.id.chipMonth -> "MONTH"
-                            R.id.chipYear -> "YEAR"
-                            else -> "DAY"
-                        }
-                        populateTimeOptions(selectedTimeGranularity)
-                        applyFiltersAndUpdate()
-                    }
-
-                    // initial filter apply
-                    applyFiltersAndUpdate()
+                    populateAssigneesDropdown()
+                    applyFiltersAndUpdateDashboard(view)
+                    generateTeamActivity()
                 })
 
-                remoteVm.errorMessage.observe(viewLifecycleOwner, Observer { err ->
-                    if (!err.isNullOrBlank()) {
-                        android.util.Log.w("TaskDashboardFragment", "Remote fetch error: $err")
-                        Toast.makeText(requireContext(), "Failed to load team tasks: $err", Toast.LENGTH_LONG).show()
-                    }
-                })
-
-                // fetch initial
-                android.util.Log.d("TaskDashboardFragment", "Calling remoteVm.fetchTasks($teamIdArg)")
-                remoteVm.fetchTasks(teamIdArg)
+                setupFilterListeners(view)
 
             } else {
-                // existing local repo logic (unchanged)
-                // Setup adapters
-                recentAdapter = TaskRecentAdapter(
-                    onArrowClick = { task, v ->
-                        // ripple/elevation handled by Material by default; highlight then navigate
-                        v.isPressed = true
-                        v.postDelayed({ v.isPressed = false }, 120)
-
-                        // determine taskId string to send to detail fragment
-                        val taskIdArg = task.serverId ?: task.id.toString()
-                        val nav = Navigation.findNavController(v)
-                        val bundle = bundleOf("taskId" to taskIdArg)
-                        nav.navigate(R.id.action_teamDashboard_to_taskDetail, bundle)
-                    },
-                    onCheckboxToggle = { task, checked ->
-                        // show progress by disabling checkbox is done in adapter; call viewModel to update
-                        viewModel.toggleTaskDone(task.id, checked)
-                    }
-                )
-
-                rvRecent.adapter = recentAdapter
-
-                // Collect state with repeatOnLifecycle using viewLifecycleOwner (local flow)
-                viewLifecycleOwner.lifecycleScope.launch {
-                    viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                        viewModel.uiState.collectLatest { state ->
-                            // update pie chart
-                            updateChart(pieChart, state)
-                            // update summary adapter
-                            (rvSummary.adapter as? SummaryAdapter)?.submit(state)
-                            // update recent
-                            recentAdapter.submitList(state.recent)
-                        }
-                    }
-                }
+                Toast.makeText(context, "Team ID not found!", Toast.LENGTH_SHORT).show()
             }
 
-            // Summary as grid of 4
-            rvSummary.layoutManager = GridLayoutManager(requireContext(), 4)
-            rvSummary.adapter = SummaryAdapter()
-
-            // assignee dropdown placeholder
-            val assignees = listOf("All Members")
-            actAssignee.setAdapter(ArrayAdapter(requireContext(), android.R.layout.simple_list_item_1, assignees))
-
-            // time chips
-            chipGroupTime.setOnCheckedChangeListener { _, checkedId ->
-                when (checkedId) {
-                    R.id.chipHour -> viewModel.setTimeRange(TimeRange.HOUR)
-                    R.id.chipDay -> viewModel.setTimeRange(TimeRange.DAY)
-                    R.id.chipMonth -> viewModel.setTimeRange(TimeRange.MONTH)
-                    R.id.chipYear -> viewModel.setTimeRange(TimeRange.YEAR)
-                }
-            }
-
-            // Note: local viewModel.uiState is collected only in the local branch above; remote branch uses remoteVm tasks LiveData
         } catch (t: Throwable) {
-            Log.e("TaskDashboardFragment", "Error in onViewCreated: ", t)
-            Toast.makeText(requireContext(), "Failed to open Team Dashboard: ${t.message}", Toast.LENGTH_LONG).show()
+            Log.e("TeamDashboard", "Error init: ", t)
         }
+    }
+
+    private fun setupHeaderEvents(view: View) {
+        view.findViewById<View>(R.id.btnMenu)?.setOnClickListener {
+            val drawer = parentFragment?.parentFragment?.view?.findViewById<DrawerLayout>(R.id.drawer_layout)
+                ?: requireActivity().findViewById<DrawerLayout>(R.id.drawer_layout)
+
+            if (drawer != null) {
+                if (drawer.isDrawerOpen(GravityCompat.END)) drawer.closeDrawer(GravityCompat.END)
+                else drawer.openDrawer(GravityCompat.END)
+            }
+        }
+    }
+
+    private fun applyFiltersAndUpdateDashboard(view: View) {
+        val rvSummary = view.findViewById<RecyclerView>(R.id.rvSummary)
+        val pieChart = view.findViewById<PieChart>(R.id.pieChart)
+
+        val filtered = remoteTasks.filter { task ->
+            // Filter Assignee
+            val assigneeOk = selectedAssigneeId?.let { id ->
+                task.assignees.any { it.id == id }
+            } ?: true
+            if (!assigneeOk) return@filter false
+
+            // Filter Time
+            if (selectedTimeGranularity == "ALL") return@filter true
+            if (selectedTimeValue.isNullOrBlank()) return@filter true
+
+            val dateToFilter = if (selectedDateBasis == "DUE_DATE") task.dueDate else task.createdAt
+            if (dateToFilter == null || dateToFilter == 0L) return@filter false
+
+            val cal = Calendar.getInstance()
+            cal.timeInMillis = dateToFilter
+
+            when (selectedTimeGranularity) {
+                "DAY" -> SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(cal.time) == selectedTimeValue
+                "MONTH" -> SimpleDateFormat("yyyy-MM", Locale.getDefault()).format(cal.time) == selectedTimeValue
+                "YEAR" -> cal.get(Calendar.YEAR).toString() == selectedTimeValue
+                else -> true
+            }
+        }
+
+        val now = System.currentTimeMillis()
+        val total = filtered.size
+
+        val done = filtered.count { it.status.equals("DONE", true) }
+
+        val todo = filtered.count { it.status.equals("TODO", true) }
+
+        val overdue = filtered.count {
+            val isNotDone = !it.status.equals("DONE", true)
+            val isNotTodo = !it.status.equals("TODO", true)
+            val isExplicitOverdue = it.status.equals("OVERDUE", true)
+            val isExpired = it.dueDate != null && it.dueDate < now
+            isNotDone && isNotTodo && (isExplicitOverdue || isExpired)
+        }
+
+        val inProgress = total - done - overdue - todo
+
+        val state = TaskDashboardUiState(total = total, done = done, inProgress = inProgress, overdue = overdue, todo = todo)
+
+        (rvSummary.adapter as? SummaryAdapter)?.submit(state)
+        updateChart(pieChart, state)
     }
 
     private fun updateChart(pieChart: PieChart, s: TaskDashboardUiState) {
         val entries = mutableListOf<PieEntry>()
         var totalCount = 0f
-        if (s.done > 0) { entries.add(PieEntry(s.done.toFloat(), "Done")); totalCount += s.done }
-        if (s.pending > 0) { entries.add(PieEntry(s.pending.toFloat(), "Pending")); totalCount += s.pending }
-        if (s.overdue > 0) { entries.add(PieEntry(s.overdue.toFloat(), "Overdue")); totalCount += s.overdue }
+
+        if (s.done > 0) {
+            entries.add(PieEntry(s.done.toFloat(), "Done"))
+            totalCount += s.done
+        }
+        if (s.inProgress > 0) {
+            entries.add(PieEntry(s.inProgress.toFloat(), "In Progress"))
+            totalCount += s.inProgress
+        }
+        if (s.todo > 0) {
+            entries.add(PieEntry(s.todo.toFloat(), "Todo"))
+            totalCount += s.todo
+        }
+        if (s.overdue > 0) {
+            entries.add(PieEntry(s.overdue.toFloat(), "Overdue"))
+            totalCount += s.overdue
+        }
 
         val ds = PieDataSet(entries, "")
         ds.colors = listOf(
             ContextCompat.getColor(requireContext(), R.color.brand_blue),
             ContextCompat.getColor(requireContext(), R.color.primary_light),
+            ContextCompat.getColor(requireContext(), R.color.dark_gray),
             ContextCompat.getColor(requireContext(), R.color.danger_500)
         )
         ds.setDrawValues(false)
+
         val pd = PieData(ds)
         pieChart.data = pd
 
-        // appearance
-        pieChart.setUsePercentValues(false) // we'll compute percent manually
+        // Appearance
+        pieChart.setUsePercentValues(false)
         pieChart.description.isEnabled = false
         pieChart.setDrawEntryLabels(false)
         pieChart.legend.isEnabled = false
@@ -384,17 +246,16 @@ class TeamManagementDashboardFragment : Fragment() {
         pieChart.holeRadius = 60f
         pieChart.setHoleColor(ContextCompat.getColor(requireContext(), android.R.color.transparent))
         pieChart.setCenterTextSize(14f)
+        pieChart.setCenterTextColor(Color.BLACK)
 
-        // default center text
-        pieChart.centerText = if (s.total > 0) "${(s.done * 100 / s.total)}% Done" else "No tasks"
+        val defaultCenterText = if (s.total > 0) "${(s.done * 100 / s.total)}% Done" else "No tasks"
+        pieChart.centerText = defaultCenterText
 
-        // animate
         pieChart.animateY(300)
         pieChart.invalidate()
 
-        // selection listener: show label + percent
-        pieChart.setOnChartValueSelectedListener(object : com.github.mikephil.charting.listener.OnChartValueSelectedListener {
-            override fun onValueSelected(e: com.github.mikephil.charting.data.Entry?, h: com.github.mikephil.charting.highlight.Highlight?) {
+        pieChart.setOnChartValueSelectedListener(object : OnChartValueSelectedListener {
+            override fun onValueSelected(e: Entry?, h: Highlight?) {
                 if (e is PieEntry && totalCount > 0f) {
                     val percent = (e.value / totalCount * 100).toInt()
                     pieChart.centerText = "${e.label}: ${percent}%"
@@ -402,8 +263,187 @@ class TeamManagementDashboardFragment : Fragment() {
             }
 
             override fun onNothingSelected() {
-                pieChart.centerText = if (s.total > 0) "${(s.done * 100 / s.total)}% Done" else "No tasks"
+                pieChart.centerText = defaultCenterText
             }
         })
+    }
+
+    private fun fetchTeamMembers(teamId: String, onComplete: () -> Unit) {
+        RetrofitClient.teamApiService.getTeamMembers(teamId).enqueue(object : Callback<List<TeamMember>> {
+            override fun onResponse(call: Call<List<TeamMember>>, response: Response<List<TeamMember>>) {
+                if (response.isSuccessful) teamMembers = response.body() ?: emptyList()
+                onComplete()
+            }
+            override fun onFailure(call: Call<List<TeamMember>>, t: Throwable) { onComplete() }
+        })
+    }
+
+    private fun generateTeamActivity() {
+        val activityPairs = mutableListOf<Pair<UiNotification, Long>>()
+        remoteTasks.forEach { task ->
+            val time = if (task.createdAt > 0) task.createdAt else 0L
+            if (time > 0) {
+                val creatorName = getMemberName(task.createdBy ?: "")
+                val notif = UiNotification(
+                    id = task.id.hashCode().toLong(),
+                    title = "New Task Created",
+                    message = "'${task.title}' was added by $creatorName",
+                    time = formatTimeAgo(time),
+                    isNew = false,
+                    dedupeKey = "task_${task.id}"
+                )
+                activityPairs.add(Pair(notif, time))
+            }
+        }
+        teamMembers.forEach { member ->
+            val time = parseIsoTime(member.joinedAt)
+            if (time > 0) {
+                val name = member.displayName ?: member.email ?: "Unknown"
+                val notif = UiNotification(
+                    id = member.id.hashCode().toLong(),
+                    title = "New Member Joined",
+                    message = "$name has joined the team",
+                    time = formatTimeAgo(time),
+                    isNew = false,
+                    dedupeKey = "member_${member.id}"
+                )
+                activityPairs.add(Pair(notif, time))
+            }
+        }
+        val sortedList = activityPairs.sortedByDescending { it.second }.map { it.first }.take(10)
+        recentActivityAdapter.replaceAll(sortedList)
+
+        val rvRecent = view?.findViewById<RecyclerView>(R.id.rvRecent)
+        rvRecent?.visibility = if (sortedList.isEmpty()) View.GONE else View.VISIBLE
+    }
+
+    private fun getMemberName(userId: String): String {
+        return teamMembers.find { it.id == userId }?.displayName
+            ?: teamMembers.find { it.id == userId }?.email
+            ?: "Someone"
+    }
+
+    private fun setupFilterListeners(view: View) {
+        val actAssignee = view.findViewById<AutoCompleteTextView>(R.id.actAssignee)
+        val actDateBasis = view.findViewById<AutoCompleteTextView>(R.id.actDateBasis)
+        val actTimeSelector = view.findViewById<AutoCompleteTextView>(R.id.actTimeSelector)
+        val chipGroupTime = view.findViewById<ChipGroup>(R.id.chipGroupTime)
+
+        actAssignee.setOnClickListener { actAssignee.showDropDown() }
+        actAssignee.setOnFocusChangeListener { _, hasFocus -> if (hasFocus) actAssignee.showDropDown() }
+        actAssignee.setOnItemClickListener { parent, _, position, _ ->
+            val sel = parent.getItemAtPosition(position) as String
+            selectedAssigneeId = assigneeDisplayToId[sel]
+            applyFiltersAndUpdateDashboard(view)
+        }
+
+        val dateBasisOptions = listOf("Due Date (Ngày hết hạn)", "Created Date (Ngày giao)")
+        val basisAdapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, dateBasisOptions)
+        actDateBasis.setAdapter(basisAdapter)
+        actDateBasis.setText(dateBasisOptions[0], false)
+        actDateBasis.setOnClickListener { actDateBasis.showDropDown() }
+        actDateBasis.setOnItemClickListener { _, _, position, _ ->
+            selectedDateBasis = if (position == 0) "DUE_DATE" else "CREATED_AT"
+            applyFiltersAndUpdateDashboard(view)
+        }
+
+        chipGroupTime.setOnCheckedChangeListener { _, checkedId ->
+            selectedTimeGranularity = when (checkedId) {
+                R.id.chipAllTime -> "ALL"
+                R.id.chipDay -> "DAY"
+                R.id.chipMonth -> "MONTH"
+                R.id.chipYear -> "YEAR"
+                else -> "ALL"
+            }
+            populateTimeValueOptions(selectedTimeGranularity)
+            applyFiltersAndUpdateDashboard(view)
+        }
+
+        actTimeSelector.setOnClickListener { actTimeSelector.showDropDown() }
+        actTimeSelector.setOnItemClickListener { parent, _, position, _ ->
+            selectedTimeValue = parent.getItemAtPosition(position) as String
+            applyFiltersAndUpdateDashboard(view)
+        }
+    }
+
+    private fun populateAssigneesDropdown() {
+        val allMemberNames = mutableSetOf<Pair<String, String>>()
+        teamMembers.forEach {
+            val name = it.displayName ?: it.email ?: "Unknown"
+            allMemberNames.add(Pair(name, it.id))
+        }
+        val displayList = ArrayList<String>()
+        displayList.add("All Members")
+        assigneeDisplayToId.clear()
+        assigneeDisplayToId["All Members"] = null
+        allMemberNames.sortedBy { it.first }.forEach { (name, id) ->
+            displayList.add(name)
+            assigneeDisplayToId[name] = id
+        }
+        val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, displayList)
+        val actAssignee = view?.findViewById<AutoCompleteTextView>(R.id.actAssignee)
+        actAssignee?.setAdapter(adapter)
+        val current = assigneeDisplayToId.entries.find { it.value == selectedAssigneeId }?.key
+        actAssignee?.setText(current ?: "All Members", false)
+    }
+
+    private fun populateTimeValueOptions(granularity: String) {
+        val actTimeSelector = view?.findViewById<AutoCompleteTextView>(R.id.actTimeSelector)
+        if (granularity == "ALL") {
+            actTimeSelector?.visibility = View.GONE
+            selectedTimeValue = null
+            return
+        }
+        actTimeSelector?.visibility = View.VISIBLE
+        val list = mutableListOf<String>()
+        val cal = Calendar.getInstance()
+        val sdfDay = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+        val sdfMonth = SimpleDateFormat("yyyy-MM", Locale.getDefault())
+
+        when (granularity) {
+            "DAY" -> for (i in 0..29) {
+                cal.time = Date()
+                cal.add(Calendar.DAY_OF_YEAR, -i)
+                list.add(sdfDay.format(cal.time))
+            }
+            "MONTH" -> for (i in 0..11) {
+                cal.time = Date()
+                cal.add(Calendar.MONTH, -i)
+                list.add(sdfMonth.format(cal.time))
+            }
+            "YEAR" -> {
+                val year = cal.get(Calendar.YEAR)
+                for (i in -1..2) list.add((year + i).toString())
+            }
+        }
+        val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, list)
+        actTimeSelector?.setAdapter(adapter)
+        if (list.isNotEmpty()) {
+            selectedTimeValue = list[0]
+            actTimeSelector?.setText(list[0], false)
+        }
+    }
+
+    private fun parseIsoTime(iso: String?): Long {
+        if (iso.isNullOrEmpty()) return 0L
+        return try {
+            val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
+            sdf.timeZone = TimeZone.getTimeZone("UTC")
+            sdf.parse(iso)?.time ?: 0L
+        } catch (e: Exception) { 0L }
+    }
+
+    private fun formatTimeAgo(time: Long): String {
+        val diff = System.currentTimeMillis() - time
+        val min = 60 * 1000
+        val hour = 60 * min
+        val day = 24 * hour
+        return when {
+            diff < 0 -> "Just now"
+            diff < min -> "Just now"
+            diff < hour -> "${diff / min}m ago"
+            diff < day -> "${diff / hour}h ago"
+            else -> "${diff / day}d ago"
+        }
     }
 }

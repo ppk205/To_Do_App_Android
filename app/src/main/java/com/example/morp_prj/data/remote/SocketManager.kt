@@ -7,7 +7,7 @@ import java.net.URISyntaxException
 
 object SocketManager {
     private const val TAG = "SocketManager"
-    private const val SERVER_URL = "http://10.0.2.2:3001" // Sử dụng IP máy nếu chạy local bằng máy thật nhee
+    private const val SERVER_URL = "http://192.168.1.5:3001/" // Sử dụng IP máy nếu chạy local bằng máy thật nhee
 
     private var mSocket: Socket? = null
 

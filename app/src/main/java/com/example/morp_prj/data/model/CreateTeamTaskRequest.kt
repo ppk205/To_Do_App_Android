@@ -15,8 +15,8 @@ data class CreateTeamTaskRequest(
     val priority: String,
     @SerializedName("assignees")
     val assignees: List<String>,
-    @SerializedName("tagsCsv")
-    val tagsCsv: String?,
+    @SerializedName("tags")
+    val tags: List<String>?,
     @SerializedName("createdBy")
     val createdBy: String
 )

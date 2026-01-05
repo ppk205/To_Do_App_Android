@@ -27,7 +27,7 @@ class TaskDashboardViewModel(private val repo: TaskRepository) : ViewModel() {
                     val now = System.currentTimeMillis()
                     val total = list.size
                     val done = list.count { it.status.equals("DONE", true) }
-                    val pending = list.count { it.status.equals("TODO", true) }
+                    val inProgress = list.count { it.status.equals("IN_PROGRESS", true) }
                     val overdue = list.count { it.deadlineAt != null && it.deadlineAt!! < now && !it.status.equals("DONE", true) }
 
                     _uiState.update { s ->
@@ -35,7 +35,7 @@ class TaskDashboardViewModel(private val repo: TaskRepository) : ViewModel() {
                             isLoading = false,
                             total = total,
                             done = done,
-                            pending = pending,
+                            inProgress = inProgress,
                             overdue = overdue,
                             recent = list.sortedByDescending { it.createdAt }.take(20)
                         )
