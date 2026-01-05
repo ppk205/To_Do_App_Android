@@ -125,7 +125,6 @@ class TeamDetailFragment : Fragment(R.layout.fragment_team_detail), NavigationVi
         val toolbarTitle = currentFragmentView.findViewById<TextView>(R.id.toolbar_title)
         toolbarTitle?.text = when(destinationId) {
             R.id.memberManagementFragment -> "Member Management"
-            R.id.joinRequestFragment -> "Join Requests"
             R.id.createTeamTaskFragment -> "Create New Task"
             R.id.assignedTasksFragment -> "Assigned Tasks"
             R.id.teamTaskManagementFragment -> "Team Task Management"
@@ -152,7 +151,6 @@ class TeamDetailFragment : Fragment(R.layout.fragment_team_detail), NavigationVi
         when (item.itemId) {
             // For Manager
             R.id.nav_member_management -> teamNavController.navigate(R.id.memberManagementFragment, args, navOptionsBuilder.build())
-            R.id.nav_join_requests -> teamNavController.navigate(R.id.joinRequestFragment, args, navOptionsBuilder.build())
             R.id.nav_create_task -> teamNavController.navigate(R.id.createTeamTaskFragment, args, navOptionsBuilder.build())
             R.id.nav_team_task_management -> teamNavController.navigate(R.id.teamTaskManagementFragment, args, navOptionsBuilder.build())
 
