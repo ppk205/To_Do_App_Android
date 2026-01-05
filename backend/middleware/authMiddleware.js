@@ -1,21 +1,10 @@
 const jwt = require('jsonwebtoken');
 
-/**
- * ========================================
- * AUTH MIDDLEWARE - OWASP MASTG Compliant
- * ========================================
- *
- * Validates JWT access tokens on protected routes
- * - Verifies signature and expiration
- * - Extracts user info from token
- * - Attaches user to request context
- */
 
-// ✅ CRITICAL: Validate JWT secret at startup
 const JWT_SECRET = process.env.JWT_SECRET;
 
 if (!JWT_SECRET) {
-    throw new Error('🔴 CRITICAL: JWT_SECRET must be defined in environment variables');
+    throw new Error('CRITICAL: JWT_SECRET must be defined in environment variables');
 }
 
 /**

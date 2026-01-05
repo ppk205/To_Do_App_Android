@@ -532,7 +532,7 @@ class VerifyOtpFragment : Fragment(R.layout.fragment_verify_otp) {
         otpExpireTimer?.cancel()
         resendCooldownTimer?.cancel()
 
-        // ✅ Hiện lại bottom navigation khi thoát nếu đã đăng nhập
+        // ✅ Chỉ hiện bottom navigation nếu đã đăng nhập
         showBottomNavigationIfLoggedIn()
     }
 
@@ -555,5 +555,10 @@ class VerifyOtpFragment : Fragment(R.layout.fragment_verify_otp) {
         } catch (e: Exception) {
             android.util.Log.e("VerifyOtpFragment", "Error showing bottom navigation", e)
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        hideBottomNavigation()
     }
 }

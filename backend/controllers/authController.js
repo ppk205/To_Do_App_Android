@@ -56,7 +56,7 @@ async function register(req, res) {
             });
         }
 
-        // ✅ CRITICAL: Wait for email to be sent (Option 1: Synchronous)
+        // CRITICAL: Wait for email to be sent (Option 1: Synchronous)
         // This ensures user only gets success response if email was actually sent
         const emailResult = await sendOTPEmail(email, otpData.otpCode, displayName);
 
@@ -272,7 +272,7 @@ async function login(req, res) {
             });
         }
 
-        // ✅ Kiểm tra user đã verified
+        // Kiểm tra user đã verified
         if (!user.verified) {
             return res.status(403).json({
                 success: false,
