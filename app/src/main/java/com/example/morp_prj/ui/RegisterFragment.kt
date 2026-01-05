@@ -13,15 +13,20 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import com.example.morp_prj.R
 import com.example.morp_prj.data.repository.AuthRepository
+import com.example.morp_prj.data.repository.SessionTaskManager
+import com.example.morp_prj.data.repository.TaskSyncRepository
 import com.example.morp_prj.utils.PreferenceManager
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputEditText
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 class RegisterFragment : Fragment(R.layout.fragment_register) {
 
     private lateinit var authRepository: AuthRepository
     private lateinit var preferenceManager: PreferenceManager
+    private lateinit var sessionTaskManager: SessionTaskManager
+    private lateinit var taskSyncRepository: TaskSyncRepository
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -33,6 +38,8 @@ class RegisterFragment : Fragment(R.layout.fragment_register) {
 
         authRepository = AuthRepository(requireContext())
         preferenceManager = PreferenceManager(requireContext())
+        sessionTaskManager = SessionTaskManager(requireContext())
+        taskSyncRepository = TaskSyncRepository(requireContext())
 
         // Back button handler
         val btnBack = view.findViewById<View>(R.id.btn_back)
@@ -195,7 +202,17 @@ class RegisterFragment : Fragment(R.layout.fragment_register) {
 
             result.onSuccess { response ->
                 if (response.success && response.userId != null && response.email != null) {
-                    // Navigate to OTP verification screen
+                    // Best-effort migrate guest tasks to new user id and push up before OTP
+                    try {
+                        lifecycleScope.launch(Dispatchers.IO) {
+                            sessionTaskManager.migrateGuestData(response.userId)
+                            runCatching { taskSyncRepository.syncUp() }
+                                .onFailure { android.util.Log.w("RegisterFragment", "syncUp after migrate failed", it) }
+                        }
+                    } catch (t: Throwable) {
+                        android.util.Log.w("RegisterFragment", "Guest migration block failed", t)
+                    }
+
                     Toast.makeText(requireContext(), response.message, Toast.LENGTH_SHORT).show()
 
                     val bundle = Bundle().apply {
@@ -244,7 +261,7 @@ class RegisterFragment : Fragment(R.layout.fragment_register) {
 
     private fun showBottomNavigationIfLoggedIn() {
         try {
-            val prefs = com.example.morp_prj.utils.PreferenceManager(requireContext())
+            val prefs = PreferenceManager(requireContext())
             val tokenStorage = com.example.morp_prj.security.SecureTokenStorage(requireContext())
             val shouldShow = prefs.isLoggedIn() || tokenStorage.hasValidRefreshToken()
             val bottomNav = activity?.findViewById<View>(R.id.bottom_nav_view)

@@ -7,7 +7,10 @@ import com.example.morp_prj.data.db.TaskEntity
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
-class TaskDashboardViewModel(private val repo: TaskRepository) : ViewModel() {
+class TaskDashboardViewModel(
+    private val repo: TaskRepository,
+    private val userId: String
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(TaskDashboardUiState(isLoading = true))
     val uiState: StateFlow<TaskDashboardUiState> = _uiState.asStateFlow()
@@ -21,14 +24,28 @@ class TaskDashboardViewModel(private val repo: TaskRepository) : ViewModel() {
             _uiState.update { it.copy(isLoading = true, error = null) }
 
             try {
-                val flow: Flow<List<TaskEntity>> = repo.observeAllLocal("guest")
+                val flow: Flow<List<TaskEntity>> = repo.observeAllByUser(userId)
 
                 flow.collect { list ->
                     val now = System.currentTimeMillis()
+
+                    // === ✅ NEW UNIFIED BUSINESS LOGIC ===
                     val total = list.size
-                    val done = list.count { it.status.equals("DONE", true) }
-                    val inProgress = list.count { it.status.equals("IN_PROGRESS", true) }
-                    val overdue = list.count { it.deadlineAt != null && it.deadlineAt!! < now && !it.status.equals("DONE", true) }
+                    val done = list.count { it.status.equals("DONE", ignoreCase = true) }
+
+                    // In Progress: Task chưa DONE và deadline còn hạn (trong tương lai)
+                    val inProgress = list.count {
+                        !it.status.equals("DONE", ignoreCase = true) &&
+                        it.deadlineAt != null &&
+                        it.deadlineAt!! > now
+                    }
+
+                    // Overdue: Task chưa DONE và deadline đã quá hạn (trong quá khứ)
+                    val overdue = list.count {
+                        !it.status.equals("DONE", ignoreCase = true) &&
+                        it.deadlineAt != null &&
+                        it.deadlineAt!! < now
+                    }
 
                     _uiState.update { s ->
                         s.copy(

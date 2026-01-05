@@ -93,7 +93,7 @@ class LoginFragment : Fragment(R.layout.fragment_login) {
         // Show loading
         try {
             btnLogin?.isEnabled = false
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             // ignore UI update errors
         }
 
@@ -101,7 +101,7 @@ class LoginFragment : Fragment(R.layout.fragment_login) {
             Log.e("LoginFragment", "Unhandled login coroutine error", throwable)
             try {
                 Toast.makeText(requireContext(), "Lỗi nội bộ: ${throwable.message}", Toast.LENGTH_LONG).show()
-            } catch (ex: Exception) {
+            } catch (_: Exception) {
                 // ignore
             }
         }
@@ -123,14 +123,13 @@ class LoginFragment : Fragment(R.layout.fragment_login) {
             // Hide loading
             try {
                 btnLogin?.isEnabled = true
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 // ignore
             }
 
             result.onSuccess { response ->
                 try {
                     if (response.success && response.user != null) {
-                        // Save user data - guard nullability
                         val user = response.user
                         try {
                             preferenceManager.saveLoginData(
@@ -141,17 +140,25 @@ class LoginFragment : Fragment(R.layout.fragment_login) {
                                 token = response.token
                             )
 
-                            // ✅ Đánh dấu đã xem onboarding sau khi đăng nhập thành công
                             preferenceManager.setHasSeenOnboarding(true)
 
-                            // Apply session task rules (show this user's tasks; later can trigger sync-down)
                             try {
                                 sessionTaskManager.onLoginSuccess(user.id)
                             } catch (t: Throwable) {
                                 Log.w("LoginFragment", "SessionTaskManager.onLoginSuccess failed", t)
                             }
 
-                            // ✅ Sync notifications after login so the Notifications tab is up-to-date
+                            // Migrate guest tasks to real user, then best-effort syncUp
+                            try {
+                                withContext(Dispatchers.IO) {
+                                    sessionTaskManager.migrateGuestData(user.id)
+                                    runCatching { taskSyncRepository.syncUp() }
+                                        .onFailure { Log.w("LoginFragment", "syncUp after migration failed", it) }
+                                }
+                            } catch (t: Throwable) {
+                                Log.w("LoginFragment", "Guest migration block failed", t)
+                            }
+
                             try {
                                 withContext(Dispatchers.IO) {
                                     NotificationRepository(requireContext()).syncFromServer(showDeviceNotifications = false)
@@ -160,7 +167,6 @@ class LoginFragment : Fragment(R.layout.fragment_login) {
                                 Log.w("LoginFragment", "Auto notifications sync after login failed", t)
                             }
 
-                            // ✅ Auto refresh đúng 1 lần sau login để hiển thị task ngay
                             try {
                                 withContext(Dispatchers.IO) {
                                     taskSyncRepository.syncDown()
@@ -178,14 +184,13 @@ class LoginFragment : Fragment(R.layout.fragment_login) {
                         } catch (_: Exception) {
                         }
 
-                        // Ensure fragment still added before navigating
                         if (isAdded) {
                             findNavController().navigate(R.id.action_login_to_home)
                         }
                     } else {
                         try {
                             Toast.makeText(requireContext(), response.message, Toast.LENGTH_SHORT).show()
-                        } catch (e: Exception) {
+                        } catch (_: Exception) {
                             // ignore
                         }
                     }
@@ -193,7 +198,7 @@ class LoginFragment : Fragment(R.layout.fragment_login) {
                     Log.e("LoginFragment", "Error handling login result", e)
                     try {
                         Toast.makeText(requireContext(), "Lỗi xử lý dữ liệu đăng nhập", Toast.LENGTH_LONG).show()
-                    } catch (ex: Exception) {
+                    } catch (_: Exception) {
                         // ignore
                     }
                 }
@@ -205,7 +210,7 @@ class LoginFragment : Fragment(R.layout.fragment_login) {
                         "Lỗi: ${error.message ?: "Không thể kết nối đến server"}",
                         Toast.LENGTH_LONG
                     ).show()
-                } catch (e: Exception) {
+                } catch (_: Exception) {
                     // ignore
                 }
             }
@@ -236,7 +241,7 @@ class LoginFragment : Fragment(R.layout.fragment_login) {
 
     private fun showBottomNavigationIfLoggedIn() {
         try {
-            val prefs = com.example.morp_prj.utils.PreferenceManager(requireContext())
+            val prefs = PreferenceManager(requireContext())
             val tokenStorage = com.example.morp_prj.security.SecureTokenStorage(requireContext())
             val shouldShow = prefs.isLoggedIn() || tokenStorage.hasValidRefreshToken()
             val bottomNav = activity?.findViewById<View>(R.id.bottom_nav_view)

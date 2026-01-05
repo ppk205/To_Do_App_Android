@@ -52,18 +52,6 @@
                 app:layout_constraintStart_toStartOf="@id/tvWelcome"
                 app:layout_constraintTop_toBottomOf="@id/tvWelcome" />
 
-            <ImageView
-                android:id="@+id/ivNotification"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:padding="8dp"
-                android:background="@drawable/bg_circle_green"
-                android:src="@drawable/ic_notification"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:tint="@color/white"/>
-
         </androidx.constraintlayout.widget.ConstraintLayout>
 
         <!-- Search Bar -->
@@ -236,17 +224,6 @@
             android:textStyle="bold"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/hsvStatus" />
-
-        <TextView
-            android:id="@+id/tvSeeAll"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="24dp"
-            android:text="See All"
-            android:textColor="#246BFD"
-            android:textSize="14sp"
-            app:layout_constraintBaseline_toBaselineOf="@id/tvRecentTask"
-            app:layout_constraintEnd_toEndOf="parent" />
 
         <!-- Task List RecyclerView -->
         <androidx.recyclerview.widget.RecyclerView

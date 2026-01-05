@@ -37,6 +37,7 @@ import com.github.mikephil.charting.data.PieEntry
 import com.github.mikephil.charting.highlight.Highlight
 import com.github.mikephil.charting.listener.OnChartValueSelectedListener
 import com.google.android.material.chip.ChipGroup
+import com.example.morp_prj.utils.PreferenceManager
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -79,10 +80,12 @@ class TeamManagementDashboardFragment : Fragment() {
 
             val db = AppDatabase.getInstance(requireContext())
             val repo = TaskRepository(db.taskDao())
+            val prefs = PreferenceManager(requireContext())
+            val userId = if (prefs.isGuest()) PreferenceManager.GUEST_USER_ID else prefs.getUserId() ?: PreferenceManager.GUEST_USER_ID
             val factory = object : ViewModelProvider.Factory {
                 override fun <T : ViewModel> create(modelClass: Class<T>): T {
                     @Suppress("UNCHECKED_CAST")
-                    return TaskDashboardViewModel(repo) as T
+                    return TaskDashboardViewModel(repo, userId) as T
                 }
             }
             viewModel = ViewModelProvider(this, factory).get(TaskDashboardViewModel::class.java)

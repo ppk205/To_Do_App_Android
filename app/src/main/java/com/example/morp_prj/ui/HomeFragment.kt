@@ -203,32 +203,29 @@ class HomeFragment : Fragment() {
     private fun loadOverviewCounts() {
         val userId = currentUserId
         viewLifecycleOwner.lifecycleScope.launch {
-            // Observe TODO count for current user
-            launch {
-                repository.observeCountByStatusForUser(userId, "TODO")
-                    .distinctUntilChanged()
-                    .collect { count ->
-                        tvTodoCount.text = resources.getQuantityString(R.plurals.tasks_count, count, count)
-                    }
-            }
+            // === ✅ NEW UNIFIED BUSINESS LOGIC ===
+            // Observe toàn bộ task list để tính toán chính xác theo logic thống nhất
+            repository.observeAllByUser(userId)
+                .distinctUntilChanged()
+                .collect { tasks ->
+                    val now = System.currentTimeMillis()
 
-            // Observe IN_PROGRESS count for current user
-            launch {
-                repository.observeCountByStatusForUser(userId, "IN_PROGRESS")
-                    .distinctUntilChanged()
-                    .collect { count ->
-                        tvInProgressCount.text = resources.getQuantityString(R.plurals.tasks_count, count, count)
-                    }
-            }
+                    // TODO count - task có status TODO
+                    val todoCount = tasks.count { it.status.equals("TODO", ignoreCase = true) }
+                    tvTodoCount.text = resources.getQuantityString(R.plurals.tasks_count, todoCount, todoCount)
 
-            // Observe DONE count for current user
-            launch {
-                repository.observeCountByStatusForUser(userId, "DONE")
-                    .distinctUntilChanged()
-                    .collect { count ->
-                        tvCompletedCount.text = resources.getQuantityString(R.plurals.tasks_count, count, count)
+                    // IN_PROGRESS count - Task chưa DONE và còn deadline trong tương lai
+                    val inProgressCount = tasks.count {
+                        !it.status.equals("DONE", ignoreCase = true) &&
+                        it.deadlineAt != null &&
+                        it.deadlineAt!! > now
                     }
-            }
+                    tvInProgressCount.text = resources.getQuantityString(R.plurals.tasks_count, inProgressCount, inProgressCount)
+
+                    // DONE count - task có status DONE
+                    val doneCount = tasks.count { it.status.equals("DONE", ignoreCase = true) }
+                    tvCompletedCount.text = resources.getQuantityString(R.plurals.tasks_count, doneCount, doneCount)
+                }
         }
     }
 
@@ -236,6 +233,8 @@ class HomeFragment : Fragment() {
         toDoAdapter = ToDoAdapter(
             onCheckedChanged = { todo, isChecked ->
                 viewLifecycleOwner.lifecycleScope.launch {
+                    // Khi check → DONE, khi uncheck → TODO (mặc định)
+                    // Lưu ý: Không thể khôi phục IN_PROGRESS vì không lưu trạng thái trước đó
                     val newStatus = if (isChecked) "DONE" else "TODO"
                     repository.updateStatus(todo.id, newStatus)
                 }
@@ -255,8 +254,8 @@ class HomeFragment : Fragment() {
     private fun loadTasksFromDatabase() {
         val userId = currentUserId
 
-
-        // Get today's start and end time
+        // === ✅ TODAY'S TASKS LOGIC ===
+        // Tính toán khoảng thời gian của ngày hôm nay (từ 00:00:00 đến 23:59:59)
         val calendar = Calendar.getInstance()
         calendar.set(Calendar.HOUR_OF_DAY, 0)
         calendar.set(Calendar.MINUTE, 0)
@@ -267,21 +266,22 @@ class HomeFragment : Fragment() {
         calendar.add(Calendar.DAY_OF_MONTH, 1)
         val endOfDay = calendar.timeInMillis
 
-        // Load tasks with deadline today for current user
+        Log.d("HomeFragment", "Loading Today's Tasks for user $userId (deadline between $startOfDay and $endOfDay)")
+
+        // Load tasks có deadline trong ngày hôm nay
         viewLifecycleOwner.lifecycleScope.launch {
             repository.observeByDateRangeForUser(userId, startOfDay, endOfDay)
                 .map { list ->
-                    Log.d("HomeFragment", "Loaded ${list.size} today's tasks for user $userId")
+                    Log.d("HomeFragment", "Loaded ${list.size} today's tasks from database")
                     list.map { it.toUiItem() }
                 }
                 .collect { tasks ->
-                    Log.d("HomeFragment", "Mapped ${tasks.size} today's tasks to UI items")
+                    Log.d("HomeFragment", "Displaying ${tasks.size} today's tasks")
                     latestAllItems = tasks
                     refreshUi()
                 }
         }
     }
-
     private fun refreshUi() {
         val filtered = applyFilters(latestAllItems)
         Log.d("HomeFragment", "Displaying ${filtered.size} tasks after filter (query='$queryText')")
@@ -300,16 +300,7 @@ class HomeFragment : Fragment() {
     }
 
     private fun setupListeners(root: View) {
-        val ivNotification = root.findViewById<ImageView>(R.id.ivNotification)
-        val tvSeeAll = root.findViewById<TextView>(R.id.tvSeeAll)
         val tvViewDashboard = root.findViewById<TextView>(R.id.tvViewDashboard)
-
-        ivNotification.setOnClickListener {
-            Toast.makeText(context, "Notifications clicked", Toast.LENGTH_SHORT).show()
-        }
-        tvSeeAll.setOnClickListener {
-            Toast.makeText(context, "See All clicked", Toast.LENGTH_SHORT).show()
-        }
         tvViewDashboard.setOnClickListener {
             findNavController().navigate(R.id.action_home_to_dashboardDetail)
         }
