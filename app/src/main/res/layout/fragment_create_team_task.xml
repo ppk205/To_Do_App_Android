@@ -148,19 +148,6 @@
                     android:maxLines="1" />
             </com.google.android.material.textfield.TextInputLayout>
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnAttachFile"
-                android:layout_width="match_parent"
-                android:layout_height="56dp"
-                android:layout_marginTop="24dp"
-                android:text="Attach File"
-                android:textAllCaps="false"
-                android:textColor="#212121"
-                app:backgroundTint="#F5F5F5"
-                app:icon="@drawable/ic_attach"
-                app:iconGravity="textStart"
-                app:iconTint="#757575" />
-
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 

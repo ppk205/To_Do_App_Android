@@ -28,5 +28,11 @@ data class TeamTask(
     val assignees: List<User> = emptyList(),
 
     @SerializedName("tags")
-    val tags: List<String>? = null
+    val tags: List<String>? = null,
+
+    @SerializedName("createdAt")
+    val createdAt: Long = 0,
+
+    @SerializedName("createdBy")
+    val createdBy: String? = null
 )

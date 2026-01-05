@@ -1,4 +1,4 @@
-// models/Team.js
+// models/team.js
 const db = require('../config/database');
 
 const Team = {
@@ -73,18 +73,45 @@ const Team = {
     return db.query(query, [id, name, description, tagsJson, createdBy, inviteCode, avatarUrl || null]);
   },
 
-  update: (teamId, teamData) => {
-    const { name, description, tags } = teamData;
-    const tagsJson = Array.isArray(tags) ? JSON.stringify(tags) : tags;
+  // --- HÀM UPDATE ĐÃ ĐƯỢC SỬA (DYNAMIC UPDATE) ---
+  update: async (teamId, data) => {
+    // 1. Lấy danh sách các cặp key-value từ data gửi lên
+    const keys = Object.keys(data);
+    const values = [];
+    const fields = [];
 
-    const query = 'UPDATE team SET name = ?, description = ?, tags = ? WHERE id = ?';
-    return db.query(query, [name, description, tagsJson, teamId]);
+    // 2. Nếu không có dữ liệu gì để update thì return luôn
+    if (keys.length === 0) return;
+
+    // 3. Xây dựng câu query động
+    keys.forEach((key) => {
+        fields.push(`${key} = ?`);
+        // Xử lý đặc biệt cho mảng tags
+        if (key === 'tags' && Array.isArray(data[key])) {
+            values.push(JSON.stringify(data[key]));
+        } else {
+            values.push(data[key]);
+        }
+    });
+
+    // Thêm teamId vào cuối mảng values cho điều kiện WHERE
+    values.push(teamId);
+
+    // 4. Tạo câu SQL
+    const sql = `UPDATE team SET ${fields.join(', ')} WHERE id = ?`;
+
+    return db.execute(sql, values);
   },
 
   addMember: (memberData) => {
     const { id, teamId, userId, role, status = 'pending' } = memberData;
     const query = 'INSERT INTO teammember (id, teamId, userId, role, status, isPinned, joinedAt) VALUES (?, ?, ?, ?, ?, 0, NOW())';
     return db.query(query, [id, teamId, userId, role, status]);
+  },
+
+  // Thêm hàm delete vào trong object Team luôn
+  delete: async (teamId) => {
+    await db.execute('DELETE FROM team WHERE id = ?', [teamId]);
   }
 };
 

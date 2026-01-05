@@ -48,4 +48,8 @@ router.get('/:teamId', authenticateToken, teamController.getTeamDetail);
 // GET /team/:teamId/messages
 router.get('/:teamId/messages', authenticateToken, teamController.getTeamMessages);
 
+router.put('/:teamId/invite-code', authenticateToken, teamController.regenerateInviteCode);
+
+router.delete('/:teamId', authenticateToken, teamController.deleteTeam);
+
 module.exports = router;

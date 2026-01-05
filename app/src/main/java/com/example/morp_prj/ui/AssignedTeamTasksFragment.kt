@@ -48,7 +48,7 @@ class AssignedTeamTasksFragment : Fragment(R.layout.fragment_assigned_team_tasks
     private var selectedDateMillis: Long? = System.currentTimeMillis()
     private var statusFilter: String? = null
 
-    // --- LOGIC SORT ---
+    // sort
     enum class SortType { TIME, PRIORITY }
     enum class SortOrder { NONE, DESC, ASC }
 
@@ -58,7 +58,7 @@ class AssignedTeamTasksFragment : Fragment(R.layout.fragment_assigned_team_tasks
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // 1. Init UI References
+        // Init UI References
         rvDateSelector = view.findViewById(R.id.rvDateSelector)
         rvTasks = view.findViewById(R.id.rvAssignedTasks)
         btnPickDate = view.findViewById(R.id.btnPickDate)
@@ -69,12 +69,12 @@ class AssignedTeamTasksFragment : Fragment(R.layout.fragment_assigned_team_tasks
         progressBar = view.findViewById(R.id.progressBar)
         tvEmpty = view.findViewById(R.id.tvEmptyState)
 
-        // 2. Setup Logic
+        // Setup Logic
         setupDateSelector()
         setupTaskRecyclerView()
         setupControls()
 
-        // 3. Init ViewModel & Data
+        // Init ViewModel & Data
         viewModel = ViewModelProvider(requireActivity())[TeamTaskViewModel::class.java]
         val teamId = arguments?.getString("teamId")
         if (teamId != null) {
@@ -83,8 +83,6 @@ class AssignedTeamTasksFragment : Fragment(R.layout.fragment_assigned_team_tasks
             Toast.makeText(context, "Team ID missing", Toast.LENGTH_SHORT).show()
         }
     }
-
-    // --- CÁC HÀM SETUP (ĐÃ ĐƯỢC ĐỊNH NGHĨA LẠI ĐẦY ĐỦ) ---
 
     private fun setupDateSelector() {
         dateList.clear()
@@ -191,11 +189,9 @@ class AssignedTeamTasksFragment : Fragment(R.layout.fragment_assigned_team_tasks
 
         // Menu Sidebar
         btnMenu.setOnClickListener {
-            requireActivity().findViewById<DrawerLayout>(R.id.drawer_layout)?.openDrawer(GravityCompat.START)
+            requireActivity().findViewById<DrawerLayout>(R.id.drawer_layout)?.openDrawer(GravityCompat.END)
         }
     }
-
-    // --- LOGIC HELPER ---
 
     private fun cycleSortOrder() {
         currentSortOrder = when (currentSortOrder) {
@@ -242,7 +238,6 @@ class AssignedTeamTasksFragment : Fragment(R.layout.fragment_assigned_team_tasks
     }
 
     private fun updateSortIcon() {
-        // FIX: Đã thay colorPrimary thành brand_blue (có trong file colors.xml của bạn)
         val activeColor = ContextCompat.getColor(requireContext(), R.color.brand_blue)
         val inactiveColor = ContextCompat.getColor(requireContext(), R.color.text_secondary)
 
@@ -271,7 +266,6 @@ class AssignedTeamTasksFragment : Fragment(R.layout.fragment_assigned_team_tasks
             applyFiltersAndSort()
         }
 
-        // Fix: Sử dụng observe cho errorMessage
         viewModel.errorMessage.observe(viewLifecycleOwner) { error ->
             if (error != null) {
                 progressBar.visibility = View.GONE
@@ -317,10 +311,18 @@ class AssignedTeamTasksFragment : Fragment(R.layout.fragment_assigned_team_tasks
                     if (comparison == 0) comparison = p1.compareTo(p2)
                 }
 
-                if (currentSortOrder == SortOrder.DESC) {
-                    comparison * -1
+                if (currentSortType == SortType.PRIORITY){
+                    if (currentSortOrder == SortOrder.DESC) {
+                        comparison * -1
+                    } else {
+                        comparison
+                    }
                 } else {
-                    comparison
+                    if (currentSortOrder == SortOrder.ASC) {
+                        comparison * -1
+                    } else {
+                        comparison
+                    }
                 }
             })
         }

@@ -6,8 +6,10 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageButton
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
+import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.morp_prj.R
 import com.example.morp_prj.data.model.TeamTask
@@ -22,6 +24,8 @@ class TeamTaskDetailFragment : Fragment() {
 
     private lateinit var viewModel: TeamTaskViewModel
 
+    private lateinit var btnBack : ImageButton
+
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentTeamTaskDetailBinding.inflate(inflater, container, false)
         return binding.root
@@ -31,6 +35,7 @@ class TeamTaskDetailFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         viewModel = ViewModelProvider(requireActivity())[TeamTaskViewModel::class.java]
+        btnBack = view.findViewById(R.id.btnBack)
 
         val taskId = arguments?.getString("taskId")
         val teamId = arguments?.getString("teamId")
@@ -49,6 +54,10 @@ class TeamTaskDetailFragment : Fragment() {
 
         if (viewModel.tasks.value.isNullOrEmpty() && !teamId.isNullOrBlank()) {
             viewModel.fetchTasks(teamId)
+        }
+
+        btnBack.setOnClickListener {
+            findNavController().navigateUp()
         }
     }
 

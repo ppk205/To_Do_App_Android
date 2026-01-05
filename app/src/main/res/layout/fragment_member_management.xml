@@ -41,9 +41,8 @@
 
         <ImageButton
             android:id="@+id/btnMore"
-            android:layout_width="48dp"
+            android:layout_width="24dp"
             android:layout_height="48dp"
-            android:layout_marginEnd="8dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="More Options"
             android:src="@drawable/ic_more_vert"

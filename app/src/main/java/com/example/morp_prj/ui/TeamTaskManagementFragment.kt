@@ -223,7 +223,7 @@ class TeamTaskManagementFragment : Fragment(R.layout.fragment_team_task_manageme
 
         // Menu
         btnMenu.setOnClickListener {
-            requireActivity().findViewById<DrawerLayout>(R.id.drawer_layout)?.openDrawer(GravityCompat.START)
+            requireActivity().findViewById<DrawerLayout>(R.id.drawer_layout)?.openDrawer(GravityCompat.END)
         }
     }
 
