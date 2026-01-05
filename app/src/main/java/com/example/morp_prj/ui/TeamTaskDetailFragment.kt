@@ -1,13 +1,15 @@
 package com.example.morp_prj.ui
 
+import android.content.res.ColorStateList
+import android.graphics.Color
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.content.res.ColorStateList
-import android.graphics.Color
+import android.widget.ImageButton
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
+import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.morp_prj.R
 import com.example.morp_prj.data.model.TeamTask
@@ -22,6 +24,8 @@ class TeamTaskDetailFragment : Fragment() {
 
     private lateinit var viewModel: TeamTaskViewModel
 
+    private lateinit var btnBack : ImageButton
+
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentTeamTaskDetailBinding.inflate(inflater, container, false)
         return binding.root
@@ -30,31 +34,30 @@ class TeamTaskDetailFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Kết nối vào Shared ViewModel
         viewModel = ViewModelProvider(requireActivity())[TeamTaskViewModel::class.java]
+        btnBack = view.findViewById(R.id.btnBack)
 
-        // Lấy taskId và optional teamId từ bundle
         val taskId = arguments?.getString("taskId")
         val teamId = arguments?.getString("teamId")
 
-        // Quan sát danh sách task
         viewModel.tasks.observe(viewLifecycleOwner) { tasks ->
             val task = tasks.find { it.id == taskId }
 
-            // If found, render full details using the helper
             if (task != null) {
                 displayTaskDetails(task)
             } else {
-                // If not found and we have a teamId, attempt to fetch tasks for that team
                 if (!teamId.isNullOrBlank()) {
                     viewModel.fetchTasks(teamId)
                 }
             }
         }
 
-        // If initial dataset is empty, we also trigger a fetch when teamId is provided
         if (viewModel.tasks.value.isNullOrEmpty() && !teamId.isNullOrBlank()) {
             viewModel.fetchTasks(teamId)
+        }
+
+        btnBack.setOnClickListener {
+            findNavController().navigateUp()
         }
     }
 
@@ -62,24 +65,20 @@ class TeamTaskDetailFragment : Fragment() {
         binding.tvTitle.text = task.title
         binding.tvDescription.text = task.description ?: "No description provided."
 
-        // Date formatting
         task.dueDate?.let {
-            val sdf = SimpleDateFormat("dd-MM-yyyy  |  HH:MM", Locale.getDefault())
+            val sdf = SimpleDateFormat("dd-MM-yyyy  |  HH:mm", Locale.getDefault())
             binding.tvDueDate.text = sdf.format(Date(it))
         } ?: run {
             binding.tvDueDate.text = "No deadline"
         }
 
-        // Priority & Status Styling
         setupBadges(task)
 
-        // Tags: render tagsCsv into chips
         binding.chipGroupTags.removeAllViews()
-        task.tagsCsv?.let { csv ->
-            val tags = csv.split(",").map { it.trim() }.filter { it.isNotEmpty() }
-            for (tag in tags) {
+        task.tags?.forEach { tagText ->
+            if (tagText.isNotBlank()) {
                 val chip = Chip(requireContext())
-                chip.text = tag
+                chip.text = tagText
                 chip.isClickable = false
                 chip.isCheckable = false
                 chip.setTextColor(Color.DKGRAY)
@@ -90,7 +89,7 @@ class TeamTaskDetailFragment : Fragment() {
         }
 
         binding.rvAssignees.layoutManager = LinearLayoutManager(context)
-        val assigneeAdapter = AssigneeAdapter(task.assignees) // task.assignees là List<User>
+        val assigneeAdapter = AssigneeAdapter(task.assignees)
         binding.rvAssignees.adapter = assigneeAdapter
     }
 

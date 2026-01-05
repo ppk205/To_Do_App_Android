@@ -9,7 +9,7 @@
         android:id="@+id/teamDashboardFragment"
         android:name="com.example.morp_prj.ui.dashboard.TeamManagementDashboardFragment"
         android:label="Team Manager Dashboard"
-        tools:layout="@layout/fragment_task_dashboard">
+        tools:layout="@layout/fragment_team_dashboard">
         <argument
             android:name="teamId"
             app:argType="string"
@@ -35,17 +35,6 @@
             android:defaultValue="" />
         <argument
             android:name="inviteCode"
-            app:argType="string"
-            android:defaultValue="" />
-    </fragment>
-
-    <fragment
-        android:id="@+id/joinRequestFragment"
-        android:name="com.example.morp_prj.ui.JoinRequestFragment"
-        android:label="Join Requests"
-        tools:layout="@layout/fragment_join_requests">
-        <argument
-            android:name="teamId"
             app:argType="string"
             android:defaultValue="" />
     </fragment>
@@ -99,5 +88,31 @@
         <argument
             android:name="taskId"
             app:argType="string" />
+    </fragment>
+    <fragment
+        android:id="@+id/teamChatFragment"
+        android:name="com.example.morp_prj.ui.chat.TeamChatFragment"
+        android:label="Team Chat"
+        tools:layout="@layout/fragment_team_chat">
+        <argument
+            android:name="teamId"
+            app:argType="string" />
+        <argument
+            android:name="teamName"
+            app:argType="string"
+            android:defaultValue="Team Chat" />
+    </fragment>
+    <fragment
+        android:id="@+id/teamSettingsFragment"
+        android:name="com.example.morp_prj.ui.TeamSettingsFragment"
+        android:label="Team Chat"
+        tools:layout="@layout/fragment_team_settings">
+        <argument
+            android:name="teamId"
+            app:argType="string" />
+        <argument
+            android:name="teamName"
+            app:argType="string"
+            android:defaultValue="Team Chat" />
     </fragment>
 </navigation>

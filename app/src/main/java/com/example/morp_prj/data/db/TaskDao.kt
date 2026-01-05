@@ -1,11 +1,13 @@
 package com.example.morp_prj.data.db
 
+import com.example.morp_prj.utils.PreferenceManager
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
+import com.example.morp_prj.data.db.SyncState
 
 @Dao
 interface TaskDao {
@@ -106,4 +108,12 @@ interface TaskDao {
         "SELECT * FROM tasks WHERE userId = :userId AND deadlineAt IS NOT NULL AND deadlineAt >= :fromMillis AND deadlineAt <= :toMillis ORDER BY deadlineAt ASC"
     )
     suspend fun getDueSoonForUser(userId: String, fromMillis: Long, toMillis: Long): List<TaskEntity>
+
+    @Query("UPDATE tasks SET userId = :newUserId, isFromServer = 0, syncState = :pendingState, updatedAt = :updatedAt WHERE userId = :guestUserId")
+    suspend fun migrateGuestTasks(
+        guestUserId: String = PreferenceManager.GUEST_USER_ID,
+        newUserId: String,
+        pendingState: String = SyncState.PENDING.name,
+        updatedAt: Long = System.currentTimeMillis()
+    ): Int
 }

@@ -2,160 +2,138 @@ package com.example.morp_prj.ui
 
 import android.content.res.ColorStateList
 import android.graphics.Color
+import android.graphics.Paint
+import android.view.Gravity
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
-import android.widget.LinearLayout
+import android.widget.PopupMenu
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
-import com.bumptech.glide.Glide
 import com.example.morp_prj.R
 import com.example.morp_prj.data.model.TeamTask
-import com.example.morp_prj.databinding.ItemTeamTaskManagementBinding
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import com.example.morp_prj.utils.DateUtils
+import com.google.android.material.card.MaterialCardView
 
 class TeamTaskManagementAdapter(
     private var tasks: List<TeamTask> = emptyList(),
-    // updated callback to include the itemView for animation before navigate
-    private val onTaskClick: ((TeamTask, android.view.View) -> Unit)? = null
+    private val onTaskClick: ((TeamTask) -> Unit)? = null,
+    private val onStatusChange: ((TeamTask, String) -> Unit)? = null,
+    private val onEditClick: ((TeamTask) -> Unit)? = null,
+    private val onDeleteClick: ((TeamTask) -> Unit)? = null
 ) : RecyclerView.Adapter<TeamTaskManagementAdapter.ViewHolder>() {
+
+    private val pastelColors = listOf(
+        R.color.pastel_yellow,
+        R.color.pastel_gray,
+        R.color.pastel_green,
+        R.color.pastel_purple
+    )
 
     fun submitList(newTasks: List<TeamTask>) {
         tasks = newTasks
         notifyDataSetChanged()
     }
 
-    inner class ViewHolder(val binding: ItemTeamTaskManagementBinding) :
-        RecyclerView.ViewHolder(binding.root) {
+    inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+        val tvTitle: TextView = view.findViewById(R.id.tvTaskTitle)
+        val tvDesc: TextView = view.findViewById(R.id.tvTaskDesc)
+        val tvTime: TextView = view.findViewById(R.id.tvTime)
+        val tvPriority: TextView = view.findViewById(R.id.tvPriorityMini)
+        val cardTask: MaterialCardView = view.findViewById(R.id.cardTask)
+        val ivDot: ImageView = view.findViewById(R.id.ivTimelineDot)
 
-        fun bind(task: TeamTask) {
-            binding.tvTitle.text = task.title
-            
-            // Format Date
-            if (task.dueDate != null) {
-                val sdf = SimpleDateFormat("dd-MM-yyyy  |  HH:MM", Locale.getDefault())
-                binding.tvDueDate.text = "Due: ${sdf.format(Date(task.dueDate))}"
-            } else {
-                binding.tvDueDate.text = "No Due Date"
-            }
+        fun bind(task: TeamTask, position: Int) {
+            tvTitle.text = task.title
+            tvDesc.text = task.description ?: ""
 
-            // Priority Badge
-            binding.tvPriorityBadge.text = task.priority
-            when (task.priority.uppercase()) {
-                "HIGH" -> binding.tvPriorityBadge.setBackgroundResource(R.drawable.bg_priority_high)
-                "MEDIUM" -> binding.tvPriorityBadge.setBackgroundResource(R.drawable.bg_priority_medium) // Reuse existing or default
-                "LOW" -> binding.tvPriorityBadge.setBackgroundResource(R.drawable.bg_priority_low)
-                else -> binding.tvPriorityBadge.setBackgroundColor(Color.GRAY)
-            }
+            tvPriority.text = task.priority.uppercase()
+            tvPriority.setTextColor(Color.parseColor(
+                when(task.priority.uppercase()) {
+                    "HIGH" -> "#D32F2F"
+                    "LOW" -> "#388E3C"
+                    else -> "#F57C00"
+                }
+            ))
 
-            // Status Badge Logic
-            // Check overdue first
-            val isOverdue = task.dueDate != null && task.dueDate < System.currentTimeMillis() && task.status.uppercase() != "DONE"
-            
-            if (isOverdue) {
-                binding.tvStatusBadge.text = "Overdue"
-                binding.tvStatusBadge.setBackgroundResource(R.drawable.bg_badge_red)
-            } else {
-                binding.tvStatusBadge.text = task.status
-                when (task.status.uppercase()) {
-                    "IN_PROGRESS" -> binding.tvStatusBadge.setBackgroundResource(R.drawable.bg_status_progress)
-                    "TODO" -> binding.tvStatusBadge.setBackgroundResource(R.drawable.bg_todo_tag)
-                    "DONE" -> binding.tvStatusBadge.setBackgroundResource(R.drawable.bg_circle_green)
-                    else -> binding.tvStatusBadge.setBackgroundColor(Color.LTGRAY)
+            task.dueDate?.let {
+                tvTime.text = DateUtils.formatTime(it)
+            } ?: run { tvTime.text = "--:--" }
+
+            val status = task.status.uppercase()
+            val isOverdue = task.dueDate != null && task.dueDate < System.currentTimeMillis() && status != "DONE"
+
+            tvTitle.paintFlags = tvTitle.paintFlags and Paint.STRIKE_THRU_TEXT_FLAG.inv()
+            cardTask.alpha = 1.0f
+
+            when {
+                status == "DONE" || status == "COMPLETED" -> {
+                    ivDot.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#4CAF50")) // Green
+                    ivDot.setImageResource(R.drawable.ic_check)
+                    cardTask.alpha = 0.6f
+                    tvTitle.paintFlags = tvTitle.paintFlags or Paint.STRIKE_THRU_TEXT_FLAG
+                }
+                status == "IN_PROGRESS" -> {
+                    ivDot.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#FF9800")) // Orange
+                    ivDot.setImageResource(R.drawable.ic_in_progress)
+                }
+                isOverdue -> {
+                    ivDot.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#F44336")) // Red
+                    ivDot.setImageDrawable(null)
+                }
+                else -> { // TODO
+                    ivDot.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#BDBDBD")) // Grey
+                    ivDot.setImageDrawable(null)
                 }
             }
 
-            // Avatars Logic
-            binding.layoutAvatars.removeAllViews()
-            val maxAvatars = 3
-            val assignees = task.assignees
-            val displayCount = if (assignees.size > maxAvatars) maxAvatars else assignees.size
+            if (status != "DONE" && status != "IN_PROGRESS") {
+                ivDot.setImageDrawable(null)
+            }
 
-            for (i in 0 until displayCount) {
-                val user = assignees[i]
-                val imageView = ImageView(binding.root.context)
-                val size = (24 * binding.root.resources.displayMetrics.density).toInt()
-                val params = LinearLayout.LayoutParams(size, size)
-                
-                // Add negative margin for overlap effect, except for the first item
-                if (i > 0) {
-                    params.marginStart = (-8 * binding.root.resources.displayMetrics.density).toInt()
+            val colorRes = pastelColors[position % pastelColors.size]
+            cardTask.setCardBackgroundColor(ContextCompat.getColor(itemView.context, colorRes))
+
+            cardTask.setOnClickListener { onTaskClick?.invoke(task) }
+
+            ivDot.setOnClickListener {
+                val nextStatus = when (status) {
+                    "TODO" -> "IN_PROGRESS"
+                    "IN_PROGRESS" -> "DONE"
+                    "DONE" -> "TODO"
+                    else -> "TODO"
                 }
-                
-                imageView.layoutParams = params
-                // Use a circular background/mask if needed, or Glide circleCrop
-                Glide.with(binding.root.context)
-                    .load(user.avatarUrl)
-                    .placeholder(R.drawable.ic_avatar_placeholder)
-                    .circleCrop()
-                    .into(imageView)
-                
-                // Optional: Add a white border to separate overlapping avatars
-                imageView.background = ContextCompat.getDrawable(binding.root.context, R.drawable.bg_circle_gray) // Or a dedicated ring drawable
-                
-                binding.layoutAvatars.addView(imageView)
+                onStatusChange?.invoke(task, nextStatus)
             }
 
-            if (assignees.size > maxAvatars) {
-                val remaining = assignees.size - maxAvatars
-                val textView = TextView(binding.root.context)
-                val size = (24 * binding.root.resources.displayMetrics.density).toInt()
-                val params = LinearLayout.LayoutParams(size, size)
-                params.marginStart = (-8 * binding.root.resources.displayMetrics.density).toInt()
-                textView.layoutParams = params
-                
-                textView.text = "+$remaining"
-                textView.textSize = 10f
-                textView.setTextColor(Color.WHITE)
-                textView.gravity = android.view.Gravity.CENTER
-                textView.setBackgroundResource(R.drawable.bg_circle_gray) // Your gray circle drawable
-                
-                binding.layoutAvatars.addView(textView)
-            }
+            cardTask.setOnLongClickListener {
+                val popup = PopupMenu(itemView.context, cardTask, Gravity.END)
+                popup.menu.add("Edit Task")
+                popup.menu.add("Delete Task")
 
-            binding.btnViewDetails.setOnClickListener {
-                onTaskClick?.invoke(task, binding.root)
+                popup.setOnMenuItemClickListener { item ->
+                    when (item.title) {
+                        "Edit Task" -> onEditClick?.invoke(task)
+                        "Delete Task" -> onDeleteClick?.invoke(task)
+                    }
+                    true
+                }
+                popup.show()
+                true // Consume event
             }
-            
-            binding.btnEdit.setOnClickListener {
-                // Handle edit click
-            }
-
-            // Tag
-            binding.chipGroupTags.removeAllViews()
-            task.tagsCsv?.let { csv ->
-                val tags = csv.split(",").map { it.trim() }.filter { it.isNotEmpty() }
-                for (tag in tags) {
-                    val chip = com.google.android.material.chip.Chip(binding.root.context)
-                    chip.text = tag
-                    chip.isCheckable = false
-                    chip.isClickable = false
-                    chip.setTextColor(ContextCompat.getColor(binding.root.context, R.color.black))
-                    val bgColor = Color.parseColor("#E0E0E0")
-                    chip.chipBackgroundColor = ColorStateList.valueOf(bgColor)
-                     chip.textSize = 12f
-                     binding.chipGroupTags.addView(chip)
-                 }
-             }
-         }
-
+        }
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-        val binding = ItemTeamTaskManagementBinding.inflate(
-            LayoutInflater.from(parent.context),
-            parent,
-            false
-        )
-        return ViewHolder(binding)
+        val view = LayoutInflater.from(parent.context).inflate(R.layout.item_timeline_task, parent, false)
+        return ViewHolder(view)
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        holder.bind(tasks[position])
+        holder.bind(tasks[position], position)
     }
 
-    override fun getItemCount(): Int = tasks.size
+    override fun getItemCount() = tasks.size
 }

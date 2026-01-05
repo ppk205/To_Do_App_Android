@@ -123,6 +123,29 @@ class TeamTaskViewModel : ViewModel() {
         })
     }
 
+    fun deleteTask(taskId: String, onSuccess: () -> Unit) {
+        _isLoading.postValue(true)
+        apiService.deleteTeamTask(taskId).enqueue(object : Callback<Void> {
+            override fun onResponse(call: Call<Void>, response: Response<Void>) {
+                _isLoading.postValue(false)
+                if (response.isSuccessful) {
+                    val currentList = _tasks.value.orEmpty().toMutableList()
+                    currentList.removeAll { it.id == taskId }
+                    _tasks.value = currentList
+                    calculateSummary(currentList)
+                    onSuccess()
+                } else {
+                    _errorMessage.postValue("Failed to delete task: ${response.code()}")
+                }
+            }
+
+            override fun onFailure(call: Call<Void>, t: Throwable) {
+                _isLoading.postValue(false)
+                _errorMessage.postValue(t.message ?: "Network error")
+            }
+        })
+    }
+
     private fun calculateSummary(taskList: List<TeamTask>) {
         val now = System.currentTimeMillis()
         val calendar = Calendar.getInstance()

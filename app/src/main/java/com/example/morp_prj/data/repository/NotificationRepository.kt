@@ -45,11 +45,21 @@ class NotificationRepository(context: Context) {
             val key = n.dedupeKey
             val isNewToDevice = !existingKeys.contains(key)
 
+            val rawChannel = n.channel.trim().lowercase()
+            val channel = when (rawChannel) {
+                "tasks" -> "tasks"
+                "teams" -> "teams"
+                // Backward compat if old backend sent channel ids
+                NotificationChannels.CHANNEL_TASKS.lowercase() -> "tasks"
+                NotificationChannels.CHANNEL_TEAMS.lowercase() -> "teams"
+                else -> "teams"
+            }
+
             try {
                 dao.insert(
                     NotificationEntity(
                         userId = n.userId.ifBlank { userId },
-                        channel = n.channel,
+                        channel = channel,
                         title = n.title,
                         message = n.message,
                         dedupeKey = key,
@@ -62,7 +72,7 @@ class NotificationRepository(context: Context) {
 
             if (showDeviceNotifications && isNewToDevice) {
                 try {
-                    val channelId = when (n.channel) {
+                    val channelId = when (channel) {
                         "tasks" -> NotificationChannels.CHANNEL_TASKS
                         "teams" -> NotificationChannels.CHANNEL_TEAMS
                         else -> NotificationChannels.CHANNEL_TEAMS
@@ -93,7 +103,7 @@ class NotificationRepository(context: Context) {
         dao.insert(
             NotificationEntity(
                 userId = userId,
-                channel = NotificationChannels.CHANNEL_TASKS,
+                channel = "tasks",
                 title = title,
                 message = message,
                 dedupeKey = dedupeKey,
@@ -125,7 +135,7 @@ class NotificationRepository(context: Context) {
         dao.insert(
             NotificationEntity(
                 userId = userId,
-                channel = NotificationChannels.CHANNEL_TEAMS,
+                channel = "teams",
                 title = title,
                 message = message,
                 dedupeKey = dedupeKey,
@@ -160,6 +170,14 @@ class NotificationRepository(context: Context) {
     }
 
     suspend fun clear(userId: String = currentUserIdOrGuest()) {
+        // Guest mode is local-only.
+        if (!isGuest()) {
+            try {
+                RetrofitClient.notificationApiService.clearAll()
+            } catch (_: Throwable) {
+            }
+        }
+
         dao.clearForUser(userId)
     }
 

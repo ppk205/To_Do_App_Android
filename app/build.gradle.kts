@@ -107,6 +107,9 @@ dependencies {
     // Security - Encrypted SharedPreferences
     implementation(libs.androidx.security.crypto)
 
+    // Biometric Authentication
+    implementation(libs.androidx.biometric)
+
     // Donut Chart
     implementation(libs.mp.android.chart)
 
@@ -123,4 +126,7 @@ dependencies {
 
     // BCrypt for password hashing
     implementation("org.mindrot:jbcrypt:0.4")
+
+    // SocketIO Client
+    implementation("io.socket:socket.io-client:2.1.1")
 }

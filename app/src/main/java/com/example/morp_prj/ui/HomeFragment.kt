@@ -21,6 +21,7 @@ import com.example.morp_prj.R
 import com.example.morp_prj.data.TaskRepository
 import com.example.morp_prj.data.TaskUiMapper.toUiItem
 import com.example.morp_prj.data.db.AppDatabase
+import com.example.morp_prj.data.repository.AuthRepository
 import com.example.morp_prj.utils.PreferenceManager
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -82,6 +83,11 @@ class HomeFragment : Fragment() {
         ivAvatar = view.findViewById(R.id.ivAvatar)
         updateGreeting()
 
+        // Fetch fresh profile từ server để đảm bảo avatar được load ngay sau đăng nhập
+        if (!prefs.isGuest()) {
+            fetchProfileFromServer()
+        }
+
         // 1. Lấy thông tin user hiện tại
         val user = PreferenceManager.getUser(requireContext())
 
@@ -104,10 +110,45 @@ class HomeFragment : Fragment() {
     override fun onResume() {
         super.onResume()
         updateGreeting()
+        // Fetch fresh profile data from server khi quay lại màn hình
+        // Điều này đảm bảo avatar luôn được cập nhật mới nhất
+        if (!prefs.isGuest()) {
+            fetchProfileFromServer()
+        }
+    }
+
+    /**
+     * Fetch profile từ server để đảm bảo dữ liệu luôn mới nhất
+     * Đặc biệt quan trọng sau khi đăng nhập vì cache có thể chưa có avatarUrl
+     */
+    private fun fetchProfileFromServer() {
+        val authRepo = AuthRepository(requireContext())
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            val result = authRepo.fetchProfile()
+
+            result.onSuccess { user ->
+                // Lưu vào cache cục bộ
+                PreferenceManager.saveUser(requireContext(), user)
+                // Cập nhật lại UI với dữ liệu mới
+                updateGreetingWithUser(user)
+            }.onFailure { error ->
+                // Fail silently - tiếp tục sử dụng dữ liệu từ cache
+                Log.w("HomeFragment", "Không thể fetch profile từ server: ${error.message}")
+            }
+        }
     }
 
     private fun updateGreeting() {
         val user = PreferenceManager.getUser(requireContext())
+        updateGreetingWithUser(user)
+    }
+
+    /**
+     * Cập nhật UI greeting và avatar với dữ liệu user được truyền vào
+     */
+    private fun updateGreetingWithUser(user: com.example.morp_prj.data.model.User?) {
+        // Xử lý tên hiển thị
         val name = when {
             prefs.isGuest() -> getString(R.string.guest_user_name)
             user?.displayName?.isNotBlank() == true -> user.displayName
@@ -117,15 +158,17 @@ class HomeFragment : Fragment() {
         }
         tvWelcome.text = getString(R.string.home_greeting_format, name)
 
-        // Load avatar from server or use default
+        // Load avatar từ server URL - logic giống ProfileFragment
         if (user != null && !user.avatarUrl.isNullOrEmpty()) {
-            // Build full URL for server avatar
+            // Build full URL: http://10.0.2.2:3001/uploads/avatars/filename.jpg
             val baseUrl = "http://10.0.2.2:3001" // Android emulator localhost
             val fullUrl = if (user.avatarUrl.startsWith("http")) {
                 user.avatarUrl
             } else {
                 "$baseUrl${user.avatarUrl}"
             }
+
+            Log.d("HomeFragment", "Loading avatar from URL: $fullUrl")
 
             Glide.with(this)
                 .load(fullUrl)
@@ -134,7 +177,7 @@ class HomeFragment : Fragment() {
                 .circleCrop() // Make it circular
                 .into(ivAvatar)
         } else {
-            // No avatar URL, use default image
+            // Không có avatar URL, sử dụng ảnh mặc định
             Glide.with(this)
                 .load(R.drawable.img_1)
                 .circleCrop()
@@ -160,32 +203,29 @@ class HomeFragment : Fragment() {
     private fun loadOverviewCounts() {
         val userId = currentUserId
         viewLifecycleOwner.lifecycleScope.launch {
-            // Observe TODO count for current user
-            launch {
-                repository.observeCountByStatusForUser(userId, "TODO")
-                    .distinctUntilChanged()
-                    .collect { count ->
-                        tvTodoCount.text = resources.getQuantityString(R.plurals.tasks_count, count, count)
-                    }
-            }
+            // === ✅ NEW UNIFIED BUSINESS LOGIC ===
+            // Observe toàn bộ task list để tính toán chính xác theo logic thống nhất
+            repository.observeAllByUser(userId)
+                .distinctUntilChanged()
+                .collect { tasks ->
+                    val now = System.currentTimeMillis()
 
-            // Observe IN_PROGRESS count for current user
-            launch {
-                repository.observeCountByStatusForUser(userId, "IN_PROGRESS")
-                    .distinctUntilChanged()
-                    .collect { count ->
-                        tvInProgressCount.text = resources.getQuantityString(R.plurals.tasks_count, count, count)
-                    }
-            }
+                    // TODO count - task có status TODO
+                    val todoCount = tasks.count { it.status.equals("TODO", ignoreCase = true) }
+                    tvTodoCount.text = resources.getQuantityString(R.plurals.tasks_count, todoCount, todoCount)
 
-            // Observe DONE count for current user
-            launch {
-                repository.observeCountByStatusForUser(userId, "DONE")
-                    .distinctUntilChanged()
-                    .collect { count ->
-                        tvCompletedCount.text = resources.getQuantityString(R.plurals.tasks_count, count, count)
+                    // IN_PROGRESS count - Task chưa DONE và còn deadline trong tương lai
+                    val inProgressCount = tasks.count {
+                        !it.status.equals("DONE", ignoreCase = true) &&
+                        it.deadlineAt != null &&
+                        it.deadlineAt!! > now
                     }
-            }
+                    tvInProgressCount.text = resources.getQuantityString(R.plurals.tasks_count, inProgressCount, inProgressCount)
+
+                    // DONE count - task có status DONE
+                    val doneCount = tasks.count { it.status.equals("DONE", ignoreCase = true) }
+                    tvCompletedCount.text = resources.getQuantityString(R.plurals.tasks_count, doneCount, doneCount)
+                }
         }
     }
 
@@ -193,6 +233,8 @@ class HomeFragment : Fragment() {
         toDoAdapter = ToDoAdapter(
             onCheckedChanged = { todo, isChecked ->
                 viewLifecycleOwner.lifecycleScope.launch {
+                    // Khi check → DONE, khi uncheck → TODO (mặc định)
+                    // Lưu ý: Không thể khôi phục IN_PROGRESS vì không lưu trạng thái trước đó
                     val newStatus = if (isChecked) "DONE" else "TODO"
                     repository.updateStatus(todo.id, newStatus)
                 }
@@ -212,8 +254,8 @@ class HomeFragment : Fragment() {
     private fun loadTasksFromDatabase() {
         val userId = currentUserId
 
-
-        // Get today's start and end time
+        // === ✅ TODAY'S TASKS LOGIC ===
+        // Tính toán khoảng thời gian của ngày hôm nay (từ 00:00:00 đến 23:59:59)
         val calendar = Calendar.getInstance()
         calendar.set(Calendar.HOUR_OF_DAY, 0)
         calendar.set(Calendar.MINUTE, 0)
@@ -224,21 +266,22 @@ class HomeFragment : Fragment() {
         calendar.add(Calendar.DAY_OF_MONTH, 1)
         val endOfDay = calendar.timeInMillis
 
-        // Load tasks with deadline today for current user
+        Log.d("HomeFragment", "Loading Today's Tasks for user $userId (deadline between $startOfDay and $endOfDay)")
+
+        // Load tasks có deadline trong ngày hôm nay
         viewLifecycleOwner.lifecycleScope.launch {
             repository.observeByDateRangeForUser(userId, startOfDay, endOfDay)
                 .map { list ->
-                    Log.d("HomeFragment", "Loaded ${list.size} today's tasks for user $userId")
+                    Log.d("HomeFragment", "Loaded ${list.size} today's tasks from database")
                     list.map { it.toUiItem() }
                 }
                 .collect { tasks ->
-                    Log.d("HomeFragment", "Mapped ${tasks.size} today's tasks to UI items")
+                    Log.d("HomeFragment", "Displaying ${tasks.size} today's tasks")
                     latestAllItems = tasks
                     refreshUi()
                 }
         }
     }
-
     private fun refreshUi() {
         val filtered = applyFilters(latestAllItems)
         Log.d("HomeFragment", "Displaying ${filtered.size} tasks after filter (query='$queryText')")
@@ -253,20 +296,11 @@ class HomeFragment : Fragment() {
         val query = queryText.trim().lowercase()
         if (query.isBlank()) return true
         return item.title.lowercase().contains(query) ||
-            item.tags.any { it.lowercase().contains(query) }
+                item.tags.any { it.lowercase().contains(query) }
     }
 
     private fun setupListeners(root: View) {
-        val ivNotification = root.findViewById<ImageView>(R.id.ivNotification)
-        val tvSeeAll = root.findViewById<TextView>(R.id.tvSeeAll)
         val tvViewDashboard = root.findViewById<TextView>(R.id.tvViewDashboard)
-
-        ivNotification.setOnClickListener {
-            Toast.makeText(context, "Notifications clicked", Toast.LENGTH_SHORT).show()
-        }
-        tvSeeAll.setOnClickListener {
-            Toast.makeText(context, "See All clicked", Toast.LENGTH_SHORT).show()
-        }
         tvViewDashboard.setOnClickListener {
             findNavController().navigate(R.id.action_home_to_dashboardDetail)
         }

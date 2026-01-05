@@ -5,35 +5,42 @@
     android:layout_height="wrap_content"
     android:layout_margin="8dp"
     app:cardCornerRadius="12dp"
-    app:cardElevation="2dp">
+    app:cardElevation="4dp"
+    app:cardBackgroundColor="@android:color/white">
 
-    <androidx.constraintlayout.widget.ConstraintLayout
-        android:padding="16dp"
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
 
-        <TextView
-            android:id="@+id/tvTitle"
-            android:layout_width="0dp"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Design user flow for new"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toStartOf="@+id/tvPriorityBadge" />
+            android:orientation="horizontal"
+            android:gravity="top">
 
-        <TextView
-            android:id="@+id/tvPriorityBadge"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:paddingHorizontal="12dp"
-            android:paddingVertical="4dp"
-            android:text="High Priority"
-            android:textColor="@color/white"
-            android:background="@drawable/bg_priority_high"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
+            <TextView
+                android:id="@+id/tvTitle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginEnd="8dp"
+                android:text="Design user flow for new"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvPriorityBadge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="6dp"
+                android:text="High Priority"
+                android:textColor="@color/white"
+                android:textSize="12sp"
+                android:background="@drawable/bg_badge_high_priority" />
+        </LinearLayout>
 
         <TextView
             android:id="@+id/tvDueDate"
@@ -42,69 +49,72 @@
             android:layout_marginTop="8dp"
             android:text="Due: 2024-07-15"
             android:textColor="#757575"
-            app:layout_constraintTop_toBottomOf="@id/tvTitle"
-            app:layout_constraintStart_toStartOf="parent" />
-
-        <TextView
-            android:id="@+id/tvAssignedLabel"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:text="Assigned To: "
-            app:layout_constraintTop_toBottomOf="@id/tvDueDate"
-            app:layout_constraintStart_toStartOf="parent" />
+            android:textSize="14sp" />
 
         <LinearLayout
-            android:id="@+id/layoutAvatars"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            app:layout_constraintTop_toTopOf="@id/tvAssignedLabel"
-            app:layout_constraintBottom_toBottomOf="@id/tvAssignedLabel"
-            app:layout_constraintStart_toEndOf="@id/tvAssignedLabel" />
+            android:gravity="center_vertical"
+            android:layout_marginTop="12dp">
+
+            <TextView
+                android:id="@+id/tvAssignedLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Assigned To: "
+                android:layout_marginEnd="8dp"/>
+
+            <LinearLayout
+                android:id="@+id/layoutAvatars"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal" />
+        </LinearLayout>
 
         <TextView
             android:id="@+id/tvStatusBadge"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:paddingHorizontal="16dp"
+            android:paddingHorizontal="12dp"
             android:paddingVertical="6dp"
             android:text="In Progress"
-            android:background="@drawable/bg_status_progress"
-            app:layout_constraintTop_toBottomOf="@id/tvAssignedLabel"
-            app:layout_constraintStart_toStartOf="parent" />
+            android:textSize="13sp"
+            android:background="@drawable/bg_status_progress" />
 
         <com.google.android.material.chip.ChipGroup
             android:id="@+id/chipGroupTags"
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
             app:chipSpacing="6dp"
-            app:singleLine="false"
-            app:layout_constraintTop_toBottomOf="@id/tvStatusBadge"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
+            app:singleLine="false" />
 
-        <TextView
-            android:id="@+id/btnViewDetails"
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="View Details"
-            android:textColor="#2196F3"
-            android:textStyle="bold"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toStartOf="@id/btnEdit"
-            android:layout_marginEnd="16dp"/>
+            android:orientation="horizontal"
+            android:gravity="end|center_vertical"
+            android:layout_marginTop="16dp">
 
-        <ImageButton
-            android:id="@+id/btnEdit"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:src="@drawable/ic_edit"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
+            <TextView
+                android:id="@+id/btnViewDetails"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="View Details"
+                android:textColor="#2196F3"
+                android:textStyle="bold"
+                android:padding="8dp"
+                android:layout_marginEnd="8dp"/>
 
-    </androidx.constraintlayout.widget.ConstraintLayout>
+            <ImageButton
+                android:id="@+id/btnEdit"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:src="@drawable/ic_edit"
+                android:background="?attr/selectableItemBackgroundBorderless" />
+        </LinearLayout>
+
+    </LinearLayout>
 </com.google.android.material.card.MaterialCardView>
