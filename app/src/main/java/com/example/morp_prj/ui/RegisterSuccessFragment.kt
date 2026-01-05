@@ -14,6 +14,11 @@ class RegisterSuccessFragment : Fragment(R.layout.fragment_register_success) {
     private var username: String? = null
     private var email: String? = null
 
+    override fun onStart() {
+        super.onStart()
+        hideBottomNavigation()
+    }
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -38,6 +43,7 @@ class RegisterSuccessFragment : Fragment(R.layout.fragment_register_success) {
 
         // Navigate to login when button clicked
         btnContinueLogin.setOnClickListener {
+            hideBottomNavigation()
             try {
                 findNavController().navigate(R.id.action_registerSuccess_to_login)
             } catch (e: Exception) {
@@ -49,11 +55,16 @@ class RegisterSuccessFragment : Fragment(R.layout.fragment_register_success) {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        hideBottomNavigation()
+    }
+
     override fun onDestroyView() {
         super.onDestroyView()
 
-        // ✅ Hiện lại bottom navigation khi thoát
-        showBottomNavigation()
+        // ✅ Chỉ hiện lại nếu user đã đăng nhập
+        showBottomNavigationIfLoggedIn()
     }
 
     private fun hideBottomNavigation() {
@@ -65,10 +76,13 @@ class RegisterSuccessFragment : Fragment(R.layout.fragment_register_success) {
         }
     }
 
-    private fun showBottomNavigation() {
+    private fun showBottomNavigationIfLoggedIn() {
         try {
+            val prefs = com.example.morp_prj.utils.PreferenceManager(requireContext())
+            val tokenStorage = com.example.morp_prj.security.SecureTokenStorage(requireContext())
+            val shouldShow = prefs.isLoggedIn() || tokenStorage.hasValidRefreshToken()
             val bottomNav = activity?.findViewById<View>(R.id.bottom_nav_view)
-            bottomNav?.visibility = View.VISIBLE
+            bottomNav?.visibility = if (shouldShow) View.VISIBLE else View.GONE
         } catch (e: Exception) {
             Log.e("RegisterSuccessFragment", "Error showing bottom navigation", e)
         }
