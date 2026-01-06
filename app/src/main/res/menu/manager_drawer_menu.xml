@@ -36,6 +36,11 @@
                 android:id="@+id/nav_team_chat"
                 android:icon="@drawable/ic_chat_me"
                 android:title="Team Chat" />
+
+            <item
+                android:id="@+id/nav_team_info"
+                android:icon="@drawable/ic_info"
+                android:title="Team Infomation" />
         </menu>
     </item>
 

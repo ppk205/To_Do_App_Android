@@ -3,96 +3,123 @@ package com.example.morp_prj.ui
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ImageButton
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.example.morp_prj.R
 import com.example.morp_prj.data.model.Team
-import java.util.Locale
+import com.example.morp_prj.data.api.RetrofitClient
 
 class TeamAdapter(
-    var members: List<Team>,
-    private val layoutResId: Int,
-    private val onItemClick: ((Team) -> Unit)? = null,
-    private val onItemLongClick: ((Team) -> Unit)? = null,
-    private val onChatClick: ((Team) -> Unit)? = null
+    private var teams: List<Team>,
+    private val onTeamClick: (Team) -> Unit,
+    private val onChatClick: (Team) -> Unit,
+    private val onPinClick: (Team) -> Unit
 ) : RecyclerView.Adapter<TeamAdapter.TeamViewHolder>() {
 
-    class TeamViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        val tvTeamName: TextView = itemView.findViewById(R.id.tvTeamName)
-        val imgTeamLogo: ImageView = itemView.findViewById(R.id.imgTeamLogo)
-        val tvRole: TextView? = itemView.findViewById(R.id.tvRole)
-        val tvMemberCount: TextView? = itemView.findViewById(R.id.tvMemberCount)
-        val tvPendingStatus: TextView? = itemView.findViewById(R.id.tvPendingStatus)
-        val btnChat: ImageView? = itemView.findViewById(R.id.btnChat)
+    inner class TeamViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        val imgAvatar: ImageView = itemView.findViewById(R.id.imgAvatar)
+        val tvName: TextView = itemView.findViewById(R.id.tvTeamName)
+        val tvInfo: TextView = itemView.findViewById(R.id.tvTeamInfo)
+        val imgPin: ImageView = itemView.findViewById(R.id.imgPin)
+        private val layoutTags: LinearLayout = itemView.findViewById(R.id.layoutTags)
+        val btnChat: ImageView = itemView.findViewById(R.id.btnChat)
+
+        fun bind(team: Team) {
+            tvName.text = team.name
+            val roleDisplay = team.role?.replaceFirstChar { it.uppercase() } ?: "Member"
+            tvInfo.text = "${team.memberCount} members • $roleDisplay"
+
+            // Avatar
+            if (!team.avatarUrl.isNullOrEmpty()) {
+                val fullUrl = RetrofitClient.buildFullUrl(team.avatarUrl) ?: team.avatarUrl
+                Glide.with(itemView.context)
+                    .load(fullUrl)
+                    .placeholder(R.drawable.ic_avatar_placeholder)
+                    .error(R.drawable.ic_avatar_placeholder)
+                    .fallback(R.drawable.ic_avatar_placeholder)
+                    .circleCrop()
+                    .into(imgAvatar)
+            } else {
+                imgAvatar.setImageResource(R.drawable.ic_avatar_placeholder)
+            }
+
+            // Pin
+            imgPin.visibility = View.VISIBLE
+            imgPin.imageAlpha = if (team.isPinned) 255 else 120
+            imgPin.setColorFilter(itemView.context.getColor(if (team.isPinned) R.color.soft_blue_primary else R.color.gray_text))
+            imgPin.setOnClickListener { onPinClick(team) }
+
+            // Tags Logic
+            renderTags(team.tags)
+
+            // Click Listeners
+            // 1. Click vào cả card -> Xem chi tiết
+            itemView.setOnClickListener { onTeamClick(team) }
+
+            // 2. Click vào nút Chat -> Vào chat nhanh
+            btnChat.setOnClickListener {
+                onChatClick(team)
+            }
+        }
+
+        private fun renderTags(tags: List<String>?) {
+            layoutTags.removeAllViews()
+
+            if (tags.isNullOrEmpty()) {
+                layoutTags.visibility = View.GONE
+                return
+            }
+            layoutTags.visibility = View.VISIBLE
+
+            val inflater = LayoutInflater.from(itemView.context)
+            val maxVisibleTags = 3 // show up to 3 slots; last may become "+N"
+            val tagsToShow = tags.take(maxVisibleTags)
+            val remaining = tags.size - tagsToShow.size
+
+            tagsToShow.forEachIndexed { index, tag ->
+                val isLastSlot = index == maxVisibleTags - 1 && remaining > 0
+                if (isLastSlot) {
+                    layoutTags.addView(createMoreTagView(remaining))
+                } else {
+                    layoutTags.addView(createTagView(tag))
+                }
+            }
+
+            // If there are more tags beyond the taken subset, ensure we append +N
+            if (remaining > 0 && tagsToShow.size < maxVisibleTags) {
+                layoutTags.addView(createMoreTagView(remaining))
+            }
+        }
+
+        private fun createTagView(text: String): View {
+            val view = LayoutInflater.from(itemView.context).inflate(R.layout.view_tag_chip, layoutTags, false)
+            view.findViewById<TextView>(R.id.tagText).text = text
+            return view
+        }
+
+        private fun createMoreTagView(remaining: Int): View {
+            val view = LayoutInflater.from(itemView.context).inflate(R.layout.view_tag_more_chip, layoutTags, false)
+            view.findViewById<TextView>(R.id.tagText).text = "+$remaining"
+            return view
+        }
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): TeamViewHolder {
-        val view = LayoutInflater.from(parent.context).inflate(layoutResId, parent, false)
+        val view = LayoutInflater.from(parent.context).inflate(R.layout.item_team, parent, false)
         return TeamViewHolder(view)
     }
 
     override fun onBindViewHolder(holder: TeamViewHolder, position: Int) {
-        val team = members[position]
-        
-        holder.tvTeamName.text = team.name
-        
-        Glide.with(holder.itemView.context)
-            .load(team.avatarUrl)
-            .placeholder(android.R.drawable.btn_star) 
-            .error(android.R.drawable.btn_star)
-            .into(holder.imgTeamLogo)
-
-        // Xử lý hiển thị dựa trên status
-        if (team.status == "pending") {
-            holder.tvRole?.visibility = View.GONE
-            holder.tvMemberCount?.visibility = View.GONE
-            holder.tvPendingStatus?.visibility = View.VISIBLE
-        } else {
-            holder.tvRole?.visibility = View.VISIBLE
-            holder.tvMemberCount?.visibility = View.VISIBLE
-            holder.tvPendingStatus?.visibility = View.GONE
-
-            val count = team.memberCount
-            holder.tvMemberCount?.text = "$count member${if (count > 1) "s" else ""}"
-            
-            val roleText = team.role?.replaceFirstChar { it.titlecase(Locale.getDefault()) } ?: "Member"
-            holder.tvRole?.text = roleText
-        }
-
-        holder.itemView.setOnClickListener {
-            if (team.status != "pending") {
-                onItemClick?.invoke(team)
-            }
-        }
-
-        holder.btnChat?.setOnClickListener {
-            if (team.status != "pending") {
-                onChatClick?.invoke(team)
-            }
-        }
-
-        // Ẩn nút chat nếu là pending
-        if (team.status == "pending") {
-            holder.btnChat?.visibility = View.GONE
-        } else {
-            holder.btnChat?.visibility = View.VISIBLE
-        }
-
-        holder.itemView.setOnLongClickListener {
-            if (team.status != "pending") {
-                onItemLongClick?.invoke(team)
-            }
-            true
-        }
+        holder.bind(teams[position])
     }
 
-    override fun getItemCount(): Int = members.size
+    override fun getItemCount(): Int = teams.size
 
     fun updateData(newTeams: List<Team>) {
-        members = newTeams
+        this.teams = newTeams
         notifyDataSetChanged()
     }
 }

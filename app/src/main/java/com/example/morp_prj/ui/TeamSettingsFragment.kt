@@ -1,6 +1,8 @@
 package com.example.morp_prj.ui
 
 import android.app.AlertDialog
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.view.KeyEvent
@@ -8,21 +10,30 @@ import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.widget.EditText
 import android.widget.ImageButton
+import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.widget.AppCompatButton
+import androidx.appcompat.widget.AppCompatImageView
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import androidx.navigation.findNavController
 import androidx.navigation.fragment.findNavController
+import com.bumptech.glide.Glide
 import com.example.morp_prj.R
 import com.example.morp_prj.data.api.RetrofitClient
 import com.example.morp_prj.data.model.Team
 import com.example.morp_prj.data.model.UpdateTeamRequest
+import com.example.morp_prj.utils.CloudinaryHelper
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
+import kotlinx.coroutines.launch
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 class TeamSettingsFragment : Fragment(R.layout.fragment_team_settings) {
 
@@ -41,6 +52,26 @@ class TeamSettingsFragment : Fragment(R.layout.fragment_team_settings) {
     private lateinit var etNewTag: EditText
     private lateinit var btnAddTag: ImageButton
     private lateinit var chipGroupTags: ChipGroup
+
+    // Avatar components
+    private lateinit var imgAvatar: ImageView
+    private lateinit var btnChangeAvatar: ImageButton
+    private var uploadedAvatarUrl: String? = null
+    private var selectedAvatarUri: Uri? = null
+
+    // Allow member directory switch
+    private lateinit var switchMemberDirectory: androidx.appcompat.widget.SwitchCompat
+
+    private val imagePickerLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            val uri = result.data?.data
+            uri?.let {
+                selectedAvatarUri = it
+                Glide.with(this).load(it).centerCrop().into(imgAvatar)
+                uploadAvatar(it)
+            }
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -72,6 +103,13 @@ class TeamSettingsFragment : Fragment(R.layout.fragment_team_settings) {
         etNewTag = view.findViewById(R.id.etNewTag)
         btnAddTag = view.findViewById(R.id.btnAddTag)
         chipGroupTags = view.findViewById(R.id.chipGroupTags)
+
+        // Ánh xạ các view cho phần Avatar
+        imgAvatar = view.findViewById(R.id.imgTeamAvatar)
+        btnChangeAvatar = view.findViewById(R.id.btnChangeAvatar)
+
+        // Ánh xạ switch cho member directory
+        switchMemberDirectory = view.findViewById(R.id.switchMemberDirectory)
     }
 
     private fun setupRoleBasedUI() {
@@ -125,6 +163,10 @@ class TeamSettingsFragment : Fragment(R.layout.fragment_team_settings) {
                 false
             }
         }
+
+        // Chọn ảnh đại diện
+        btnChangeAvatar.setOnClickListener { openImagePicker() }
+        imgAvatar.setOnClickListener { openImagePicker() }
     }
 
     // --- LOGIC XỬ LÝ TAGS (CHIP GROUP) ---
@@ -185,12 +227,21 @@ class TeamSettingsFragment : Fragment(R.layout.fragment_team_settings) {
                     etTeamName.setText(team?.name)
                     etDescription.setText(team?.description)
                     tvInviteCode.text = team?.inviteCode ?: "NO CODE"
+                    uploadedAvatarUrl = team?.avatarUrl
+                    Glide.with(requireContext())
+                        .load(team?.avatarUrl)
+                        .placeholder(R.drawable.ic_avatar_placeholder)
+                        .error(R.drawable.ic_avatar_placeholder)
+                        .into(imgAvatar)
 
                     // Load Tags từ server lên ChipGroup
                     chipGroupTags.removeAllViews()
                     team?.tags?.forEach { tag ->
                         addChipToGroup(tag)
                     }
+
+                    // Load member directory setting
+                    switchMemberDirectory.isChecked = team?.allowMemberDirectory ?: false
                 }
             }
             override fun onFailure(call: Call<Team>, t: Throwable) {
@@ -221,7 +272,9 @@ class TeamSettingsFragment : Fragment(R.layout.fragment_team_settings) {
         val request = UpdateTeamRequest(
             name = name,
             description = desc,
-            tags = tagsList
+            tags = tagsList,
+            avatarUrl = uploadedAvatarUrl,
+            allowMemberDirectory = switchMemberDirectory.isChecked
         )
 
         RetrofitClient.teamApiService.updateTeam(teamId, request).enqueue(object : Callback<Team> {
@@ -267,7 +320,7 @@ class TeamSettingsFragment : Fragment(R.layout.fragment_team_settings) {
             override fun onResponse(call: Call<Void>, response: Response<Void>) {
                 if (response.isSuccessful) {
                     Toast.makeText(context, "Team deleted", Toast.LENGTH_LONG).show()
-                    findNavController().navigateUp()
+                    exitToHome()
                 } else {
                     Toast.makeText(context, "Delete failed: ${response.code()}", Toast.LENGTH_SHORT).show()
                 }
@@ -278,6 +331,12 @@ class TeamSettingsFragment : Fragment(R.layout.fragment_team_settings) {
         })
     }
 
+    private fun exitToHome() {
+        val nav = activity?.findNavController(R.id.nav_host_fragment) ?: findNavController()
+        nav.popBackStack(nav.graph.startDestinationId, false)
+        runCatching { nav.navigate(R.id.menu_team) }
+    }
+
     // Hàm tiện ích hiển thị Dialog xác nhận
     private fun showConfirmDialog(title: String, msg: String, onConfirm: () -> Unit) {
         AlertDialog.Builder(requireContext())
@@ -286,5 +345,30 @@ class TeamSettingsFragment : Fragment(R.layout.fragment_team_settings) {
             .setPositiveButton("Yes") { _, _ -> onConfirm() }
             .setNegativeButton("Cancel", null)
             .show()
+    }
+
+    private fun openImagePicker() {
+        val intent = Intent(Intent.ACTION_GET_CONTENT).apply { type = "image/*" }
+        imagePickerLauncher.launch(Intent.createChooser(intent, "Select Team Avatar"))
+    }
+
+    private fun uploadAvatar(uri: Uri) {
+        CloudinaryHelper.init(requireContext().applicationContext)
+        Toast.makeText(requireContext(), "Uploading avatar...", Toast.LENGTH_SHORT).show()
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+            val result = CloudinaryHelper.uploadImage(uri)
+            withContext(kotlinx.coroutines.Dispatchers.Main) {
+                result.fold(
+                    onSuccess = { url ->
+                        uploadedAvatarUrl = url
+                        Toast.makeText(requireContext(), "Avatar uploaded", Toast.LENGTH_SHORT).show()
+                    },
+                    onFailure = { e ->
+                        uploadedAvatarUrl = null
+                        Toast.makeText(requireContext(), "Upload failed: ${'$'}{e.message}", Toast.LENGTH_LONG).show()
+                    }
+                )
+            }
+        }
     }
 }

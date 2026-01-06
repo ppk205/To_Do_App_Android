@@ -52,4 +52,8 @@ router.put('/:teamId/invite-code', authenticateToken, teamController.regenerateI
 
 router.delete('/:teamId', authenticateToken, teamController.deleteTeam);
 
+// 11. Cập nhật vai trò thành viên trong team
+// POST /team/update-member-role
+router.post('/update-member-role', authenticateToken, teamController.updateMemberRole);
+
 module.exports = router;

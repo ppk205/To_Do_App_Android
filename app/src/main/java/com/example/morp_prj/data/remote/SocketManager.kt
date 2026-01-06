@@ -4,10 +4,13 @@ import android.util.Log
 import io.socket.client.IO
 import io.socket.client.Socket
 import java.net.URISyntaxException
+import com.example.morp_prj.data.api.RetrofitClient
 
 object SocketManager {
     private const val TAG = "SocketManager"
-    private const val SERVER_URL = "http://192.168.1.5:3001/" // Sử dụng IP máy nếu chạy local bằng máy thật nhee
+    // Use the same base URL as RetrofitClient for consistency
+    private val SERVER_URL: String
+        get() = RetrofitClient.getBaseUrl()
 
     private var mSocket: Socket? = null
 

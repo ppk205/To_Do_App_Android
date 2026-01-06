@@ -10,5 +10,9 @@ data class CreateTeamRequest(
     @SerializedName("createdBy")
     val createdBy: String,
     @SerializedName("tags")
-    var tags: List<String> = emptyList()
+    var tags: List<String> = emptyList(),
+    @SerializedName("avatarUrl")
+    val avatarUrl: String? = null,
+    @SerializedName("allowMemberDirectory")
+    val allowMemberDirectory: Boolean = true
 )

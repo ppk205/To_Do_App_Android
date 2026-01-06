@@ -353,10 +353,89 @@ const deleteTeamTask = async (req, res) => {
     }
 };
 
+const getAssignedTeamTasks = async (req, res) => {
+    const { teamId } = req.params;
+    const userId = req.user.id; // Lấy ID user từ token (đã qua middleware authenticateToken)
+
+    if (!teamId) {
+        return res.status(400).json({ message: 'Missing teamId parameter' });
+    }
+
+    const conn = await pool.getConnection();
+    try {
+        const query = `
+            SELECT
+                t.id, t.teamId, t.title, t.description, t.dueDate, t.priority, t.status, t.createdAt, t.createdBy, t.tags,
+                u.id as assigneeId, u.username, u.avatarUrl, u.email
+            FROM team_tasks t
+            INNER JOIN team_task_assignees my_assign ON t.id = my_assign.taskId
+            LEFT JOIN team_task_assignees ta ON t.id = ta.taskId
+            LEFT JOIN users u ON ta.userId = u.id
+            WHERE t.teamId = ? AND my_assign.userId = ?
+            ORDER BY t.dueDate ASC, t.createdAt DESC
+        `;
+
+        const [rows] = await conn.query(query, [teamId, userId]);
+
+        const tasksMap = new Map();
+
+        for (const row of rows) {
+            if (!tasksMap.has(row.id)) {
+                let parsedTags = [];
+                try {
+                    if (typeof row.tags === 'string') {
+                        parsedTags = JSON.parse(row.tags);
+                    } else if (Array.isArray(row.tags)) {
+                        parsedTags = row.tags;
+                    }
+                } catch (e) {
+                    parsedTags = [];
+                }
+
+                tasksMap.set(row.id, {
+                    id: row.id,
+                    teamId: row.teamId,
+                    title: row.title,
+                    description: row.description,
+                    dueDate: row.dueDate,
+                    priority: row.priority,
+                    status: row.status,
+                    tags: parsedTags,
+                    createdAt: row.createdAt,
+                    createdBy: row.createdBy,
+                    assignees: []
+                });
+            }
+
+            if (row.assigneeId) {
+                const task = tasksMap.get(row.id);
+                if (!task.assignees.some(a => a.id === row.assigneeId)) {
+                    task.assignees.push({
+                        id: row.assigneeId,
+                        username: row.username,
+                        avatarUrl: row.avatarUrl,
+                        email: row.email
+                    });
+                }
+            }
+        }
+
+        const tasks = Array.from(tasksMap.values());
+        res.json(tasks);
+
+    } catch (error) {
+        console.error('Error fetching assigned team tasks:', error);
+        res.status(500).json({ message: 'Failed to fetch assigned tasks' });
+    } finally {
+        conn.release();
+    }
+};
+
 module.exports = {
     createTeamTask,
     getTeamTasks,
     updateTaskStatus,
-    updateTeamTask, // Export mới
-    deleteTeamTask  // Export mới
+    updateTeamTask,
+    deleteTeamTask,
+    getAssignedTeamTasks
 };

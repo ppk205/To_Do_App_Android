@@ -64,6 +64,18 @@
                 android:background="#E0F2F1"/>
         </androidx.cardview.widget.CardView>
 
+        <!-- Progress indicator for avatar upload -->
+        <ProgressBar
+            android:id="@+id/progressBarAvatar"
+            android:layout_width="60dp"
+            android:layout_height="60dp"
+            android:visibility="gone"
+            android:indeterminateTint="@color/colorPrimary"
+            app:layout_constraintBottom_toBottomOf="@id/cvAvatar"
+            app:layout_constraintEnd_toEndOf="@id/cvAvatar"
+            app:layout_constraintStart_toStartOf="@id/cvAvatar"
+            app:layout_constraintTop_toTopOf="@id/cvAvatar" />
+
         <View
             android:layout_width="20dp"
             android:layout_height="20dp"
@@ -169,16 +181,18 @@
             android:id="@+id/etBio"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:minHeight="50dp"
+            android:minHeight="80dp"
+            android:maxLines="5"
             android:layout_marginHorizontal="20dp"
             android:layout_marginTop="8dp"
             android:background="@drawable/bg_input_field"
             android:gravity="top|start"
             android:hint="Passionate software developer always seeking new challenges."
             android:padding="16dp"
-            android:inputType="textMultiLine"
+            android:inputType="textMultiLine|textCapSentences"
             android:enabled="false"
             android:textColor="@android:color/black"
+            android:textColorHint="#9E9E9E"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/lblBio" />
@@ -477,6 +491,17 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/btnCancel" />
+
+        <ImageButton
+            android:id="@+id/btnBack"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_margin="12dp"
+            android:src="@drawable/ic_arrow_back"
+            android:contentDescription="Back"
+            app:tint="@color/black"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 </ScrollView>

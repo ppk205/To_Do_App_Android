@@ -19,7 +19,7 @@ const parseTags = (tagsData) => {
 // --- 1. Tạo nhóm mới ---
 exports.createTeam = async (req, res) => {
     try {
-        const { name, description, tags } = req.body;
+        const { name, description, tags, avatarUrl, allowMemberDirectory } = req.body;
         const createdBy = req.user ? req.user.id : req.body.createdBy;
 
         if (!name || !createdBy) {
@@ -35,7 +35,9 @@ exports.createTeam = async (req, res) => {
             description,
             tags: tags || [],
             createdBy,
-            inviteCode
+            inviteCode,
+            avatarUrl: avatarUrl || null,
+            allowMemberDirectory: allowMemberDirectory ? 1 : 0
         };
 
         // 1. Tạo Team
@@ -265,7 +267,7 @@ exports.getTeamDetail = async (req, res) => {
 exports.updateTeam = async (req, res) => {
     try {
         const { teamId } = req.params;
-        const { name, description, tags } = req.body;
+        const { name, description, tags, avatarUrl, allowMemberDirectory } = req.body;
         const userId = req.user ? req.user.id : req.body.userId;
 
         // 1. Kiểm tra quyền Manager
@@ -275,8 +277,15 @@ exports.updateTeam = async (req, res) => {
             return res.status(403).json({ message: 'Only manager can update team info' });
         }
 
-        // 2. Cập nhật
-        await teamModel.update(teamId, { name, description, tags });
+        // 2. Cập nhật - build update object dynamically
+        const updateData = {};
+        if (name !== undefined) updateData.name = name;
+        if (description !== undefined) updateData.description = description;
+        if (tags !== undefined) updateData.tags = tags;
+        if (avatarUrl !== undefined) updateData.avatarUrl = avatarUrl;
+        if (allowMemberDirectory !== undefined) updateData.allowMemberDirectory = allowMemberDirectory ? 1 : 0;
+
+        await teamModel.update(teamId, updateData);
 
         res.json({ message: 'Team updated successfully' });
     } catch (error) {
@@ -324,6 +333,25 @@ exports.getMembersByTeamId = async (req, res) => {
     try {
         const teamId = req.params.teamId;
         const status = req.query.status || 'active';
+        const userId = req.user ? req.user.id : req.query.userId;
+
+        // Check if user is a member of this team
+        const membership = await teamModel.findMember(teamId, userId);
+        if (!membership) {
+            return res.status(403).json({ message: 'Access denied. You are not a member.' });
+        }
+
+        // Check if user is manager/co-manager OR if allowMemberDirectory is enabled
+        const isManagerOrCoManager = membership.role === 'manager' || membership.role === 'co-manager';
+
+        if (!isManagerOrCoManager) {
+            // Check team settings
+            const team = await teamModel.findById(teamId);
+            if (!team || !team.allowMemberDirectory) {
+                return res.status(403).json({ message: 'Access denied. Member directory is disabled.' });
+            }
+        }
+
         const members = await teamModel.findMembersByTeamId(teamId, status);
         res.json(members);
     } catch (error) {
@@ -397,6 +425,48 @@ exports.deleteTeam = async (req, res) => {
         res.json({ success: true, message: 'Team deleted successfully' });
     } catch (error) {
         console.error('Delete Team Error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+// --- 10. Cập nhật vai trò thành viên (Manager, Co-manager) ---
+exports.updateMemberRole = async (req, res) => {
+    try {
+        const { teamId, userId, newRole } = req.body;
+        const actorId = req.user ? req.user.id : req.body.actorId;
+        if (!teamId || !userId || !newRole) {
+            return res.status(400).json({ message: 'Missing fields' });
+        }
+
+        // Fetch memberships
+        const actor = await teamModel.findMember(teamId, actorId);
+        const target = await teamModel.findMember(teamId, userId);
+        if (!actor || !target) {
+            return res.status(404).json({ message: 'Member not found' });
+        }
+
+        const actorRole = String(actor.role || '').toLowerCase();
+        const targetRole = String(target.role || '').toLowerCase();
+        const desiredRole = String(newRole).toLowerCase();
+
+        // Permissions: manager can toggle member<->co-manager; co-manager can toggle member<->co-manager but cannot change managers.
+        const isManager = actorRole === 'manager';
+        const isCoManager = actorRole === 'co-manager';
+
+        if (!isManager && !isCoManager) {
+            return res.status(403).json({ message: 'No permission' });
+        }
+        if (targetRole === 'manager') {
+            return res.status(403).json({ message: 'Cannot change manager role' });
+        }
+        if (desiredRole !== 'member' && desiredRole !== 'co-manager') {
+            return res.status(400).json({ message: 'Invalid role' });
+        }
+
+        await teamModel.updateMemberRole(teamId, userId, desiredRole);
+        res.json({ success: true });
+    } catch (err) {
+        console.error('updateMemberRole error:', err);
         res.status(500).json({ message: 'Server error' });
     }
 };

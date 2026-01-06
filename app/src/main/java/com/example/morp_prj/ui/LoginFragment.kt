@@ -202,6 +202,7 @@ class LoginFragment : Fragment(R.layout.fragment_login) {
             result.onSuccess { response ->
                 try {
                     if (response.success && response.user != null) {
+                        // Save user data - guard nullability
                         val user = response.user
                         try {
                             preferenceManager.saveLoginData(
@@ -212,8 +213,12 @@ class LoginFragment : Fragment(R.layout.fragment_login) {
                                 token = response.token
                             )
 
+                            // ✅ Đánh dấu đã xem onboarding sau khi đăng nhập thành công
                             preferenceManager.setHasSeenOnboarding(true)
 
+                            (requireActivity() as? MainActivity)?.connectSocket()
+
+                            // Apply session task rules (show this user's tasks; later can trigger sync-down)
                             try {
                                 sessionTaskManager.onLoginSuccess(user.id)
                             } catch (t: Throwable) {
@@ -239,6 +244,7 @@ class LoginFragment : Fragment(R.layout.fragment_login) {
                                 Log.w("LoginFragment", "Auto notifications sync after login failed", t)
                             }
 
+                            // ✅ Auto refresh đúng 1 lần sau login để hiển thị task ngay
                             try {
                                 withContext(Dispatchers.IO) {
                                     taskSyncRepository.syncDown()
@@ -256,6 +262,7 @@ class LoginFragment : Fragment(R.layout.fragment_login) {
                         } catch (_: Exception) {
                         }
 
+                        // Ensure fragment still added before navigating
                         if (isAdded) {
                             findNavController().navigate(R.id.action_login_to_home)
                         }

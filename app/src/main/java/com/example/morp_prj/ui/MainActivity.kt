@@ -7,6 +7,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
@@ -22,10 +23,13 @@ import com.example.morp_prj.R
 import com.example.morp_prj.utils.PreferenceManager
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.example.morp_prj.security.SecureTokenStorage
+import com.example.morp_prj.data.remote.SocketManager
+import com.example.morp_prj.data.repository.NotificationRealtimeRepository
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var bottomNav: BottomNavigationView
+    private var notificationRealtimeRepository: NotificationRealtimeRepository? = null
     private val sessionExpiredReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             // When session expires, navigate to onboarding and clear backstack
@@ -37,6 +41,10 @@ class MainActivity : AppCompatActivity() {
                     .build()
                 // Navigate to onboarding when session expires (NOT login)
                 navController.navigate(R.id.onboarding_fragment, null, navOptions)
+
+                SecureTokenStorage(context!!).clearTokens()
+                SocketManager.disconnect()
+
                 android.widget.Toast.makeText(this@MainActivity, "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.", android.widget.Toast.LENGTH_LONG).show()
             } catch (e: Exception) {
                 android.util.Log.e("MainActivity", "Error handling session expired broadcast", e)
@@ -101,6 +109,17 @@ class MainActivity : AppCompatActivity() {
                 filter,
                 androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED
             )
+        }
+
+        val secureStorage = SecureTokenStorage(this)
+        val token = secureStorage.getAccessToken()
+        if (!token.isNullOrEmpty()) {
+            SocketManager.connect(token)
+
+            // Start realtime notifications (persist to Room + show device notification)
+            notificationRealtimeRepository = NotificationRealtimeRepository(this).also {
+                it.start(showDeviceNotifications = true)
+            }
         }
 
         // Navigation logic:
@@ -179,5 +198,24 @@ class MainActivity : AppCompatActivity() {
         } catch (e: Exception) {
             // ignore
         }
+        notificationRealtimeRepository = null
+    }
+
+    fun connectSocket() {
+        val secureStorage = SecureTokenStorage(this)
+        val token = secureStorage.getAccessToken()
+        if (!token.isNullOrEmpty()) {
+            SocketManager.connect(token)
+
+            // Start realtime notifications (persist to Room + show device notification)
+            notificationRealtimeRepository = NotificationRealtimeRepository(this).also {
+                it.start(showDeviceNotifications = true)
+            }
+        }
+    }
+
+    fun disconnectSocket() {
+        SocketManager.disconnect()
+        Log.d("SocketManager","Close socket")
     }
 }

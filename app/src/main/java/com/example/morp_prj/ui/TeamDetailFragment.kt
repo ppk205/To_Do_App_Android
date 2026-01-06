@@ -82,7 +82,7 @@ class TeamDetailFragment : Fragment(R.layout.fragment_team_detail), NavigationVi
         }
 
         val tvTeamName = headerView.findViewById<TextView>(R.id.tvTeamName)
-        val tvRole = headerView.findViewById<TextView>(R.id.tvRole)
+        val tvRole = headerView.findViewById<TextView>(R.id.tvMemberRole)
 
         if (tvTeamName != null) {
             tvTeamName.text = teamName
@@ -130,6 +130,13 @@ class TeamDetailFragment : Fragment(R.layout.fragment_team_detail), NavigationVi
             R.id.nav_team_chat -> {
                 tryNavigate(R.id.teamChatFragment, args, navOptions)
             }
+            R.id.nav_team_info -> {
+                tryNavigate(R.id.teamInfoFragment, args, navOptions)
+            }
+            R.id.nav_member_directory -> {
+                tryNavigate(R.id.memberDirectoryFragment, args, navOptions)
+            }
+
 
             // --- SECTION 3: SYSTEM ---
             R.id.nav_leave_team -> {

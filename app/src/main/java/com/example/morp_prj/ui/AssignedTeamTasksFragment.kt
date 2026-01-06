@@ -204,10 +204,11 @@ class AssignedTeamTasksFragment : Fragment(R.layout.fragment_assigned_team_tasks
 
         val typeText = if (currentSortType == SortType.TIME) "Time" else "Priority"
         val orderText = when(currentSortOrder) {
-            SortOrder.DESC -> "Desc (High->Low)"
-            SortOrder.ASC -> "Asc (Low->High)"
+            SortOrder.DESC -> if (currentSortType == SortType.PRIORITY) "Desc (High->Low)" else "Desc (Soon -> Late)"
+            SortOrder.ASC -> if (currentSortType == SortType.PRIORITY) "Asc (Low->High)" else "Asc (Late -> Soon)"
             SortOrder.NONE -> "Default"
         }
+
         if (currentSortOrder != SortOrder.NONE) {
             Toast.makeText(context, "Sorted by $typeText: $orderText", Toast.LENGTH_SHORT).show()
         }
@@ -259,7 +260,7 @@ class AssignedTeamTasksFragment : Fragment(R.layout.fragment_assigned_team_tasks
 
     private fun observeTasks(teamId: String) {
         progressBar.visibility = View.VISIBLE
-        viewModel.fetchTasks(teamId)
+        viewModel.fetchAssignedTasks(teamId)
         viewModel.tasks.observe(viewLifecycleOwner) { tasks ->
             progressBar.visibility = View.GONE
             allTasks = tasks

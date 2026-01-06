@@ -9,6 +9,7 @@ import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.example.morp_prj.R
+import com.example.morp_prj.data.api.RetrofitClient
 import com.example.morp_prj.data.model.TeamMember
 
 class JoinRequestAdapter(
@@ -35,8 +36,9 @@ class JoinRequestAdapter(
 
         holder.tvUserName.text = request.displayName
 
+        val fullUrl = RetrofitClient.buildFullUrl(request.avatarUrl) ?: request.avatarUrl
         Glide.with(holder.itemView.context)
-            .load(request.avatarUrl)
+            .load(fullUrl)
             .placeholder(R.drawable.ic_profile_selector)
             .error(R.drawable.ic_profile_selector)
             .circleCrop()
