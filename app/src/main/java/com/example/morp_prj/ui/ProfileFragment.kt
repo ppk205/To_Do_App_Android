@@ -95,34 +95,20 @@ class ProfileFragment : Fragment() {
         }
 
         loadUserData()
-        fetchProfileFromServer() // Fetch fresh data from server
         setupListeners(readOnly = false)
         updateUIState(false) // Mặc định là chế độ View
+
+        // Refresh profile on load
+        refreshProfile()
     }
 
-    /**
-     * Fetch profile from server and update UI
-     */
-    private fun fetchProfileFromServer() {
-        val authRepo = AuthRepository(requireContext())
+    override fun onResume() {
+        super.onResume()
 
-        lifecycleScope.launch {
-            val result = authRepo.fetchProfile()
-
-            result.onSuccess { user ->
-                // Save to local cache
-                PreferenceManager.saveUser(requireContext(), user)
-                currentUser = user
-
-                // Update UI with fresh data
-                updateUIWithUser(user)
-            }.onFailure { error ->
-                // Silently fail - keep using cached data
-                // Only show error if it's critical
-                if (currentUser == null) {
-                    Toast.makeText(context, "Không thể tải profile: ${error.message}", Toast.LENGTH_SHORT).show()
-                }
-            }
+        // Refresh profile data every time fragment becomes visible
+        // This ensures data is up-to-date when switching between tabs
+        if (!readOnly) {
+            refreshProfile()
         }
     }
 
@@ -130,6 +116,45 @@ class ProfileFragment : Fragment() {
         currentUser = PreferenceManager.getUser(requireContext())
         currentUser?.let { user ->
             updateUIWithUser(user)
+        }
+    }
+
+    /**
+     * Refresh profile - Load from cache và fetch từ server
+     * Gọi hàm này sau mỗi lần có thay đổi để đảm bảo UI luôn updated
+     */
+    private fun refreshProfile() {
+        android.util.Log.d("ProfileFragment", "🔄 Refreshing profile...")
+
+        // 1. Load từ cache ngay lập tức (fast)
+        val cachedUser = PreferenceManager.getUser(requireContext())
+        if (cachedUser != null) {
+            currentUser = cachedUser
+            updateUIWithUser(cachedUser)
+            android.util.Log.d("ProfileFragment", "📦 Loaded from cache: ${cachedUser.displayName}")
+        }
+
+        // 2. Fetch từ server để đảm bảo data mới nhất (background)
+        val authRepo = AuthRepository(requireContext())
+        lifecycleScope.launch {
+            val result: Result<com.example.morp_prj.data.model.User> = authRepo.fetchProfile()
+
+            if (result.isSuccess) {
+                val freshUser = result.getOrNull()
+                if (freshUser != null) {
+                    // Save to cache
+                    PreferenceManager.saveUser(requireContext(), freshUser)
+                    currentUser = freshUser
+
+                    // Update UI with fresh server data
+                    requireActivity().runOnUiThread {
+                        updateUIWithUser(freshUser)
+                        android.util.Log.d("ProfileFragment", "🌐 Updated from server: ${freshUser.displayName}")
+                    }
+                }
+            } else {
+                android.util.Log.e("ProfileFragment", "❌ Failed to fetch from server: ${result.exceptionOrNull()?.message}")
+            }
         }
     }
 
@@ -146,20 +171,27 @@ class ProfileFragment : Fragment() {
         binding.etUsername.setText(user.username)
         binding.etBio.setText(user.bio ?: "")
 
-        // Bind social URLs
+        // Bind social URLs - force update immediately
         binding.etGithub.setText(user.githubUrl ?: "")
         binding.etLinkedin.setText(user.linkedinUrl ?: "")
         binding.etWebsite.setText(user.websiteUrl ?: "")
+
+        // Update currentUser reference to ensure social icons have latest data
+        currentUser = user
 
         // Load Avatar từ server URL
         if (!user.avatarUrl.isNullOrEmpty()) {
             // Use RetrofitClient to build full URL consistently
             val fullUrl = RetrofitClient.buildFullUrl(user.avatarUrl) ?: user.avatarUrl
 
+            // Force reload by clearing Glide cache for this specific URL
             Glide.with(this)
                 .load(fullUrl)
                 .placeholder(R.drawable.ic_profile_unselected)
                 .error(R.drawable.ic_profile_unselected)
+                .circleCrop()
+                .skipMemoryCache(true) // Skip cache to force reload
+                .diskCacheStrategy(com.bumptech.glide.load.engine.DiskCacheStrategy.NONE) // Skip disk cache
                 .into(binding.ivAvatar)
         } else {
             binding.ivAvatar.setImageResource(R.drawable.ic_profile_unselected)
@@ -398,13 +430,8 @@ class ProfileFragment : Fragment() {
             )
 
             result.onSuccess { response ->
-                // Log response để debug
-                android.util.Log.d("ProfileFragment", "✅ Update success response: ${response.user}")
-
                 // Update thành công trên Server
                 response.user?.let { updatedUser ->
-                    android.util.Log.d("ProfileFragment", "📝 Avatar URL from server: ${updatedUser.avatarUrl}")
-
                     PreferenceManager.saveUser(requireContext(), updatedUser)
                     currentUser = updatedUser
 
@@ -417,8 +444,10 @@ class ProfileFragment : Fragment() {
                 updateUIState(false)
                 selectedAvatarUri = null
                 uploadedCloudinaryLink = null
+
+                // Refresh profile để đảm bảo UI có data mới nhất từ server
+                refreshProfile()
             }.onFailure { error ->
-                android.util.Log.e("ProfileFragment", "❌ Update failed: ${error.message}")
                 Toast.makeText(context, "Lỗi cập nhật: ${error.message}", Toast.LENGTH_LONG).show()
             }
 
@@ -448,10 +477,6 @@ class ProfileFragment : Fragment() {
         }
     }
 
-    private fun fetchProfileForDisplay(userId: String) {
-        // In read-only mode we already bind passed args; skip network fetch of current user
-        updateUIWithArgsFallback()
-    }
 
     private fun performLogout() {
         // Xóa dữ liệu preferences (clearLoginData sẽ reset hasSeenOnboarding về false)

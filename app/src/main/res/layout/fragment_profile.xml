@@ -64,6 +64,18 @@
                 android:background="#E0F2F1"/>
         </androidx.cardview.widget.CardView>
 
+        <!-- Progress indicator for avatar upload -->
+        <ProgressBar
+            android:id="@+id/progressBarAvatar"
+            android:layout_width="60dp"
+            android:layout_height="60dp"
+            android:visibility="gone"
+            android:indeterminateTint="@color/colorPrimary"
+            app:layout_constraintBottom_toBottomOf="@id/cvAvatar"
+            app:layout_constraintEnd_toEndOf="@id/cvAvatar"
+            app:layout_constraintStart_toStartOf="@id/cvAvatar"
+            app:layout_constraintTop_toTopOf="@id/cvAvatar" />
+
         <View
             android:layout_width="20dp"
             android:layout_height="20dp"
