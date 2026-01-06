@@ -24,7 +24,7 @@ class RedisOTPService {
     static config = {
         OTP_LENGTH: 6,
         OTP_TTL_MINUTES: 2,
-        RESEND_COOLDOWN_SECONDS: 30,
+        RESEND_COOLDOWN_SECONDS: 60,
         MAX_ATTEMPTS: 5,
         FAIL_COOLDOWN_SECONDS: 60,
         HMAC_SECRET: process.env.OTP_HMAC_SECRET || 'your-secret-key-here'

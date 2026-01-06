@@ -654,7 +654,9 @@ async function resendResetOTP(req, res) {
 
         res.status(200).json({
             success: true,
-            message: 'If the email exists, a new OTP has been sent'
+            message: 'If the email exists, a new OTP has been sent',
+            expiresIn: (result.ttl || 10) * 60, // seconds (default 10 minutes)
+            resendAvailableIn: RedisOTPService.config.RESEND_COOLDOWN_SECONDS
         });
 
     } catch (error) {
