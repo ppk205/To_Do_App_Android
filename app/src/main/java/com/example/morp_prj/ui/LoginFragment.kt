@@ -183,9 +183,17 @@ class LoginFragment : Fragment(R.layout.fragment_login) {
                 withContext(Dispatchers.Main) {
                     val errorMessage = when {
                         e.message?.contains("Unauthorized", ignoreCase = true) == true ||
-                        e.message?.contains("401", ignoreCase = true) == true ->
+                        e.message?.contains("401", ignoreCase = true) == true ||
+                        e.message?.contains("Invalid credentials", ignoreCase = true) == true ||
+                        e.message?.contains("Incorrect password", ignoreCase = true) == true ||
+                        e.message?.contains("User not found", ignoreCase = true) == true ->
                             "Username or password is incorrect. Please try again."
-                        else -> "Error: ${e.message ?: "Cannot connect to server"}"
+                        e.message?.contains("ConnectException", ignoreCase = true) == true ||
+                        e.message?.contains("SocketTimeoutException", ignoreCase = true) == true ||
+                        e.message?.contains("UnknownHostException", ignoreCase = true) == true ->
+                            "Cannot connect to server. Please check your internet connection."
+                        e.message.isNullOrBlank() -> "Login failed. Please try again."
+                        else -> e.message ?: "Login failed. Please try again."
                     }
                     Toast.makeText(requireContext(), errorMessage, Toast.LENGTH_LONG).show()
                 }
@@ -287,9 +295,16 @@ class LoginFragment : Fragment(R.layout.fragment_login) {
                     val errorMessage = when {
                         error.message?.contains("Unauthorized", ignoreCase = true) == true ||
                         error.message?.contains("401", ignoreCase = true) == true ||
-                        error.message?.contains("Invalid credentials", ignoreCase = true) == true ->
+                        error.message?.contains("Invalid credentials", ignoreCase = true) == true ||
+                        error.message?.contains("Incorrect password", ignoreCase = true) == true ||
+                        error.message?.contains("User not found", ignoreCase = true) == true ->
                             "Username or password is incorrect. Please try again."
-                        else -> "Error: ${error.message ?: "Cannot connect to server"}"
+                        error.message?.contains("ConnectException", ignoreCase = true) == true ||
+                        error.message?.contains("SocketTimeoutException", ignoreCase = true) == true ||
+                        error.message?.contains("UnknownHostException", ignoreCase = true) == true ->
+                            "Cannot connect to server. Please check your internet connection."
+                        error.message.isNullOrBlank() -> "Login failed. Please try again."
+                        else -> error.message ?: "Login failed. Please try again."
                     }
                     Toast.makeText(
                         requireContext(),
