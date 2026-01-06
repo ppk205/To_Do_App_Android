@@ -1060,7 +1060,6 @@ module.exports = {
     changePassword,
     getProfile,
     getUserById,
-    updateProfile
     updateProfile,
     getCloudinarySignature // REQ-UPLOAD-01: Signed uploads
 };
