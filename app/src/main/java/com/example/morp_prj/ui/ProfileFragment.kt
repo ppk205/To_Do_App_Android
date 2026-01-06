@@ -74,7 +74,6 @@ class ProfileFragment : Fragment() {
             })
         }
 
-        binding.btnBack.setOnClickListener { findNavController().navigateUp() }
 
         // Initialize Cloudinary
         CloudinaryHelper.init(requireContext())

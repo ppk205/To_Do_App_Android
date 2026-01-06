@@ -57,8 +57,8 @@ class HomeFragment : Fragment() {
     private val currentUserId: String
         get() = if (prefs.isGuest()) GUEST_USER_ID else prefs.getUserId() ?: GUEST_USER_ID
 
-    private lateinit var tvWelcome: TextView
-    private lateinit var ivAvatar: ImageView
+    private lateinit var tvGreeting: TextView
+    private lateinit var ivUserAvatar: ImageView
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -80,8 +80,8 @@ class HomeFragment : Fragment() {
             }
         })
 
-        tvWelcome = view.findViewById(R.id.tvWelcome)
-        ivAvatar = view.findViewById(R.id.ivAvatar)
+        tvGreeting = view.findViewById(R.id.tvGreeting)
+        ivUserAvatar = view.findViewById(R.id.ivUserAvatar)
         updateGreeting()
 
         // Fetch fresh profile từ server để đảm bảo avatar được load ngay sau đăng nhập
@@ -151,13 +151,13 @@ class HomeFragment : Fragment() {
     private fun updateGreetingWithUser(user: com.example.morp_prj.data.model.User?) {
         // Xử lý tên hiển thị
         val name = when {
-            prefs.isGuest() -> getString(R.string.guest_user_name)
+            prefs.isGuest() -> "Guest"
             user?.displayName?.isNotBlank() == true -> user.displayName
             user?.username?.isNotBlank() == true -> user.username
             user?.email?.isNotBlank() == true -> user.email
-            else -> getString(R.string.default_user_name)
+            else -> "User"
         }
-        tvWelcome.text = getString(R.string.home_greeting_format, name)
+        tvGreeting.text = "Hi, $name"
 
         // Load avatar using RetrofitClient for consistent URL handling
         if (user != null && !user.avatarUrl.isNullOrEmpty()) {
@@ -170,13 +170,13 @@ class HomeFragment : Fragment() {
                 .placeholder(R.drawable.img_1) // Default avatar while loading
                 .error(R.drawable.img_1) // Default avatar if load fails
                 .circleCrop() // Make it circular
-                .into(ivAvatar)
+                .into(ivUserAvatar)
         } else {
             // Không có avatar URL, sử dụng ảnh mặc định
             Glide.with(this)
                 .load(R.drawable.img_1)
                 .circleCrop()
-                .into(ivAvatar)
+                .into(ivUserAvatar)
         }
     }
 
