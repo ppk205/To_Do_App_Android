@@ -88,6 +88,10 @@ object RetrofitClient {
     var notificationApiService: NotificationApiService = retrofit.create(NotificationApiService::class.java)
         private set
 
+    @Volatile
+    var encryptionApiService: EncryptionApiService = retrofit.create(EncryptionApiService::class.java)
+        private set
+
     private fun buildRetrofit(builder: OkHttpClient.Builder?): Retrofit {
         val clientBuilder = builder ?: OkHttpClient.Builder()
             .addInterceptor(loggingInterceptor)
@@ -146,6 +150,7 @@ object RetrofitClient {
             teamApiService = retrofit.create(TeamApiService::class.java)
             teamTaskApiService = retrofit.create(TeamTaskApiService::class.java)
             notificationApiService = retrofit.create(NotificationApiService::class.java)
+            encryptionApiService = retrofit.create(EncryptionApiService::class.java)
         } catch (e: Exception) {
             // Fail gracefully - keep existing retrofit without auth interceptor
             if (isDebugBuild()) android.util.Log.e("RetrofitClient", "Failed to set auth interceptor", e)

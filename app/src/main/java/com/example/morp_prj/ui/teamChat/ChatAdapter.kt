@@ -59,7 +59,7 @@ class ChatAdapter(private val currentUserId: String) : RecyclerView.Adapter<Recy
 
         fun bind(msg: ChatMessage) {
             content.text = msg.content
-            time.text = DateUtils.formatTime(msg.createdAt)
+            time.text = DateUtils.formatTime(msg.timestamp)
         }
     }
 
@@ -73,7 +73,7 @@ class ChatAdapter(private val currentUserId: String) : RecyclerView.Adapter<Recy
         fun bind(msg: ChatMessage) {
             content.text = msg.content
             name.text = msg.senderName
-            time.text = DateUtils.formatTime(msg.createdAt)
+            time.text = DateUtils.formatTime(msg.timestamp)
 
             Glide.with(itemView.context)
                 .load(msg.senderAvatar)
