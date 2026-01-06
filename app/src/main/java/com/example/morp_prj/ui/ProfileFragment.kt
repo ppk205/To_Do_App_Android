@@ -185,9 +185,14 @@ class ProfileFragment : Fragment() {
             binding.etLinkedin.visibility = View.GONE
             binding.lblWebsite.visibility = View.GONE
             binding.etWebsite.visibility = View.GONE
+            // Bio luôn hiện để xem trong chế độ read-only
+            binding.lblBio.visibility = View.VISIBLE
+            binding.etBio.visibility = View.VISIBLE
             binding.etFullName.isEnabled = false
             binding.etPhone.isEnabled = false
             binding.etBio.isEnabled = false
+            binding.etBio.isFocusable = false
+            binding.etBio.isFocusableInTouchMode = false
             binding.etGithub.isEnabled = false
             binding.etLinkedin.isEnabled = false
             binding.etWebsite.isEnabled = false
@@ -260,6 +265,10 @@ class ProfileFragment : Fragment() {
             binding.etLinkedin.visibility = View.VISIBLE
             binding.lblWebsite.visibility = View.VISIBLE
             binding.etWebsite.visibility = View.VISIBLE
+
+            // HIỆN label và EditText cho Bio
+            binding.lblBio.visibility = View.VISIBLE
+            binding.etBio.visibility = View.VISIBLE
         } else {
             // Đang xem: Hiện nút Edit, Ẩn bộ nút Save/Cancel
             binding.ivEdit.visibility = View.VISIBLE
@@ -276,6 +285,10 @@ class ProfileFragment : Fragment() {
             binding.etLinkedin.visibility = View.GONE
             binding.lblWebsite.visibility = View.GONE
             binding.etWebsite.visibility = View.GONE
+
+            // HIỆN label và EditText cho Bio (luôn hiện trong view mode)
+            binding.lblBio.visibility = View.VISIBLE
+            binding.etBio.visibility = View.VISIBLE
         }
 
         // Enable/Disable các ô nhập liệu
@@ -290,6 +303,17 @@ class ProfileFragment : Fragment() {
         binding.etGithub.isEnabled = enableEdit
         binding.etLinkedin.isEnabled = enableEdit
         binding.etWebsite.isEnabled = enableEdit
+
+        // Cập nhật style của etBio dựa trên trạng thái
+        if (enableEdit) {
+            binding.etBio.setBackgroundResource(R.drawable.bg_input_field)
+            binding.etBio.isFocusable = true
+            binding.etBio.isFocusableInTouchMode = true
+        } else {
+            binding.etBio.setBackgroundResource(R.drawable.bg_input_field)
+            binding.etBio.isFocusable = false
+            binding.etBio.isFocusableInTouchMode = false
+        }
     }
 
     private fun openGallery() {
