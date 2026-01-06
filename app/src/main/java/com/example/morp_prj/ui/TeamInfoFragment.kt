@@ -156,8 +156,9 @@ private class ManagerMiniAdapter(
             name.text = item.displayName
             role.text = item.role.replaceFirstChar { it.uppercase() }
             email.text = item.email
+            val fullUrl = RetrofitClient.buildFullUrl(item.avatarUrl) ?: item.avatarUrl
             Glide.with(itemView.context)
-                .load(item.avatarUrl)
+                .load(fullUrl)
                 .placeholder(R.drawable.ic_avatar_placeholder)
                 .error(R.drawable.ic_avatar_placeholder)
                 .circleCrop()

@@ -22,6 +22,7 @@ import com.example.morp_prj.data.TaskRepository
 import com.example.morp_prj.data.TaskUiMapper.toUiItem
 import com.example.morp_prj.data.db.AppDatabase
 import com.example.morp_prj.data.repository.AuthRepository
+import com.example.morp_prj.data.api.RetrofitClient
 import com.example.morp_prj.utils.PreferenceManager
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -158,15 +159,9 @@ class HomeFragment : Fragment() {
         }
         tvWelcome.text = getString(R.string.home_greeting_format, name)
 
-        // Load avatar từ server URL - logic giống ProfileFragment
+        // Load avatar using RetrofitClient for consistent URL handling
         if (user != null && !user.avatarUrl.isNullOrEmpty()) {
-            // Build full URL: http://10.0.2.2:3001/uploads/avatars/filename.jpg
-            val baseUrl = "http://10.0.2.2:3001" // Android emulator localhost
-            val fullUrl = if (user.avatarUrl.startsWith("http")) {
-                user.avatarUrl
-            } else {
-                "$baseUrl${user.avatarUrl}"
-            }
+            val fullUrl = RetrofitClient.buildFullUrl(user.avatarUrl) ?: user.avatarUrl
 
             Log.d("HomeFragment", "Loading avatar from URL: $fullUrl")
 

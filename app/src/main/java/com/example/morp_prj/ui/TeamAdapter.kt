@@ -10,6 +10,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.example.morp_prj.R
 import com.example.morp_prj.data.model.Team
+import com.example.morp_prj.data.api.RetrofitClient
 
 class TeamAdapter(
     private var teams: List<Team>,
@@ -33,8 +34,9 @@ class TeamAdapter(
 
             // Avatar
             if (!team.avatarUrl.isNullOrEmpty()) {
+                val fullUrl = RetrofitClient.buildFullUrl(team.avatarUrl) ?: team.avatarUrl
                 Glide.with(itemView.context)
-                    .load(team.avatarUrl)
+                    .load(fullUrl)
                     .placeholder(R.drawable.ic_avatar_placeholder)
                     .error(R.drawable.ic_avatar_placeholder)
                     .fallback(R.drawable.ic_avatar_placeholder)

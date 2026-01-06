@@ -88,6 +88,31 @@ object RetrofitClient {
     var notificationApiService: NotificationApiService = retrofit.create(NotificationApiService::class.java)
         private set
 
+    /**
+     * Get the base URL used by Retrofit
+     * This ensures all network calls use the same base URL
+     */
+    fun getBaseUrl(): String = BASE_URL
+
+    /**
+     * Build full URL from relative path
+     * @param relativePath The relative path (e.g., "/uploads/avatars/image.jpg")
+     * @return Full URL (e.g., "http://192.168.2.10:3001/uploads/avatars/image.jpg")
+     */
+    fun buildFullUrl(relativePath: String?): String? {
+        if (relativePath.isNullOrEmpty()) return null
+
+        // If already a full URL, return as is
+        if (relativePath.startsWith("http://") || relativePath.startsWith("https://")) {
+            return relativePath
+        }
+
+        // Build full URL from base URL
+        val base = BASE_URL.removeSuffix("/")
+        val path = relativePath.removePrefix("/")
+        return "$base/$path"
+    }
+
     private fun buildRetrofit(builder: OkHttpClient.Builder?): Retrofit {
         val clientBuilder = builder ?: OkHttpClient.Builder()
             .addInterceptor(loggingInterceptor)

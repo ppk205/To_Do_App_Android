@@ -21,6 +21,7 @@ import com.example.morp_prj.utils.PreferenceManager
 import com.example.morp_prj.data.model.User
 import com.example.morp_prj.data.repository.AuthRepository
 import com.example.morp_prj.utils.CloudinaryHelper
+import com.example.morp_prj.data.api.RetrofitClient
 import kotlinx.coroutines.launch
 
 class ProfileFragment : Fragment() {
@@ -152,13 +153,8 @@ class ProfileFragment : Fragment() {
 
         // Load Avatar từ server URL
         if (!user.avatarUrl.isNullOrEmpty()) {
-            // Build full URL: http://localhost:3001/uploads/avatars/filename.jpg
-            val baseUrl = "http://10.0.2.2:3001" // Android emulator localhost
-            val fullUrl = if (user.avatarUrl.startsWith("http")) {
-                user.avatarUrl
-            } else {
-                "$baseUrl${user.avatarUrl}"
-            }
+            // Use RetrofitClient to build full URL consistently
+            val fullUrl = RetrofitClient.buildFullUrl(user.avatarUrl) ?: user.avatarUrl
 
             Glide.with(this)
                 .load(fullUrl)
@@ -442,8 +438,8 @@ class ProfileFragment : Fragment() {
         binding.etFullName.setText(displayName ?: "")
         binding.etEmail.setText(email ?: "")
         if (!avatarUrl.isNullOrBlank()) {
-            val baseUrl = "http://10.0.2.2:3001"
-            val fullUrl = if (avatarUrl.startsWith("http")) avatarUrl else "$baseUrl$avatarUrl"
+            // Use RetrofitClient to build full URL consistently
+            val fullUrl = RetrofitClient.buildFullUrl(avatarUrl) ?: avatarUrl
             Glide.with(this)
                 .load(fullUrl)
                 .placeholder(R.drawable.ic_profile_unselected)

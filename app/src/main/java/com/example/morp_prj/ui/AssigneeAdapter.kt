@@ -8,6 +8,7 @@ import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.example.morp_prj.R
+import com.example.morp_prj.data.api.RetrofitClient
 import com.example.morp_prj.data.model.User
 
 class AssigneeAdapter(private val users: List<User>) :
@@ -35,8 +36,9 @@ class AssigneeAdapter(private val users: List<User>) :
 
         val avatarUrl = user.avatarUrl
         if (!avatarUrl.isNullOrBlank()) {
+            val fullUrl = RetrofitClient.buildFullUrl(avatarUrl) ?: avatarUrl
             Glide.with(holder.itemView.context)
-                .load(avatarUrl)
+                .load(fullUrl)
                 .placeholder(R.drawable.ic_avatar_placeholder)
                 .circleCrop()
                 .into(holder.ivAvatar)
