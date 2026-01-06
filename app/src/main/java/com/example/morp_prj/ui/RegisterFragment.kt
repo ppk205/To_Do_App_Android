@@ -62,11 +62,45 @@ class RegisterFragment : Fragment(R.layout.fragment_register) {
         val txtRequirementNumber = view.findViewById<TextView>(R.id.txt_requirement_number)
         val txtRequirementSpecial = view.findViewById<TextView>(R.id.txt_requirement_special)
 
+        // Clear error when user starts typing
+        inputFirstName.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                (inputFirstName.parent.parent as? com.google.android.material.textfield.TextInputLayout)?.error = null
+            }
+        })
+
+        inputLastName.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                (inputLastName.parent.parent as? com.google.android.material.textfield.TextInputLayout)?.error = null
+            }
+        })
+
+        inputUsername.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                (inputUsername.parent.parent as? com.google.android.material.textfield.TextInputLayout)?.error = null
+            }
+        })
+
+        inputEmail.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                (inputEmail.parent.parent as? com.google.android.material.textfield.TextInputLayout)?.error = null
+            }
+        })
+
         // Real-time password validation
         inputPassword.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
             override fun afterTextChanged(s: Editable?) {
+                (inputPassword.parent.parent as? com.google.android.material.textfield.TextInputLayout)?.error = null
                 validatePasswordRequirements(
                     s.toString(),
                     txtRequirementLength,
@@ -86,7 +120,14 @@ class RegisterFragment : Fragment(R.layout.fragment_register) {
             val password = inputPassword.text.toString().trim()
             val phone = inputPhone.text.toString().trim()
 
-            if (validateInput(firstName, lastName, username, email, password)) {
+            // Clear all previous errors
+            (inputFirstName.parent.parent as? com.google.android.material.textfield.TextInputLayout)?.error = null
+            (inputLastName.parent.parent as? com.google.android.material.textfield.TextInputLayout)?.error = null
+            (inputUsername.parent.parent as? com.google.android.material.textfield.TextInputLayout)?.error = null
+            (inputEmail.parent.parent as? com.google.android.material.textfield.TextInputLayout)?.error = null
+            (inputPassword.parent.parent as? com.google.android.material.textfield.TextInputLayout)?.error = null
+
+            if (validateInput(firstName, lastName, username, email, password, inputFirstName, inputLastName, inputUsername, inputEmail, inputPassword)) {
                 val displayName = "$firstName $lastName"
                 performRegister(username, password, displayName, email, phone.ifEmpty { null })
             }
@@ -98,55 +139,65 @@ class RegisterFragment : Fragment(R.layout.fragment_register) {
         lastName: String,
         username: String,
         email: String,
-        password: String
+        password: String,
+        inputFirstName: TextInputEditText,
+        inputLastName: TextInputEditText,
+        inputUsername: TextInputEditText,
+        inputEmail: TextInputEditText,
+        inputPassword: TextInputEditText
     ): Boolean {
+        var isValid = true
+
+        val firstNameLayout = inputFirstName.parent.parent as? com.google.android.material.textfield.TextInputLayout
+        val lastNameLayout = inputLastName.parent.parent as? com.google.android.material.textfield.TextInputLayout
+        val usernameLayout = inputUsername.parent.parent as? com.google.android.material.textfield.TextInputLayout
+        val emailLayout = inputEmail.parent.parent as? com.google.android.material.textfield.TextInputLayout
+        val passwordLayout = inputPassword.parent.parent as? com.google.android.material.textfield.TextInputLayout
+
         if (firstName.isEmpty()) {
-            Toast.makeText(requireContext(), "Vui lòng nhập tên", Toast.LENGTH_SHORT).show()
-            return false
+            firstNameLayout?.error = "Required"
+            isValid = false
         }
 
         if (lastName.isEmpty()) {
-            Toast.makeText(requireContext(), "Vui lòng nhập họ", Toast.LENGTH_SHORT).show()
-            return false
+            lastNameLayout?.error = "Required"
+            isValid = false
         }
 
         if (username.isEmpty()) {
-            Toast.makeText(requireContext(), "Vui lòng nhập username", Toast.LENGTH_SHORT).show()
-            return false
-        }
-
-        if (username.length < 3) {
-            Toast.makeText(requireContext(), "Username phải có ít nhất 3 ký tự", Toast.LENGTH_SHORT).show()
-            return false
+            usernameLayout?.error = "Required"
+            isValid = false
+        } else if (username.length < 3) {
+            usernameLayout?.error = "At least 3 characters"
+            isValid = false
         }
 
         if (email.isEmpty()) {
-            Toast.makeText(requireContext(), "Vui lòng nhập email", Toast.LENGTH_SHORT).show()
-            return false
-        }
-
-        if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
-            Toast.makeText(requireContext(), "Email không hợp lệ", Toast.LENGTH_SHORT).show()
-            return false
+            emailLayout?.error = "Required"
+            isValid = false
+        } else if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+            emailLayout?.error = "Invalid email"
+            isValid = false
         }
 
         if (password.isEmpty()) {
-            Toast.makeText(requireContext(), "Vui lòng nhập mật khẩu", Toast.LENGTH_SHORT).show()
-            return false
-        }
-
-        // Check all password requirements at once
-        if (password.length < 8 ||
+            passwordLayout?.error = "Required"
+            isValid = false
+        } else if (password.length < 8 ||
             !password.any { it.isUpperCase() } ||
             !password.any { it.isLowerCase() } ||
             !password.any { it.isDigit() } ||
             !password.any { it in "!@#\$%^&*" }
         ) {
-            Toast.makeText(requireContext(), "Mật khẩu không đáp ứng yêu cầu", Toast.LENGTH_SHORT).show()
-            return false
+            passwordLayout?.error = "Does not meet requirements"
+            isValid = false
         }
 
-        return true
+        if (!isValid) {
+            Toast.makeText(requireContext(), "Please fill in all required fields correctly", Toast.LENGTH_SHORT).show()
+        }
+
+        return isValid
     }
 
     private fun validatePasswordRequirements(
@@ -226,11 +277,11 @@ class RegisterFragment : Fragment(R.layout.fragment_register) {
                     Toast.makeText(requireContext(), response.message, Toast.LENGTH_LONG).show()
                 }
             }.onFailure { error ->
-                val errorMessage = error.message ?: "Không thể kết nối đến server"
+                val errorMessage = error.message ?: "Cannot connect to server"
                 android.util.Log.e("RegisterFragment", "Register failed: $errorMessage", error)
                 Toast.makeText(
                     requireContext(),
-                    "Lỗi: $errorMessage",
+                    "Error: $errorMessage",
                     Toast.LENGTH_LONG
                 ).show()
             }
