@@ -17,22 +17,10 @@
 
         <CheckBox
             android:id="@+id/checkDone"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
-
-        <TextView
-            android:id="@+id/txtTitle"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="12dp"
-            android:textColor="#111"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            app:layout_constraintEnd_toStartOf="@id/ivMore"
-            app:layout_constraintStart_toEndOf="@id/checkDone"
-            app:layout_constraintTop_toTopOf="@id/checkDone" />
 
         <ImageView
             android:id="@+id/ivMore"
@@ -43,20 +31,34 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
+        <TextView
+            android:id="@+id/txtTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_marginEnd="8dp"
+            android:text="hôm nay ăn gì"
+            android:textColor="#111"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            app:layout_constraintEnd_toStartOf="@id/ivMore"
+            app:layout_constraintStart_toEndOf="@id/checkDone"
+            app:layout_constraintTop_toTopOf="parent" />
+
         <LinearLayout
             android:id="@+id/rowMeta"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:layout_marginTop="8dp"
+            app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="@id/txtTitle"
-            app:layout_constraintTop_toBottomOf="@id/txtTitle"
-            app:layout_constraintEnd_toEndOf="@id/txtTitle">
+            app:layout_constraintTop_toBottomOf="@id/txtTitle">
 
             <ImageView
-                android:layout_width="16dp"
-                android:layout_height="16dp"
+                android:layout_width="14dp"
+                android:layout_height="14dp"
                 android:src="@drawable/ic_calendar_custom"
                 app:tint="#999999" />
 
@@ -66,11 +68,11 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="6dp"
                 android:background="@drawable/bg_todo_time"
-                android:paddingHorizontal="12dp"
-                android:paddingVertical="6dp"
-                android:text="Today, 6:00 PM"
+                android:paddingHorizontal="10dp"
+                android:paddingVertical="4dp"
+                android:text="Today, 8:43 CH"
                 android:textColor="@color/white"
-                android:textSize="12sp" />
+                android:textSize="11sp" />
 
             <TextView
                 android:id="@+id/txtPriority"
@@ -78,58 +80,48 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
                 android:background="@drawable/bg_todo_priority"
-                android:paddingHorizontal="12dp"
-                android:paddingVertical="6dp"
+                android:paddingHorizontal="10dp"
+                android:paddingVertical="4dp"
                 android:text="MEDIUM"
                 android:textColor="@color/white"
-                android:textSize="12sp" />
+                android:textSize="11sp" />
         </LinearLayout>
 
-        <LinearLayout
+        <com.google.android.material.chip.ChipGroup
             android:id="@+id/rowTags"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:orientation="horizontal"
+            app:chipSpacingHorizontal="8dp"
+            app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="@id/txtTitle"
-            app:layout_constraintTop_toBottomOf="@id/rowMeta"
-            app:layout_constraintEnd_toEndOf="@id/txtTitle">
+            app:layout_constraintTop_toBottomOf="@id/rowMeta">
 
             <TextView
                 android:id="@+id/txtTagWork"
-                style="@style/Widget.MaterialComponents.Chip.Choice"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:background="@drawable/bg_todo_tag"
                 android:paddingHorizontal="12dp"
                 android:paddingVertical="4dp"
                 android:text="Work"
-                android:textColor="#111"
                 android:textSize="12sp" />
 
             <TextView
                 android:id="@+id/txtTagMarketing"
-                style="@style/Widget.MaterialComponents.Chip.Choice"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
                 android:background="@drawable/bg_todo_tag"
                 android:paddingHorizontal="12dp"
                 android:paddingVertical="4dp"
                 android:text="Marketing"
-                android:textColor="#111"
                 android:textSize="12sp" />
-        </LinearLayout>
-
-        <!-- Selection highlight: we now switch the CardView background instead of using an overlay.
-             Keep this view for compatibility, but it stays gone. -->
+        </com.google.android.material.chip.ChipGroup>
         <View
             android:id="@+id/selectionOverlay"
             android:layout_width="0dp"
             android:layout_height="0dp"
-            android:background="@drawable/bg_task_selected"
-            android:clickable="false"
-            android:focusable="false"
+            android:background="#20246BFD"
             android:visibility="gone"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
@@ -138,8 +130,9 @@
 
         <ImageView
             android:id="@+id/ivSelected"
-            android:layout_width="22dp"
-            android:layout_height="22dp"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_margin="8dp"
             android:src="@android:drawable/checkbox_on_background"
             android:visibility="gone"
             app:tint="#246BFD"
@@ -147,5 +140,4 @@
             app:layout_constraintTop_toTopOf="parent" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
-
 </androidx.cardview.widget.CardView>
