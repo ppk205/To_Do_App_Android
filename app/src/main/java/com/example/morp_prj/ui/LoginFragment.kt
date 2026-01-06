@@ -3,6 +3,7 @@ package com.example.morp_prj.ui
 import android.os.Bundle
 import android.util.Log
 import android.view.View
+import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.constraintlayout.motion.widget.MotionLayout
@@ -48,12 +49,19 @@ class LoginFragment : Fragment(R.layout.fragment_login) {
         val txtRegisterLink = view.findViewById<TextView>(R.id.txt_register_link)
         val txtForgotPassword = view.findViewById<TextView>(R.id.txt_forgot_password)
 
-        // Clear error when user starts typing
+        // Clear error when user starts typing + real-time email validation
         inputEmailOrUsername.addTextChangedListener(object : android.text.TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
             override fun afterTextChanged(s: android.text.Editable?) {
-                view.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.input_email_or_username_layout)?.error = null
+                val layout = view.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.input_email_or_username_layout)
+                layout?.error = null
+
+                // Real-time email format validation (only if it looks like an email)
+                val text = s?.toString()?.trim() ?: ""
+                if (text.isNotEmpty() && text.contains("@") && !android.util.Patterns.EMAIL_ADDRESS.matcher(text).matches()) {
+                    layout?.error = "Invalid email format"
+                }
             }
         })
 
@@ -64,6 +72,16 @@ class LoginFragment : Fragment(R.layout.fragment_login) {
                 view.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.input_password_layout)?.error = null
             }
         })
+
+        // Trigger login when user presses Done on keyboard
+        inputPassword.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_DONE) {
+                btnLogin.performClick()
+                true
+            } else {
+                false
+            }
+        }
 
         btnLogin.setOnClickListener {
             // Safe read of text (avoid NPE if .text is null)
@@ -98,21 +116,39 @@ class LoginFragment : Fragment(R.layout.fragment_login) {
 
     private fun validateInput(usernameOrEmail: String, password: String, view: View): Boolean {
         var isValid = true
+        var firstErrorField: View? = null
 
         val emailLayout = view.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.input_email_or_username_layout)
         val passwordLayout = view.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.input_password_layout)
+        val emailInput = view.findViewById<TextInputEditText>(R.id.input_email_or_username)
+        val passwordInput = view.findViewById<TextInputEditText>(R.id.input_password)
 
         if (usernameOrEmail.isEmpty()) {
             emailLayout?.error = "Required"
+            if (firstErrorField == null) firstErrorField = emailInput
             isValid = false
         }
 
         if (password.isEmpty()) {
             passwordLayout?.error = "Required"
+            if (firstErrorField == null) firstErrorField = passwordInput
             isValid = false
         }
 
         if (!isValid) {
+            // Haptic feedback
+            try {
+                firstErrorField?.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
+            } catch (_: Exception) {}
+
+            // Focus on first error field
+            firstErrorField?.requestFocus()
+
+            // Scroll to first error field
+            try {
+                view.findViewById<ScrollView>(R.id.scroll_content)?.smoothScrollTo(0, firstErrorField?.top ?: 0)
+            } catch (_: Exception) {}
+
             Toast.makeText(requireContext(), "Please fill in all required fields", Toast.LENGTH_SHORT).show()
         }
 

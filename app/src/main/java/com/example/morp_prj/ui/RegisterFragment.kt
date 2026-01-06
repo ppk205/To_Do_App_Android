@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.View
+import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.constraintlayout.motion.widget.MotionLayout
@@ -18,6 +19,7 @@ import com.example.morp_prj.data.repository.TaskSyncRepository
 import com.example.morp_prj.utils.PreferenceManager
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputEditText
+import com.hbb20.CountryCodePicker
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -43,9 +45,7 @@ class RegisterFragment : Fragment(R.layout.fragment_register) {
 
         // Back button handler
         val btnBack = view.findViewById<View>(R.id.btn_back)
-        btnBack.setOnClickListener {
-            findNavController().navigateUp()
-        }
+        btnBack.setOnClickListener { findNavController().navigateUp() }
 
         val inputFirstName = view.findViewById<TextInputEditText>(R.id.input_first_name)
         val inputLastName = view.findViewById<TextInputEditText>(R.id.input_last_name)
@@ -53,7 +53,16 @@ class RegisterFragment : Fragment(R.layout.fragment_register) {
         val inputEmail = view.findViewById<TextInputEditText>(R.id.input_email)
         val inputPassword = view.findViewById<TextInputEditText>(R.id.input_password)
         val inputPhone = view.findViewById<TextInputEditText>(R.id.input_phone)
+        val countryCodePicker = view.findViewById<CountryCodePicker>(R.id.country_code_picker)
         val btnRegister = view.findViewById<MaterialButton>(R.id.btn_register)
+        val checkboxTerms = view.findViewById<com.google.android.material.checkbox.MaterialCheckBox>(R.id.checkbox_terms)
+
+        // Configure CCP
+        countryCodePicker.setDefaultCountryUsingNameCode("VN")
+        countryCodePicker.setAutoDetectedCountry(true)
+        countryCodePicker.showNameCode(false)
+        countryCodePicker.showFullName(false)
+        countryCodePicker.registerCarrierNumberEditText(inputPhone)
 
         // Password requirement TextViews
         val txtRequirementLength = view.findViewById<TextView>(R.id.txt_requirement_length)
@@ -83,7 +92,10 @@ class RegisterFragment : Fragment(R.layout.fragment_register) {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
             override fun afterTextChanged(s: Editable?) {
-                (inputUsername.parent.parent as? com.google.android.material.textfield.TextInputLayout)?.error = null
+                val layout = (inputUsername.parent.parent as? com.google.android.material.textfield.TextInputLayout)
+                layout?.error = null
+                val text = s?.toString()?.trim() ?: ""
+                if (text.isNotEmpty() && text.length < 3) layout?.error = "At least 3 characters"
             }
         })
 
@@ -91,7 +103,12 @@ class RegisterFragment : Fragment(R.layout.fragment_register) {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
             override fun afterTextChanged(s: Editable?) {
-                (inputEmail.parent.parent as? com.google.android.material.textfield.TextInputLayout)?.error = null
+                val layout = (inputEmail.parent.parent as? com.google.android.material.textfield.TextInputLayout)
+                layout?.error = null
+                val text = s?.toString()?.trim() ?: ""
+                if (text.isNotEmpty() && text.contains("@") && !android.util.Patterns.EMAIL_ADDRESS.matcher(text).matches()) {
+                    layout?.error = "Invalid email format"
+                }
             }
         })
 
@@ -112,6 +129,27 @@ class RegisterFragment : Fragment(R.layout.fragment_register) {
             }
         })
 
+        // Real-time phone validation via CCP
+        inputPhone.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                val layout = view.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.input_phone_layout)
+                layout?.error = null
+                val text = s?.toString()?.trim().orEmpty()
+                if (text.isNotEmpty() && !countryCodePicker.isValidFullNumber) {
+                    layout?.error = "Invalid phone number"
+                }
+            }
+        })
+
+        // Trigger register when user presses Done on keyboard
+        inputPhone.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_DONE) {
+                btnRegister.performClick(); true
+            } else false
+        }
+
         btnRegister.setOnClickListener {
             val firstName = inputFirstName.text.toString().trim()
             val lastName = inputLastName.text.toString().trim()
@@ -120,16 +158,34 @@ class RegisterFragment : Fragment(R.layout.fragment_register) {
             val password = inputPassword.text.toString().trim()
             val phone = inputPhone.text.toString().trim()
 
-            // Clear all previous errors
+            if (!checkboxTerms.isChecked) {
+                Toast.makeText(requireContext(), "Please agree to the Terms of Service and Privacy Policy", Toast.LENGTH_LONG).show()
+                checkboxTerms.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
+                return@setOnClickListener
+            }
+
+            if (phone.isNotEmpty()) {
+                val phoneLayout = view.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.input_phone_layout)
+                if (!countryCodePicker.isValidFullNumber) {
+                    phoneLayout?.error = "Invalid phone number"
+                    inputPhone.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
+                    inputPhone.requestFocus()
+                    Toast.makeText(requireContext(), "Please enter a valid phone number", Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
+            }
+
             (inputFirstName.parent.parent as? com.google.android.material.textfield.TextInputLayout)?.error = null
             (inputLastName.parent.parent as? com.google.android.material.textfield.TextInputLayout)?.error = null
             (inputUsername.parent.parent as? com.google.android.material.textfield.TextInputLayout)?.error = null
             (inputEmail.parent.parent as? com.google.android.material.textfield.TextInputLayout)?.error = null
             (inputPassword.parent.parent as? com.google.android.material.textfield.TextInputLayout)?.error = null
+            view.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.input_phone_layout)?.error = null
 
             if (validateInput(firstName, lastName, username, email, password, inputFirstName, inputLastName, inputUsername, inputEmail, inputPassword)) {
                 val displayName = "$firstName $lastName"
-                performRegister(username, password, displayName, email, phone.ifEmpty { null })
+                val fullPhoneNumber = if (phone.isNotEmpty()) countryCodePicker.fullNumberWithPlus else null
+                performRegister(username, password, displayName, email, fullPhoneNumber)
             }
         }
     }
@@ -147,6 +203,7 @@ class RegisterFragment : Fragment(R.layout.fragment_register) {
         inputPassword: TextInputEditText
     ): Boolean {
         var isValid = true
+        var firstErrorField: TextInputEditText? = null
 
         val firstNameLayout = inputFirstName.parent.parent as? com.google.android.material.textfield.TextInputLayout
         val lastNameLayout = inputLastName.parent.parent as? com.google.android.material.textfield.TextInputLayout
@@ -156,32 +213,39 @@ class RegisterFragment : Fragment(R.layout.fragment_register) {
 
         if (firstName.isEmpty()) {
             firstNameLayout?.error = "Required"
+            if (firstErrorField == null) firstErrorField = inputFirstName
             isValid = false
         }
 
         if (lastName.isEmpty()) {
             lastNameLayout?.error = "Required"
+            if (firstErrorField == null) firstErrorField = inputLastName
             isValid = false
         }
 
         if (username.isEmpty()) {
             usernameLayout?.error = "Required"
+            if (firstErrorField == null) firstErrorField = inputUsername
             isValid = false
         } else if (username.length < 3) {
             usernameLayout?.error = "At least 3 characters"
+            if (firstErrorField == null) firstErrorField = inputUsername
             isValid = false
         }
 
         if (email.isEmpty()) {
             emailLayout?.error = "Required"
+            if (firstErrorField == null) firstErrorField = inputEmail
             isValid = false
         } else if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
             emailLayout?.error = "Invalid email"
+            if (firstErrorField == null) firstErrorField = inputEmail
             isValid = false
         }
 
         if (password.isEmpty()) {
             passwordLayout?.error = "Required"
+            if (firstErrorField == null) firstErrorField = inputPassword
             isValid = false
         } else if (password.length < 8 ||
             !password.any { it.isUpperCase() } ||
@@ -190,10 +254,24 @@ class RegisterFragment : Fragment(R.layout.fragment_register) {
             !password.any { it in "!@#\$%^&*" }
         ) {
             passwordLayout?.error = "Does not meet requirements"
+            if (firstErrorField == null) firstErrorField = inputPassword
             isValid = false
         }
 
         if (!isValid) {
+            // Haptic feedback
+            try {
+                firstErrorField?.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
+            } catch (_: Exception) {}
+
+            // Focus on first error field
+            firstErrorField?.requestFocus()
+
+            // Scroll to first error field
+            try {
+                view?.findViewById<ScrollView>(R.id.register_scroll)?.smoothScrollTo(0, firstErrorField?.top ?: 0)
+            } catch (_: Exception) {}
+
             Toast.makeText(requireContext(), "Please fill in all required fields correctly", Toast.LENGTH_SHORT).show()
         }
 
