@@ -19,7 +19,7 @@ const parseTags = (tagsData) => {
 // --- 1. Tạo nhóm mới ---
 exports.createTeam = async (req, res) => {
     try {
-        const { name, description, tags, avatarUrl } = req.body;
+        const { name, description, tags, avatarUrl, allowMemberDirectory } = req.body;
         const createdBy = req.user ? req.user.id : req.body.createdBy;
 
         if (!name || !createdBy) {
@@ -36,7 +36,8 @@ exports.createTeam = async (req, res) => {
             tags: tags || [],
             createdBy,
             inviteCode,
-            avatarUrl: avatarUrl || null
+            avatarUrl: avatarUrl || null,
+            allowMemberDirectory: allowMemberDirectory ? 1 : 0
         };
 
         // 1. Tạo Team
@@ -266,7 +267,7 @@ exports.getTeamDetail = async (req, res) => {
 exports.updateTeam = async (req, res) => {
     try {
         const { teamId } = req.params;
-        const { name, description, tags } = req.body;
+        const { name, description, tags, avatarUrl, allowMemberDirectory } = req.body;
         const userId = req.user ? req.user.id : req.body.userId;
 
         // 1. Kiểm tra quyền Manager
@@ -276,8 +277,15 @@ exports.updateTeam = async (req, res) => {
             return res.status(403).json({ message: 'Only manager can update team info' });
         }
 
-        // 2. Cập nhật
-        await teamModel.update(teamId, { name, description, tags });
+        // 2. Cập nhật - build update object dynamically
+        const updateData = {};
+        if (name !== undefined) updateData.name = name;
+        if (description !== undefined) updateData.description = description;
+        if (tags !== undefined) updateData.tags = tags;
+        if (avatarUrl !== undefined) updateData.avatarUrl = avatarUrl;
+        if (allowMemberDirectory !== undefined) updateData.allowMemberDirectory = allowMemberDirectory ? 1 : 0;
+
+        await teamModel.update(teamId, updateData);
 
         res.json({ message: 'Team updated successfully' });
     } catch (error) {
@@ -325,6 +333,25 @@ exports.getMembersByTeamId = async (req, res) => {
     try {
         const teamId = req.params.teamId;
         const status = req.query.status || 'active';
+        const userId = req.user ? req.user.id : req.query.userId;
+
+        // Check if user is a member of this team
+        const membership = await teamModel.findMember(teamId, userId);
+        if (!membership) {
+            return res.status(403).json({ message: 'Access denied. You are not a member.' });
+        }
+
+        // Check if user is manager/co-manager OR if allowMemberDirectory is enabled
+        const isManagerOrCoManager = membership.role === 'manager' || membership.role === 'co-manager';
+
+        if (!isManagerOrCoManager) {
+            // Check team settings
+            const team = await teamModel.findById(teamId);
+            if (!team || !team.allowMemberDirectory) {
+                return res.status(403).json({ message: 'Access denied. Member directory is disabled.' });
+            }
+        }
+
         const members = await teamModel.findMembersByTeamId(teamId, status);
         res.json(members);
     } catch (error) {
