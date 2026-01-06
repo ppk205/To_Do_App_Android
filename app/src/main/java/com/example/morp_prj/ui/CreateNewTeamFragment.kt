@@ -85,7 +85,18 @@ class CreateNewTeamFragment : Fragment() {
         initViews(view)
         setupListeners()
         setupTagInput()
+
+        // Ensure input fields scroll into view when focused (keyboard handling)
+        val scrollToView: (View) -> Unit = { v ->
+            v.postDelayed({
+                v.parent.requestChildFocus(v, v)
+            }, 100)
+        }
+        etTeamName.setOnFocusChangeListener { v, hasFocus -> if (hasFocus) scrollToView(v) }
+        etDescription.setOnFocusChangeListener { v, hasFocus -> if (hasFocus) scrollToView(v) }
+        etTagInput.setOnFocusChangeListener { v, hasFocus -> if (hasFocus) scrollToView(v) }
     }
+
 
     private fun initViews(view: View) {
         etTeamName = view.findViewById(R.id.etTeamName)

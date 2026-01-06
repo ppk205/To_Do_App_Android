@@ -3,6 +3,7 @@ package com.example.morp_prj.data.remote
 import android.util.Log
 import io.socket.client.IO
 import io.socket.client.Socket
+import io.socket.engineio.client.transports.WebSocket
 import java.net.URISyntaxException
 import com.example.morp_prj.data.api.RetrofitClient
 
@@ -25,9 +26,28 @@ object SocketManager {
 
         try {
             val options = IO.Options().apply {
-                reconnection = true
+                // Force new connection
                 forceNew = true
+
+                // Enable auto reconnection
+                reconnection = true
+                reconnectionAttempts = 5
+                reconnectionDelay = 1000
+                reconnectionDelayMax = 5000
+
+                // Increase timeout
+                timeout = 20000
+
+                // Try WebSocket first, fallback to polling
+                transports = arrayOf(WebSocket.NAME, "polling")
+
+                // Authentication
                 auth = mapOf("token" to token)
+
+                // Extra headers (optional)
+                extraHeaders = mapOf(
+                    "Authorization" to listOf("Bearer $token")
+                )
             }
 
             mSocket = IO.socket(SERVER_URL, options)
@@ -36,29 +56,70 @@ object SocketManager {
             mSocket?.connect()
 
         } catch (e: URISyntaxException) {
-            Log.e(TAG, "Lỗi URI Socket: ${e.message}")
+            Log.e(TAG, "Lỗi URI Socket: ${e.message}", e)
+        } catch (e: Exception) {
+            Log.e(TAG, "Lỗi khởi tạo Socket: ${e.message}", e)
         }
     }
 
     private fun setupGlobalListeners() {
         mSocket?.on(Socket.EVENT_CONNECT) {
-            Log.d(TAG, "Đã kết nối Socket thành công! ID: ${mSocket?.id()}")
+            Log.d(TAG, "✅ Đã kết nối Socket thành công! ID: ${mSocket?.id()}")
+        }
+
+        mSocket?.on("connecting") {
+            Log.d(TAG, "🔄 Đang kết nối Socket...")
         }
 
         mSocket?.on(Socket.EVENT_CONNECT_ERROR) { args ->
-            Log.e(TAG, "Lỗi kết nối: ${args[0]}")
+            val error = if (args.isNotEmpty()) args[0] else "Unknown error"
+            Log.e(TAG, "❌ Lỗi kết nối Socket: $error")
+
+            // Log detailed error info
+            if (args.isNotEmpty() && args[0] is Exception) {
+                (args[0] as? Exception)?.printStackTrace()
+            }
+        }
+
+        mSocket?.on(Socket.EVENT_DISCONNECT) { args ->
+            val reason = if (args.isNotEmpty()) args[0] else "Unknown"
+            Log.w(TAG, "⚠️ Socket đã ngắt kết nối: $reason")
+        }
+
+        mSocket?.on("reconnect") { args ->
+            val attempt = if (args.isNotEmpty()) args[0] else "?"
+            Log.d(TAG, "🔄 Reconnected sau $attempt lần thử")
+        }
+
+        mSocket?.on("reconnect_attempt") { args ->
+            val attempt = if (args.isNotEmpty()) args[0] else "?"
+            Log.d(TAG, "🔄 Đang thử reconnect lần thứ $attempt...")
+        }
+
+        mSocket?.on("reconnect_error") { args ->
+            val error = if (args.isNotEmpty()) args[0] else "Unknown"
+            Log.e(TAG, "❌ Lỗi reconnect: $error")
+        }
+
+        mSocket?.on("reconnect_failed") {
+            Log.e(TAG, "❌ Reconnect thất bại hoàn toàn!")
         }
 
         mSocket?.on("error") { args ->
             // Bắt lỗi từ middleware (VD: TOKEN_INVALID)
-            Log.e(TAG, "Lỗi từ server: ${args[0]}")
+            val error = if (args.isNotEmpty()) args[0] else "Unknown"
+            Log.e(TAG, "❌ Lỗi từ server: $error")
         }
     }
 
     fun getSocket(): Socket? = mSocket
 
+    fun isConnected(): Boolean = mSocket?.connected() ?: false
+
     fun disconnect() {
+        Log.d(TAG, "Ngắt kết nối Socket...")
         mSocket?.disconnect()
+        mSocket?.off() // Remove all listeners
         mSocket = null
     }
 }

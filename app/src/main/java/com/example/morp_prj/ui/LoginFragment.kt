@@ -12,9 +12,11 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import com.example.morp_prj.R
 import com.example.morp_prj.data.repository.AuthRepository
+import com.example.morp_prj.data.repository.EncryptionRepository
 import com.example.morp_prj.data.repository.NotificationRepository
 import com.example.morp_prj.data.repository.SessionTaskManager
 import com.example.morp_prj.data.repository.TaskSyncRepository
+import com.example.morp_prj.security.PasswordManager
 import com.example.morp_prj.utils.PreferenceManager
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputEditText
@@ -29,6 +31,8 @@ class LoginFragment : Fragment(R.layout.fragment_login) {
     private lateinit var preferenceManager: PreferenceManager
     private lateinit var sessionTaskManager: SessionTaskManager
     private lateinit var taskSyncRepository: TaskSyncRepository
+    private lateinit var encryptionRepository: EncryptionRepository
+    private lateinit var passwordManager: PasswordManager
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -42,6 +46,8 @@ class LoginFragment : Fragment(R.layout.fragment_login) {
         preferenceManager = PreferenceManager(requireContext())
         sessionTaskManager = SessionTaskManager(requireContext())
         taskSyncRepository = TaskSyncRepository(requireContext())
+        encryptionRepository = EncryptionRepository(requireContext())
+        passwordManager = PasswordManager(requireContext())
 
         val inputEmailOrUsername = view.findViewById<TextInputEditText>(R.id.input_email_or_username)
         val inputPassword = view.findViewById<TextInputEditText>(R.id.input_password)
@@ -225,6 +231,30 @@ class LoginFragment : Fragment(R.layout.fragment_login) {
                             preferenceManager.setHasSeenOnboarding(true)
 
                             (requireActivity() as? MainActivity)?.connectSocket()
+
+                            // 🔐 Cache password for encryption key derivation
+                            try {
+                                passwordManager.cachePasswordForSession(user.id, password)
+                                Log.d("LoginFragment", "✅ Password cached for encryption")
+                            } catch (t: Throwable) {
+                                Log.w("LoginFragment", "Failed to cache password", t)
+                            }
+
+                            // 🔐 Sync encryption keys from server
+                            try {
+                                withContext(Dispatchers.IO) {
+                                    Log.d("LoginFragment", "🔐 Syncing encryption keys...")
+                                    val result = encryptionRepository.syncAllTeamKeys(user.id, password)
+                                    if (result.isSuccess) {
+                                        val keys = result.getOrNull()
+                                        Log.d("LoginFragment", "✅ Synced ${keys?.size ?: 0} team encryption keys")
+                                    } else {
+                                        Log.w("LoginFragment", "⚠️ Failed to sync keys: ${result.exceptionOrNull()?.message}")
+                                    }
+                                }
+                            } catch (t: Throwable) {
+                                Log.w("LoginFragment", "Encryption key sync failed (non-critical)", t)
+                            }
 
                             // Apply session task rules (show this user's tasks; later can trigger sync-down)
                             try {

@@ -3,7 +3,6 @@ package com.example.morp_prj.ui
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
 import android.os.Bundle
-import android.util.Log
 import android.view.KeyEvent
 import android.view.View
 import android.view.inputmethod.EditorInfo
@@ -91,7 +90,24 @@ class CreateTeamTaskFragment : Fragment(R.layout.fragment_create_team_task) {
         }
 
         loadTeamMembers()
+
+        // Ensure input fields scroll into view when keyboard opens
+        val scrollToView: (View) -> Unit = { v ->
+            v.postDelayed({
+                v.parent.requestChildFocus(v, v)
+            }, 100)
+        }
+
+        view.findViewById<EditText>(R.id.etTaskName)?.setOnFocusChangeListener { v, hasFocus ->
+            if (hasFocus) scrollToView(v)
+        }
+        view.findViewById<EditText>(R.id.etDescription)?.setOnFocusChangeListener { v, hasFocus ->
+            if (hasFocus) scrollToView(v)
+        }
+        etDueDate.setOnFocusChangeListener { v, hasFocus -> if (hasFocus) scrollToView(v) }
+        etTaskTags.setOnFocusChangeListener { v, hasFocus -> if (hasFocus) scrollToView(v) }
     }
+
 
     private fun setupTagInput() {
         etTaskTags.setOnKeyListener { _, keyCode, event ->

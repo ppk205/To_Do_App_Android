@@ -858,11 +858,11 @@ async function updateProfile(req, res) {
         if (websiteUrl !== undefined) updateData.websiteUrl = websiteUrl;
 
         // Chỉ nhận avatarUrl từ Cloudinary (link HTTPS trực tiếp)
-        // REQ-UPLOAD-03: Validation đã được thực hiện trong middleware
         if (avatarUrl !== undefined) {
-            // Cho phép null/empty (xóa avatar) hoặc URL Cloudinary hợp lệ
+            // Validate URL format
             if (avatarUrl === null || avatarUrl === '' ||
-                /^https:\/\/res\.cloudinary\.com\/[a-zA-Z0-9_-]+\/image\/upload\/.+$/.test(avatarUrl)) {
+                avatarUrl.startsWith('https://res.cloudinary.com/') ||
+                avatarUrl.startsWith('http://res.cloudinary.com/')) {
                 updateData.avatarUrl = avatarUrl;
             } else {
                 return res.status(400).json({
@@ -876,9 +876,9 @@ async function updateProfile(req, res) {
             return res.status(400).json({ success: false, message: 'Không có dữ liệu để cập nhật' });
         }
 
-        // Log để debug (KHÔNG log PII như email, phone)
+        // Log để debug
         console.log('📝 UPDATE PROFILE - userId:', userId);
-        console.log('📝 UPDATE PROFILE - fields:', Object.keys(updateData).join(', '));
+        console.log('📝 UPDATE PROFILE - updateData:', JSON.stringify(updateData, null, 2));
 
         // Gọi Model update
         await User.update(userId, updateData);
@@ -886,8 +886,7 @@ async function updateProfile(req, res) {
         // Lấy lại user mới nhất để trả về client
         const updatedUser = await User.findById(userId);
 
-        // REQ-PROF-01: sanitizeUser đã loại bỏ hashedPassword, salt, otp
-        console.log('✅ UPDATED USER - userId:', userId);
+        console.log('✅ UPDATED USER from DB:', JSON.stringify(updatedUser, null, 2));
 
         res.status(200).json({
             success: true,
@@ -1007,6 +1006,43 @@ async function getCloudinarySignature(req, res) {
     }
 }
 
+// ============================================
+// 11. GET USER BY ID - Lấy thông tin User bất kỳ theo ID
+// ============================================
+async function getUserById(req, res) {
+    try {
+        const { userId } = req.params;
+
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                message: 'userId is required'
+            });
+        }
+
+        // Lấy user từ DB
+        const user = await User.findById(userId);
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        // Return sanitized user data (no password, etc.)
+        res.status(200).json(sanitizeUser(user));
+
+    } catch (error) {
+        console.error('Get user by ID error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error',
+            error: error.message
+        });
+    }
+}
+
 module.exports = {
     register,
     verifyOTP,
@@ -1023,6 +1059,8 @@ module.exports = {
     resetPassword,
     changePassword,
     getProfile,
+    getUserById,
+    updateProfile
     updateProfile,
     getCloudinarySignature // REQ-UPLOAD-01: Signed uploads
 };

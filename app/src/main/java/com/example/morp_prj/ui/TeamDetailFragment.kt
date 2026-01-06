@@ -10,12 +10,19 @@ import androidx.core.os.bundleOf
 import androidx.core.view.GravityCompat
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavController
 import androidx.navigation.NavOptions
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.fragment.findNavController
 import com.example.morp_prj.R
+import com.example.morp_prj.data.repository.EncryptionRepository
+import com.example.morp_prj.security.CryptoManager
+import com.example.morp_prj.security.KeyManager
+import com.example.morp_prj.security.PasswordManager
+import com.example.morp_prj.utils.PreferenceManager
 import com.google.android.material.navigation.NavigationView
+import kotlinx.coroutines.launch
 
 class TeamDetailFragment : Fragment(R.layout.fragment_team_detail), NavigationView.OnNavigationItemSelectedListener {
 
@@ -46,6 +53,9 @@ class TeamDetailFragment : Fragment(R.layout.fragment_team_detail), NavigationVi
         drawerLayout = view.findViewById(R.id.drawer_layout)
         navView = view.findViewById(R.id.nav_view)
 
+        // 🔐 Initialize encryption key for team
+        initializeTeamEncryption()
+
         // Setup Nested Navigation Controller
         val navHostFragment = childFragmentManager.findFragmentById(R.id.team_nav_host_fragment) as NavHostFragment
         teamNavController = navHostFragment.navController
@@ -64,6 +74,43 @@ class TeamDetailFragment : Fragment(R.layout.fragment_team_detail), NavigationVi
         navView.setNavigationItemSelectedListener(this)
 
         setupDrawerMenu()
+    }
+
+    /**
+     * Initialize team encryption key
+     * Tries to get from server first, falls back to deterministic generation
+     */
+    private fun initializeTeamEncryption() {
+        lifecycleScope.launch {
+            try {
+                val keyManager = KeyManager(requireContext())
+                val encryptionRepo = EncryptionRepository(requireContext())
+                val passwordManager = PasswordManager(requireContext())
+                val preferenceManager = PreferenceManager(requireContext())
+
+                // Check if team key already exists
+                if (!keyManager.hasTeamKey(teamId)) {
+                    Log.d(TAG, "🔐 No encryption key found for team $teamId, fetching...")
+
+                    val userId = preferenceManager.getUserId() ?: ""
+                    val password = passwordManager.getPassword(userId)
+
+                    // Try to get from server with password
+                    val teamKey = encryptionRepo.getOrCreateTeamKey(teamId, userId, password)
+
+                    // Key is already cached by repository
+                    Log.d(TAG, "✅ Team encryption key ready for team $teamId")
+                    Log.d(TAG, "🔑 Key preview: ${teamKey.take(20)}...")
+                } else {
+                    val existingKey = keyManager.getCachedTeamKey(teamId)
+                    Log.d(TAG, "✅ Team encryption key already exists for team $teamId")
+                    Log.d(TAG, "🔑 Key preview: ${existingKey?.take(20)}...")
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ Failed to initialize team encryption", e)
+                Toast.makeText(context, "Failed to setup encryption", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
     private fun setupDrawerMenu() {
@@ -102,10 +149,10 @@ class TeamDetailFragment : Fragment(R.layout.fragment_team_detail), NavigationVi
 
         val navOptions = NavOptions.Builder()
             .setLaunchSingleTop(true)
-            .setEnterAnim(androidx.navigation.ui.R.anim.nav_default_enter_anim)
-            .setExitAnim(androidx.navigation.ui.R.anim.nav_default_exit_anim)
-            .setPopEnterAnim(androidx.navigation.ui.R.anim.nav_default_pop_enter_anim)
-            .setPopExitAnim(androidx.navigation.ui.R.anim.nav_default_pop_exit_anim)
+            .setEnterAnim(R.anim.slide_in_right)
+            .setExitAnim(R.anim.slide_out_left)
+            .setPopEnterAnim(R.anim.slide_in_left)
+            .setPopExitAnim(R.anim.slide_out_right)
             .build()
 
         when (item.itemId) {
