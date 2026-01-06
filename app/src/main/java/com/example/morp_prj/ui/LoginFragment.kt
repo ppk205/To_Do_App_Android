@@ -217,6 +217,11 @@ class LoginFragment : Fragment(R.layout.fragment_login) {
         }
     }
 
+    override fun onStart() {
+        super.onStart()
+        hideBottomNavigation()
+    }
+
     override fun onResume() {
         super.onResume()
         hideBottomNavigation()
