@@ -5,10 +5,13 @@ import io.socket.client.IO
 import io.socket.client.Socket
 import io.socket.engineio.client.transports.WebSocket
 import java.net.URISyntaxException
+import com.example.morp_prj.data.api.RetrofitClient
 
 object SocketManager {
     private const val TAG = "SocketManager"
-    private const val SERVER_URL = "http://192.168.1.5:3001"
+    // Use the same base URL as RetrofitClient for consistency
+    private val SERVER_URL: String
+        get() = RetrofitClient.getBaseUrl()
 
     private var mSocket: Socket? = null
 
@@ -18,8 +21,7 @@ object SocketManager {
     @Synchronized
     fun connect(token: String) {
         if (mSocket != null && mSocket!!.connected()) {
-            Log.d(TAG, "Socket đã kết nối rồi")
-            return
+            return // Đã kết nối rồi thì thôi
         }
 
         try {
@@ -48,7 +50,6 @@ object SocketManager {
                 )
             }
 
-            Log.d(TAG, "Đang kết nối tới: $SERVER_URL")
             mSocket = IO.socket(SERVER_URL, options)
 
             setupGlobalListeners()

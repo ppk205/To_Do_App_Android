@@ -24,6 +24,7 @@ import com.example.morp_prj.R
 import com.example.morp_prj.data.api.RetrofitClient
 import com.example.morp_prj.data.model.TeamMember
 import com.example.morp_prj.ui.NotificationsAdapter
+import com.example.morp_prj.ui.TeamTaskViewModel
 import com.example.morp_prj.ui.UiNotification
 import com.example.morp_prj.utils.PreferenceManager
 import com.github.mikephil.charting.charts.PieChart
@@ -45,7 +46,7 @@ import java.util.TimeZone
 
 class TeamManagementDashboardFragment : Fragment() {
 
-    private lateinit var viewModel: TaskDashboardViewModel
+    private lateinit var viewModel: TeamTaskViewModel
 
     // Adapter cho Recent Activity
     private lateinit var recentActivityAdapter: NotificationsAdapter
@@ -81,7 +82,7 @@ class TeamManagementDashboardFragment : Fragment() {
 
             setupHeaderEvents(view)
 
-            viewModel = ViewModelProvider(this).get(TaskDashboardViewModel::class.java)
+            viewModel = ViewModelProvider(this).get(TeamTaskViewModel::class.java)
 
             // Views
             val rvRecent = view.findViewById<RecyclerView>(R.id.rvRecent)

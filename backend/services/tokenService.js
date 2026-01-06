@@ -7,21 +7,14 @@ const pool = require('../config/database');
  * ========================================
  * TOKEN SERVICE - OWASP MASTG Compliant
  * ========================================
- *
- * Implements secure token issuance, validation, and session management
- * - Short-lived access tokens (~30 min)
- * - Long-lived refresh tokens (~30 days)
- * - Refresh token rotation on every refresh
- * - Session binding to device and user
- * - Server-side session as source of truth
  */
 
-// ✅ CRITICAL: Validate JWT secrets at startup
+// Validate JWT secrets at startup
 const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_REFRESH_SECRET = process.env.REFRESH_TOKEN_SECRET || process.env.JWT_SECRET;
 
 if (!JWT_SECRET || !JWT_REFRESH_SECRET) {
-    throw new Error('🔴 CRITICAL: JWT_SECRET and REFRESH_TOKEN_SECRET must be defined in environment variables');
+    throw new Error('CRITICAL: JWT_SECRET and REFRESH_TOKEN_SECRET must be defined in environment variables');
 }
 
 const ACCESS_TTL_SECONDS = parseInt(process.env.ACCESS_TOKEN_TTL_SECONDS || String(30 * 60), 10); // 30min
@@ -45,7 +38,7 @@ function hashRefreshToken(refreshToken) {
 }
 
 /**
- * ✅ Create session fingerprint from server-side data
+ * Create session fingerprint from server-side data
  * Binds session to client characteristics to detect token theft
  */
 function createSessionFingerprint(req) {
@@ -59,7 +52,7 @@ function createSessionFingerprint(req) {
 }
 
 /**
- * ✅ Validate session fingerprint
+ * Validate session fingerprint
  */
 function validateFingerprint(req, storedFingerprint) {
     if (!storedFingerprint) return true; // Backward compatibility

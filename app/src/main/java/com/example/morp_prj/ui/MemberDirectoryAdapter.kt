@@ -9,6 +9,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.example.morp_prj.R
 import com.example.morp_prj.data.model.TeamMember
+import com.example.morp_prj.data.api.RetrofitClient
 
 class MemberDirectoryAdapter(
     private val onMemberClick: (TeamMember) -> Unit
@@ -52,11 +53,10 @@ class MemberDirectoryAdapter(
             }
             tvRole.setTextColor(roleColor)
 
-            // Load avatar
-            val baseUrl = "http://10.0.2.2:3001"
+            // Load avatar using RetrofitClient for consistent URL handling
             val avatarUrl = member.avatarUrl
             if (!avatarUrl.isNullOrBlank()) {
-                val fullUrl = if (avatarUrl.startsWith("http")) avatarUrl else "$baseUrl$avatarUrl"
+                val fullUrl = RetrofitClient.buildFullUrl(avatarUrl) ?: avatarUrl
                 Glide.with(itemView)
                     .load(fullUrl)
                     .placeholder(R.drawable.ic_avatar_placeholder)

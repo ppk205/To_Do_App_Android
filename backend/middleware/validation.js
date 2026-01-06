@@ -1,9 +1,6 @@
 const { body, validationResult } = require('express-validator');
 const sanitizeHtml = require('sanitize-html');
 
-/**
- * ✅ Sanitize user input to prevent XSS attacks
- */
 const sanitizeInput = (value) => {
     if (typeof value !== 'string') return value;
     return sanitizeHtml(value, {

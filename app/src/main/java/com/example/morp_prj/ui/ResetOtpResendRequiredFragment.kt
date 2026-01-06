@@ -65,7 +65,7 @@ class ResetOtpResendRequiredFragment : Fragment(R.layout.fragment_reset_otp_rese
         btnResendOtp.setTextColor(ContextCompat.getColor(requireContext(), R.color.text_secondary))
 
         countDownTimer?.cancel()
-        countDownTimer = object : CountDownTimer(30_000, 1000) {
+        countDownTimer = object : CountDownTimer(60_000, 1000) {
             override fun onTick(millisUntilFinished: Long) {
                 val seconds = millisUntilFinished / 1000
                 txtCountdown.text = getString(R.string.resend_countdown_format, seconds)
@@ -149,8 +149,13 @@ class ResetOtpResendRequiredFragment : Fragment(R.layout.fragment_reset_otp_rese
         super.onDestroyView()
         countDownTimer?.cancel()
 
-        // ✅ Hiện lại bottom navigation khi thoát
-        showBottomNavigation()
+        // ✅ Chỉ hiện bottom navigation nếu đã đăng nhập
+        showBottomNavigationIfLoggedIn()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        hideBottomNavigation()
     }
 
     private fun hideBottomNavigation() {
@@ -162,13 +167,15 @@ class ResetOtpResendRequiredFragment : Fragment(R.layout.fragment_reset_otp_rese
         }
     }
 
-    private fun showBottomNavigation() {
+    private fun showBottomNavigationIfLoggedIn() {
         try {
+            val prefs = com.example.morp_prj.utils.PreferenceManager(requireContext())
+            val tokenStorage = com.example.morp_prj.security.SecureTokenStorage(requireContext())
+            val shouldShow = prefs.isLoggedIn() || tokenStorage.hasValidRefreshToken()
             val bottomNav = activity?.findViewById<View>(R.id.bottom_nav_view)
-            bottomNav?.visibility = View.VISIBLE
+            bottomNav?.visibility = if (shouldShow) View.VISIBLE else View.GONE
         } catch (e: Exception) {
             android.util.Log.e("ResetOtpResendRequiredFragment", "Error showing bottom navigation", e)
         }
     }
 }
-

@@ -3,6 +3,7 @@ package com.example.morp_prj.ui
 import android.os.Bundle
 import android.util.Log
 import android.view.View
+import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.constraintlayout.motion.widget.MotionLayout
@@ -54,12 +55,50 @@ class LoginFragment : Fragment(R.layout.fragment_login) {
         val txtRegisterLink = view.findViewById<TextView>(R.id.txt_register_link)
         val txtForgotPassword = view.findViewById<TextView>(R.id.txt_forgot_password)
 
+        // Clear error when user starts typing + real-time email validation
+        inputEmailOrUsername.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: android.text.Editable?) {
+                val layout = view.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.input_email_or_username_layout)
+                layout?.error = null
+
+                // Real-time email format validation (only if it looks like an email)
+                val text = s?.toString()?.trim() ?: ""
+                if (text.isNotEmpty() && text.contains("@") && !android.util.Patterns.EMAIL_ADDRESS.matcher(text).matches()) {
+                    layout?.error = "Invalid email format"
+                }
+            }
+        })
+
+        inputPassword.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: android.text.Editable?) {
+                view.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.input_password_layout)?.error = null
+            }
+        })
+
+        // Trigger login when user presses Done on keyboard
+        inputPassword.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_DONE) {
+                btnLogin.performClick()
+                true
+            } else {
+                false
+            }
+        }
+
         btnLogin.setOnClickListener {
             // Safe read of text (avoid NPE if .text is null)
             val usernameOrEmail = inputEmailOrUsername?.text?.toString()?.trim().orEmpty()
             val password = inputPassword?.text?.toString()?.trim().orEmpty()
 
-            if (!validateInput(usernameOrEmail, password)) return@setOnClickListener
+            // Clear previous errors
+            view.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.input_email_or_username_layout)?.error = null
+            view.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.input_password_layout)?.error = null
+
+            if (!validateInput(usernameOrEmail, password, view)) return@setOnClickListener
 
             performLogin(usernameOrEmail, password, btnLogin)
         }
@@ -81,33 +120,60 @@ class LoginFragment : Fragment(R.layout.fragment_login) {
         }
     }
 
-    private fun validateInput(usernameOrEmail: String, password: String): Boolean {
+    private fun validateInput(usernameOrEmail: String, password: String, view: View): Boolean {
+        var isValid = true
+        var firstErrorField: View? = null
+
+        val emailLayout = view.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.input_email_or_username_layout)
+        val passwordLayout = view.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.input_password_layout)
+        val emailInput = view.findViewById<TextInputEditText>(R.id.input_email_or_username)
+        val passwordInput = view.findViewById<TextInputEditText>(R.id.input_password)
+
         if (usernameOrEmail.isEmpty()) {
-            Toast.makeText(requireContext(), "Vui lòng nhập email hoặc username", Toast.LENGTH_SHORT).show()
-            return false
+            emailLayout?.error = "Required"
+            if (firstErrorField == null) firstErrorField = emailInput
+            isValid = false
         }
 
         if (password.isEmpty()) {
-            Toast.makeText(requireContext(), "Vui lòng nhập mật khẩu", Toast.LENGTH_SHORT).show()
-            return false
+            passwordLayout?.error = "Required"
+            if (firstErrorField == null) firstErrorField = passwordInput
+            isValid = false
         }
 
-        return true
+        if (!isValid) {
+            // Haptic feedback
+            try {
+                firstErrorField?.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
+            } catch (_: Exception) {}
+
+            // Focus on first error field
+            firstErrorField?.requestFocus()
+
+            // Scroll to first error field
+            try {
+                view.findViewById<ScrollView>(R.id.scroll_content)?.smoothScrollTo(0, firstErrorField?.top ?: 0)
+            } catch (_: Exception) {}
+
+            Toast.makeText(requireContext(), "Please fill in all required fields", Toast.LENGTH_SHORT).show()
+        }
+
+        return isValid
     }
 
     private fun performLogin(usernameOrEmail: String, password: String, btnLogin: MaterialButton?) {
         // Show loading
         try {
             btnLogin?.isEnabled = false
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             // ignore UI update errors
         }
 
         val handler = CoroutineExceptionHandler { _, throwable ->
             Log.e("LoginFragment", "Unhandled login coroutine error", throwable)
             try {
-                Toast.makeText(requireContext(), "Lỗi nội bộ: ${throwable.message}", Toast.LENGTH_LONG).show()
-            } catch (ex: Exception) {
+                Toast.makeText(requireContext(), "Internal error: ${throwable.message}", Toast.LENGTH_LONG).show()
+            } catch (_: Exception) {
                 // ignore
             }
         }
@@ -121,7 +187,21 @@ class LoginFragment : Fragment(R.layout.fragment_login) {
             } catch (e: Exception) {
                 Log.e("LoginFragment", "Login request failed", e)
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(requireContext(), "Lỗi: ${e.message ?: "Không thể kết nối đến server"}", Toast.LENGTH_LONG).show()
+                    val errorMessage = when {
+                        e.message?.contains("Unauthorized", ignoreCase = true) == true ||
+                        e.message?.contains("401", ignoreCase = true) == true ||
+                        e.message?.contains("Invalid credentials", ignoreCase = true) == true ||
+                        e.message?.contains("Incorrect password", ignoreCase = true) == true ||
+                        e.message?.contains("User not found", ignoreCase = true) == true ->
+                            "Username or password is incorrect. Please try again."
+                        e.message?.contains("ConnectException", ignoreCase = true) == true ||
+                        e.message?.contains("SocketTimeoutException", ignoreCase = true) == true ||
+                        e.message?.contains("UnknownHostException", ignoreCase = true) == true ->
+                            "Cannot connect to server. Please check your internet connection."
+                        e.message.isNullOrBlank() -> "Login failed. Please try again."
+                        else -> e.message ?: "Login failed. Please try again."
+                    }
+                    Toast.makeText(requireContext(), errorMessage, Toast.LENGTH_LONG).show()
                 }
                 return@launch
             }
@@ -129,7 +209,7 @@ class LoginFragment : Fragment(R.layout.fragment_login) {
             // Hide loading
             try {
                 btnLogin?.isEnabled = true
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 // ignore
             }
 
@@ -183,7 +263,17 @@ class LoginFragment : Fragment(R.layout.fragment_login) {
                                 Log.w("LoginFragment", "SessionTaskManager.onLoginSuccess failed", t)
                             }
 
-                            // ✅ Sync notifications after login so the Notifications tab is up-to-date
+                            // Migrate guest tasks to real user, then best-effort syncUp
+                            try {
+                                withContext(Dispatchers.IO) {
+                                    sessionTaskManager.migrateGuestData(user.id)
+                                    runCatching { taskSyncRepository.syncUp() }
+                                        .onFailure { Log.w("LoginFragment", "syncUp after migration failed", it) }
+                                }
+                            } catch (t: Throwable) {
+                                Log.w("LoginFragment", "Guest migration block failed", t)
+                            }
+
                             try {
                                 withContext(Dispatchers.IO) {
                                     NotificationRepository(requireContext()).syncFromServer(showDeviceNotifications = false)
@@ -206,7 +296,7 @@ class LoginFragment : Fragment(R.layout.fragment_login) {
                         }
 
                         try {
-                            Toast.makeText(requireContext(), "Đăng nhập thành công!", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(requireContext(), "Login successful", Toast.LENGTH_SHORT).show()
                         } catch (_: Exception) {
                         }
 
@@ -216,32 +306,51 @@ class LoginFragment : Fragment(R.layout.fragment_login) {
                         }
                     } else {
                         try {
-                            Toast.makeText(requireContext(), response.message, Toast.LENGTH_SHORT).show()
-                        } catch (e: Exception) {
+                            Toast.makeText(requireContext(), "Username or password is incorrect. Please try again.", Toast.LENGTH_SHORT).show()
+                        } catch (_: Exception) {
                             // ignore
                         }
                     }
                 } catch (e: Exception) {
                     Log.e("LoginFragment", "Error handling login result", e)
                     try {
-                        Toast.makeText(requireContext(), "Lỗi xử lý dữ liệu đăng nhập", Toast.LENGTH_LONG).show()
-                    } catch (ex: Exception) {
+                        Toast.makeText(requireContext(), "Error processing login data", Toast.LENGTH_LONG).show()
+                    } catch (_: Exception) {
                         // ignore
                     }
                 }
             }.onFailure { error ->
                 Log.e("LoginFragment", "Login failed", error)
                 try {
+                    val errorMessage = when {
+                        error.message?.contains("Unauthorized", ignoreCase = true) == true ||
+                        error.message?.contains("401", ignoreCase = true) == true ||
+                        error.message?.contains("Invalid credentials", ignoreCase = true) == true ||
+                        error.message?.contains("Incorrect password", ignoreCase = true) == true ||
+                        error.message?.contains("User not found", ignoreCase = true) == true ->
+                            "Username or password is incorrect. Please try again."
+                        error.message?.contains("ConnectException", ignoreCase = true) == true ||
+                        error.message?.contains("SocketTimeoutException", ignoreCase = true) == true ||
+                        error.message?.contains("UnknownHostException", ignoreCase = true) == true ->
+                            "Cannot connect to server. Please check your internet connection."
+                        error.message.isNullOrBlank() -> "Login failed. Please try again."
+                        else -> error.message ?: "Login failed. Please try again."
+                    }
                     Toast.makeText(
                         requireContext(),
-                        "Lỗi: ${error.message ?: "Không thể kết nối đến server"}",
+                        errorMessage,
                         Toast.LENGTH_LONG
                     ).show()
-                } catch (e: Exception) {
+                } catch (_: Exception) {
                     // ignore
                 }
             }
         }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        hideBottomNavigation()
     }
 
     override fun onResume() {
@@ -268,7 +377,7 @@ class LoginFragment : Fragment(R.layout.fragment_login) {
 
     private fun showBottomNavigationIfLoggedIn() {
         try {
-            val prefs = com.example.morp_prj.utils.PreferenceManager(requireContext())
+            val prefs = PreferenceManager(requireContext())
             val tokenStorage = com.example.morp_prj.security.SecureTokenStorage(requireContext())
             val shouldShow = prefs.isLoggedIn() || tokenStorage.hasValidRefreshToken()
             val bottomNav = activity?.findViewById<View>(R.id.bottom_nav_view)

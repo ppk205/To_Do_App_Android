@@ -130,4 +130,3 @@ object CloudinaryHelper {
      */
     fun isInitialized(): Boolean = isInitialized
 }
-

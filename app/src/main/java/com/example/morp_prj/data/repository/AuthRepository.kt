@@ -93,7 +93,15 @@ class AuthRepository(private val context: Context) {
 
                 Result.success(body)
             } else {
-                Result.failure(Exception(response.body()?.message ?: response.message() ?: "Unknown error"))
+                // Extract error message from response body, prioritizing server message
+                val errorMessage = when {
+                    response.body()?.message?.isNotBlank() == true -> response.body()!!.message
+                    response.code() == 401 -> "Incorrect password. Please try again."
+                    response.code() == 404 -> "User not found. Please check your username or email."
+                    !response.isSuccessful -> "Login failed: ${response.message()}"
+                    else -> "Login failed. Please try again."
+                }
+                Result.failure(Exception(errorMessage))
             }
         } catch (e: Exception) {
             Result.failure(e)

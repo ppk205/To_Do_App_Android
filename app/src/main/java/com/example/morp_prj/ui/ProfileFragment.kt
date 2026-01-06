@@ -21,6 +21,7 @@ import com.example.morp_prj.utils.PreferenceManager
 import com.example.morp_prj.data.model.User
 import com.example.morp_prj.data.repository.AuthRepository
 import com.example.morp_prj.utils.CloudinaryHelper
+import com.example.morp_prj.data.api.RetrofitClient
 import kotlinx.coroutines.launch
 
 class ProfileFragment : Fragment() {
@@ -73,7 +74,6 @@ class ProfileFragment : Fragment() {
             })
         }
 
-        binding.btnBack.setOnClickListener { findNavController().navigateUp() }
 
         // Initialize Cloudinary
         CloudinaryHelper.init(requireContext())
@@ -95,34 +95,20 @@ class ProfileFragment : Fragment() {
         }
 
         loadUserData()
-        fetchProfileFromServer() // Fetch fresh data from server
         setupListeners(readOnly = false)
         updateUIState(false) // Mặc định là chế độ View
+
+        // Refresh profile on load
+        refreshProfile()
     }
 
-    /**
-     * Fetch profile from server and update UI
-     */
-    private fun fetchProfileFromServer() {
-        val authRepo = AuthRepository(requireContext())
+    override fun onResume() {
+        super.onResume()
 
-        lifecycleScope.launch {
-            val result = authRepo.fetchProfile()
-
-            result.onSuccess { user ->
-                // Save to local cache
-                PreferenceManager.saveUser(requireContext(), user)
-                currentUser = user
-
-                // Update UI with fresh data
-                updateUIWithUser(user)
-            }.onFailure { error ->
-                // Silently fail - keep using cached data
-                // Only show error if it's critical
-                if (currentUser == null) {
-                    Toast.makeText(context, "Không thể tải profile: ${error.message}", Toast.LENGTH_SHORT).show()
-                }
-            }
+        // Refresh profile data every time fragment becomes visible
+        // This ensures data is up-to-date when switching between tabs
+        if (!readOnly) {
+            refreshProfile()
         }
     }
 
@@ -159,6 +145,45 @@ class ProfileFragment : Fragment() {
     }
 
     /**
+     * Refresh profile - Load from cache và fetch từ server
+     * Gọi hàm này sau mỗi lần có thay đổi để đảm bảo UI luôn updated
+     */
+    private fun refreshProfile() {
+        android.util.Log.d("ProfileFragment", "🔄 Refreshing profile...")
+
+        // 1. Load từ cache ngay lập tức (fast)
+        val cachedUser = PreferenceManager.getUser(requireContext())
+        if (cachedUser != null) {
+            currentUser = cachedUser
+            updateUIWithUser(cachedUser)
+            android.util.Log.d("ProfileFragment", "📦 Loaded from cache: ${cachedUser.displayName}")
+        }
+
+        // 2. Fetch từ server để đảm bảo data mới nhất (background)
+        val authRepo = AuthRepository(requireContext())
+        lifecycleScope.launch {
+            val result: Result<com.example.morp_prj.data.model.User> = authRepo.fetchProfile()
+
+            if (result.isSuccess) {
+                val freshUser = result.getOrNull()
+                if (freshUser != null) {
+                    // Save to cache
+                    PreferenceManager.saveUser(requireContext(), freshUser)
+                    currentUser = freshUser
+
+                    // Update UI with fresh server data
+                    requireActivity().runOnUiThread {
+                        updateUIWithUser(freshUser)
+                        android.util.Log.d("ProfileFragment", "🌐 Updated from server: ${freshUser.displayName}")
+                    }
+                }
+            } else {
+                android.util.Log.e("ProfileFragment", "❌ Failed to fetch from server: ${result.exceptionOrNull()?.message}")
+            }
+        }
+    }
+
+    /**
      * Update UI fields with user data
      */
     private fun updateUIWithUser(user: User) {
@@ -171,25 +196,27 @@ class ProfileFragment : Fragment() {
         binding.etUsername.setText(user.username)
         binding.etBio.setText(user.bio ?: "")
 
-        // Bind social URLs
+        // Bind social URLs - force update immediately
         binding.etGithub.setText(user.githubUrl ?: "")
         binding.etLinkedin.setText(user.linkedinUrl ?: "")
         binding.etWebsite.setText(user.websiteUrl ?: "")
 
+        // Update currentUser reference to ensure social icons have latest data
+        currentUser = user
+
         // Load Avatar từ server URL
         if (!user.avatarUrl.isNullOrEmpty()) {
-            // Build full URL: http://localhost:3001/uploads/avatars/filename.jpg
-            val baseUrl = "http://10.0.2.2:3001" // Android emulator localhost
-            val fullUrl = if (user.avatarUrl.startsWith("http")) {
-                user.avatarUrl
-            } else {
-                "$baseUrl${user.avatarUrl}"
-            }
+            // Use RetrofitClient to build full URL consistently
+            val fullUrl = RetrofitClient.buildFullUrl(user.avatarUrl) ?: user.avatarUrl
 
+            // Force reload by clearing Glide cache for this specific URL
             Glide.with(this)
                 .load(fullUrl)
                 .placeholder(R.drawable.ic_profile_unselected)
                 .error(R.drawable.ic_profile_unselected)
+                .circleCrop()
+                .skipMemoryCache(true) // Skip cache to force reload
+                .diskCacheStrategy(com.bumptech.glide.load.engine.DiskCacheStrategy.NONE) // Skip disk cache
                 .into(binding.ivAvatar)
         } else {
             binding.ivAvatar.setImageResource(R.drawable.ic_profile_unselected)
@@ -211,9 +238,14 @@ class ProfileFragment : Fragment() {
             binding.etLinkedin.visibility = View.GONE
             binding.lblWebsite.visibility = View.GONE
             binding.etWebsite.visibility = View.GONE
+            // Bio luôn hiện để xem trong chế độ read-only
+            binding.lblBio.visibility = View.VISIBLE
+            binding.etBio.visibility = View.VISIBLE
             binding.etFullName.isEnabled = false
             binding.etPhone.isEnabled = false
             binding.etBio.isEnabled = false
+            binding.etBio.isFocusable = false
+            binding.etBio.isFocusableInTouchMode = false
             binding.etGithub.isEnabled = false
             binding.etLinkedin.isEnabled = false
             binding.etWebsite.isEnabled = false
@@ -286,6 +318,10 @@ class ProfileFragment : Fragment() {
             binding.etLinkedin.visibility = View.VISIBLE
             binding.lblWebsite.visibility = View.VISIBLE
             binding.etWebsite.visibility = View.VISIBLE
+
+            // HIỆN label và EditText cho Bio
+            binding.lblBio.visibility = View.VISIBLE
+            binding.etBio.visibility = View.VISIBLE
         } else {
             // Đang xem: Hiện nút Edit, Ẩn bộ nút Save/Cancel
             binding.ivEdit.visibility = View.VISIBLE
@@ -302,6 +338,10 @@ class ProfileFragment : Fragment() {
             binding.etLinkedin.visibility = View.GONE
             binding.lblWebsite.visibility = View.GONE
             binding.etWebsite.visibility = View.GONE
+
+            // HIỆN label và EditText cho Bio (luôn hiện trong view mode)
+            binding.lblBio.visibility = View.VISIBLE
+            binding.etBio.visibility = View.VISIBLE
         }
 
         // Enable/Disable các ô nhập liệu
@@ -316,6 +356,17 @@ class ProfileFragment : Fragment() {
         binding.etGithub.isEnabled = enableEdit
         binding.etLinkedin.isEnabled = enableEdit
         binding.etWebsite.isEnabled = enableEdit
+
+        // Cập nhật style của etBio dựa trên trạng thái
+        if (enableEdit) {
+            binding.etBio.setBackgroundResource(R.drawable.bg_input_field)
+            binding.etBio.isFocusable = true
+            binding.etBio.isFocusableInTouchMode = true
+        } else {
+            binding.etBio.setBackgroundResource(R.drawable.bg_input_field)
+            binding.etBio.isFocusable = false
+            binding.etBio.isFocusableInTouchMode = false
+        }
     }
 
     private fun openGallery() {
@@ -404,13 +455,8 @@ class ProfileFragment : Fragment() {
             )
 
             result.onSuccess { response ->
-                // Log response để debug
-                android.util.Log.d("ProfileFragment", "✅ Update success response: ${response.user}")
-
                 // Update thành công trên Server
                 response.user?.let { updatedUser ->
-                    android.util.Log.d("ProfileFragment", "📝 Avatar URL from server: ${updatedUser.avatarUrl}")
-
                     PreferenceManager.saveUser(requireContext(), updatedUser)
                     currentUser = updatedUser
 
@@ -423,8 +469,10 @@ class ProfileFragment : Fragment() {
                 updateUIState(false)
                 selectedAvatarUri = null
                 uploadedCloudinaryLink = null
+
+                // Refresh profile để đảm bảo UI có data mới nhất từ server
+                refreshProfile()
             }.onFailure { error ->
-                android.util.Log.e("ProfileFragment", "❌ Update failed: ${error.message}")
                 Toast.makeText(context, "Lỗi cập nhật: ${error.message}", Toast.LENGTH_LONG).show()
             }
 
@@ -444,8 +492,8 @@ class ProfileFragment : Fragment() {
         binding.etFullName.setText(displayName ?: "")
         binding.etEmail.setText(email ?: "")
         if (!avatarUrl.isNullOrBlank()) {
-            val baseUrl = "http://10.0.2.2:3001"
-            val fullUrl = if (avatarUrl.startsWith("http")) avatarUrl else "$baseUrl$avatarUrl"
+            // Use RetrofitClient to build full URL consistently
+            val fullUrl = RetrofitClient.buildFullUrl(avatarUrl) ?: avatarUrl
             Glide.with(this)
                 .load(fullUrl)
                 .placeholder(R.drawable.ic_profile_unselected)
@@ -454,10 +502,6 @@ class ProfileFragment : Fragment() {
         }
     }
 
-    private fun fetchProfileForDisplay(userId: String) {
-        // In read-only mode we already bind passed args; skip network fetch of current user
-        updateUIWithArgsFallback()
-    }
 
     private fun performLogout() {
         // Xóa dữ liệu preferences (clearLoginData sẽ reset hasSeenOnboarding về false)

@@ -339,56 +339,33 @@ class VerifyOtpFragment : Fragment(R.layout.fragment_verify_otp) {
                     if (authResponse?.success == true) {
                         android.util.Log.d("VerifyOtpFragment", "OTP verification successful")
 
-                        // Save user data and token
-                        val savedUserId = authResponse.user?.id ?: authResponse.userId ?: userId!!
+                        // ✅ KHÔNG tự động đăng nhập - chỉ lấy thông tin để hiển thị
                         val savedUsername = authResponse.user?.username ?: username ?: ""
-                        val savedDisplayName = authResponse.user?.displayName ?: ""
                         val savedEmail = authResponse.user?.email ?: email!!
-                        val savedToken = authResponse.token ?: ""
 
-                        android.util.Log.d("VerifyOtpFragment", "Saving user data: userId=$savedUserId, username=$savedUsername, token=${savedToken.take(20)}...")
+                        android.util.Log.d("VerifyOtpFragment", "Registration verified for: username=$savedUsername, email=$savedEmail")
 
-                        preferenceManager.saveLoginData(
-                            userId = savedUserId,
-                            username = savedUsername,
-                            displayName = savedDisplayName,
-                            email = savedEmail,
-                            token = savedToken
-                        )
+                        // ⚠️ KHÔNG lưu token - user phải login thủ công
+                        // ⚠️ KHÔNG set hasSeenOnboarding - vẫn trong flow auth
 
-                        // ✅ Đánh dấu đã xem onboarding sau khi đăng ký thành công
-                        preferenceManager.setHasSeenOnboarding(true)
-
-                        // Also save tokens securely (if provided) so session persists across app restarts
-                        try {
-                            val tokenStorage = com.example.morp_prj.security.SecureTokenStorage(requireContext())
-                            // Prefer accessToken/refreshToken fields if present
-                            authResponse.accessToken?.let { at ->
-                                tokenStorage.saveAccessToken(at, authResponse.accessTTL ?: 1800)
-                            }
-                            authResponse.refreshToken?.let { rt ->
-                                tokenStorage.saveRefreshToken(rt, authResponse.refreshTTL ?: 2592000)
-                            }
-                            // Save session metadata when available
-                            if (!authResponse.sessionId.isNullOrEmpty()) {
-                                tokenStorage.saveSessionMetadata(authResponse.sessionId!!, savedUserId)
-                            }
-                        } catch (e: Exception) {
-                            android.util.Log.e("VerifyOtpFragment", "Failed to save secure tokens", e)
-                        }
-
-                        // Navigate to register success fragment
+                        // Navigate to register success fragment - user chưa đăng nhập
                         try {
                             val bundle = bundleOf(
                                 "username" to savedUsername,
                                 "email" to savedEmail
                             )
+                            Toast.makeText(requireContext(), "Đăng ký thành công! Vui lòng đăng nhập.", Toast.LENGTH_SHORT).show()
                             findNavController().navigate(R.id.action_verifyOtp_to_registerSuccess, bundle)
                         } catch (e: Exception) {
                             android.util.Log.e("VerifyOtpFragment", "Navigation error", e)
-                            // Fallback: show toast and navigate to home
-                            Toast.makeText(requireContext(), getString(R.string.verify_success_welcome, savedDisplayName), Toast.LENGTH_LONG).show()
-                            findNavController().navigate(R.id.action_verifyOtp_to_home)
+                            // Fallback: pop back to onboarding then go to login
+                            Toast.makeText(requireContext(), "Đăng ký thành công! Vui lòng đăng nhập.", Toast.LENGTH_LONG).show()
+                            try {
+                                findNavController().popBackStack(R.id.onboarding_fragment, false)
+                                findNavController().navigate(R.id.login_fragment)
+                            } catch (ex: Exception) {
+                                android.util.Log.e("VerifyOtpFragment", "Fallback navigation failed", ex)
+                            }
                         }
                     } else {
                         val errorMsg = authResponse?.message ?: "Xác thực thất bại"
@@ -532,7 +509,7 @@ class VerifyOtpFragment : Fragment(R.layout.fragment_verify_otp) {
         otpExpireTimer?.cancel()
         resendCooldownTimer?.cancel()
 
-        // ✅ Hiện lại bottom navigation khi thoát nếu đã đăng nhập
+        // ✅ Chỉ hiện bottom navigation nếu đã đăng nhập
         showBottomNavigationIfLoggedIn()
     }
 
@@ -555,5 +532,10 @@ class VerifyOtpFragment : Fragment(R.layout.fragment_verify_otp) {
         } catch (e: Exception) {
             android.util.Log.e("VerifyOtpFragment", "Error showing bottom navigation", e)
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        hideBottomNavigation()
     }
 }
