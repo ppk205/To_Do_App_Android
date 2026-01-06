@@ -112,7 +112,12 @@ const Team = {
   // Thêm hàm delete vào trong object Team luôn
   delete: async (teamId) => {
     await db.execute('DELETE FROM team WHERE id = ?', [teamId]);
-  }
+  },
+
+  updateMemberRole: (teamId, userId, newRole) => {
+    const query = 'UPDATE teammember SET role = ? WHERE teamId = ? AND userId = ?';
+    return db.query(query, [newRole, teamId, userId]);
+  },
 };
 
 module.exports = Team;

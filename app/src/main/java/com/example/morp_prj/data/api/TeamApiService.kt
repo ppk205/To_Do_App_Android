@@ -46,4 +46,7 @@ interface TeamApiService {
 
     @DELETE("api/team/{teamId}")
     fun deleteTeam(@Path("teamId") teamId: String): Call<Void>
+
+    @POST("api/team/update-member-role")
+    fun updateMemberRole(@Body request: UpdateMemberRoleRequest): Call<Void>
 }

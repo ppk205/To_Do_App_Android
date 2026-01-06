@@ -83,6 +83,19 @@
             android:textColor="#212121"
             android:layout_marginEnd="8dp"/>
 
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipAssignee"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Assignee: All"
+            android:checkable="false"
+            app:chipBackgroundColor="@color/bg_tag_grey_color_state"
+            android:textColor="#212121"
+            android:layout_marginEnd="8dp"
+            android:ellipsize="end"
+            android:maxWidth="140dp"
+            android:singleLine="true"/>
+
         <View
             android:layout_width="0dp"
             android:layout_height="0dp"

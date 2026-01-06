@@ -37,6 +37,9 @@
             android:name="inviteCode"
             app:argType="string"
             android:defaultValue="" />
+        <action
+            android:id="@+id/action_memberManagementFragment_to_profileFragment"
+            app:destination="@id/profileFragment" />
     </fragment>
 
     <fragment
@@ -114,5 +117,52 @@
             android:name="teamName"
             app:argType="string"
             android:defaultValue="Team Chat" />
+    </fragment>
+    <fragment
+        android:id="@+id/teamInfoFragment"
+        android:name="com.example.morp_prj.ui.TeamInfoFragment"
+        android:label="Team Info"
+        tools:layout="@layout/fragment_team_info">
+        <argument
+            android:name="teamId"
+            app:argType="string"
+            android:defaultValue="" />
+        <argument
+            android:name="teamName"
+            app:argType="string"
+            android:defaultValue="" />
+        <argument
+            android:name="inviteCode"
+            app:argType="string"
+            android:defaultValue="" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/profileFragment"
+        android:name="com.example.morp_prj.ui.ProfileFragment"
+        android:label="Profile"
+        tools:layout="@layout/fragment_profile">
+        <argument
+            android:name="userId"
+            app:argType="string"
+            android:defaultValue="" />
+        <argument
+            android:name="readOnly"
+            app:argType="boolean"
+            android:defaultValue="false" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/memberDirectoryFragment"
+        android:name="com.example.morp_prj.ui.MemberDirectoryFragment"
+        android:label="Member Directory"
+        tools:layout="@layout/fragment_member_directory">
+        <argument
+            android:name="teamId"
+            app:argType="string"
+            android:defaultValue="" />
+        <action
+            android:id="@+id/action_memberDirectory_to_profileFragment"
+            app:destination="@id/profileFragment" />
     </fragment>
 </navigation>

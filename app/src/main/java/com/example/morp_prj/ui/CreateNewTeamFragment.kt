@@ -1,8 +1,11 @@
 package com.example.morp_prj.ui
 
+import android.app.Activity
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.view.KeyEvent
@@ -13,13 +16,16 @@ import android.view.inputmethod.EditorInfo
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
+import com.bumptech.glide.Glide
 import com.example.morp_prj.R
 import com.example.morp_prj.data.api.RetrofitClient
 import com.example.morp_prj.data.model.CreateTeamRequest
 import com.example.morp_prj.data.model.Team
+import com.example.morp_prj.utils.CloudinaryHelper
 import com.example.morp_prj.utils.PreferenceManager
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.chip.Chip
@@ -48,6 +54,21 @@ class CreateNewTeamFragment : Fragment() {
 
     // Danh sách tags lưu trữ tạm thời
     private val tagsList = mutableListOf<String>()
+
+    private var selectedAvatarUri: Uri? = null
+    private var uploadedAvatarUrl: String? = null
+
+    private val imagePickerLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val data: Intent? = result.data
+            val uri = data?.data
+            if (uri != null) {
+                selectedAvatarUri = uri
+                Glide.with(this).load(uri).centerCrop().into(imgTeamAvatar)
+                uploadAvatar(uri)
+            }
+        }
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -81,10 +102,9 @@ class CreateNewTeamFragment : Fragment() {
             findNavController().navigateUp()
         }
 
-        // Xử lý nút chọn ảnh (Stub logic)
+        // Mở chọn ảnh từ gallery
         val imagePickerAction = View.OnClickListener {
-            Toast.makeText(context, "Open Image Picker Feature", Toast.LENGTH_SHORT).show()
-            // Phát triển gọi intent sử dụng THƯ VIỆN ẢNH Ở ĐÂY nha
+            openImagePicker()
         }
         btnChangeAvatar.setOnClickListener(imagePickerAction)
         imgTeamAvatar.setOnClickListener(imagePickerAction)
@@ -127,6 +147,39 @@ class CreateNewTeamFragment : Fragment() {
         tagsList.add(text)
     }
 
+    private fun openImagePicker() {
+        val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
+            type = "image/*"
+        }
+        imagePickerLauncher.launch(Intent.createChooser(intent, "Select Team Avatar"))
+    }
+
+    private fun uploadAvatar(uri: Uri) {
+        // Ensure Cloudinary is ready
+        CloudinaryHelper.init(requireContext().applicationContext)
+
+        // Show quick UI hint
+        Toast.makeText(requireContext(), "Uploading avatar...", Toast.LENGTH_SHORT).show()
+
+        CoroutineScope(Dispatchers.IO).launch {
+            val result = CloudinaryHelper.uploadImage(uri)
+            withContext(Dispatchers.Main) {
+                result.fold(
+                    onSuccess = { url ->
+                        uploadedAvatarUrl = url
+                        Toast.makeText(requireContext(), "Avatar uploaded", Toast.LENGTH_SHORT).show()
+                    },
+                    onFailure = { e ->
+                        uploadedAvatarUrl = null
+                        Toast.makeText(requireContext(), "Upload failed: ${'$'}{e.message}", Toast.LENGTH_LONG).show()
+                        // Reset preview to placeholder on error
+                        imgTeamAvatar.setImageResource(R.drawable.ic_avatar_placeholder)
+                    }
+                )
+            }
+        }
+    }
+
     private fun validateAndCreateTeam() {
         val name = etTeamName.text.toString().trim()
         val description = etDescription.text.toString().trim()
@@ -143,9 +196,10 @@ class CreateNewTeamFragment : Fragment() {
             name = name,
             description = description,
             createdBy = userId,
-            tags = tagsList
+            tags = tagsList,
+            avatarUrl = uploadedAvatarUrl
         )
-        
+
         // Disable button to prevent double click
         btnCreateTeam.isEnabled = false
         btnCreateTeam.text = "Creating..."
@@ -155,7 +209,7 @@ class CreateNewTeamFragment : Fragment() {
             override fun onResponse(call: Call<Team>, response: Response<Team>) {
                 if (response.isSuccessful && response.body() != null) {
                     val createdTeam = response.body()!!
-                    
+
                     // Create group chat automatically
                     createTeamGroupChat(createdTeam)
                 } else {
