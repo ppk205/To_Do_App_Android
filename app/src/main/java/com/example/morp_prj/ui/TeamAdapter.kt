@@ -23,6 +23,7 @@ class TeamAdapter(
         val tvName: TextView = itemView.findViewById(R.id.tvTeamName)
         val tvInfo: TextView = itemView.findViewById(R.id.tvTeamInfo)
         val imgPin: ImageView = itemView.findViewById(R.id.imgPin)
+        val tvPendingBadge: TextView = itemView.findViewById(R.id.tvPendingBadge)
         private val layoutTags: LinearLayout = itemView.findViewById(R.id.layoutTags)
         val btnChat: ImageView = itemView.findViewById(R.id.btnChat)
 
@@ -31,7 +32,26 @@ class TeamAdapter(
             val roleDisplay = team.role?.replaceFirstChar { it.uppercase() } ?: "Member"
             tvInfo.text = "${team.memberCount} members • $roleDisplay"
 
-            // Avatar
+            // Check if pending
+            val isPending = team.status?.lowercase() == "pending"
+
+            // Show/hide pending badge
+            tvPendingBadge.visibility = if (isPending) View.VISIBLE else View.GONE
+
+            // Adjust pin position based on pending badge
+            if (isPending) {
+                // Hide pin when pending
+                imgPin.visibility = View.GONE
+            } else {
+                imgPin.visibility = View.VISIBLE
+                imgPin.imageAlpha = if (team.isPinned) 255 else 120
+                imgPin.setColorFilter(itemView.context.getColor(
+                    if (team.isPinned) R.color.soft_blue_primary else R.color.gray_text
+                ))
+                imgPin.setOnClickListener { onPinClick(team) }
+            }
+
+            // Avatar with opacity for pending
             if (!team.avatarUrl.isNullOrEmpty()) {
                 Glide.with(itemView.context)
                     .load(team.avatarUrl)
@@ -44,22 +64,37 @@ class TeamAdapter(
                 imgAvatar.setImageResource(R.drawable.ic_avatar_placeholder)
             }
 
-            // Pin
-            imgPin.visibility = View.VISIBLE
-            imgPin.imageAlpha = if (team.isPinned) 255 else 120
-            imgPin.setColorFilter(itemView.context.getColor(if (team.isPinned) R.color.soft_blue_primary else R.color.gray_text))
-            imgPin.setOnClickListener { onPinClick(team) }
+            // Apply opacity when pending
+            imgAvatar.alpha = if (isPending) 0.5f else 1.0f
 
             // Tags Logic
             renderTags(team.tags)
 
-            // Click Listeners
-            // 1. Click vào cả card -> Xem chi tiết
-            itemView.setOnClickListener { onTeamClick(team) }
+            // Disable chat button when pending
+            btnChat.isEnabled = !isPending
+            btnChat.alpha = if (isPending) 0.3f else 1.0f
 
-            // 2. Click vào nút Chat -> Vào chat nhanh
-            btnChat.setOnClickListener {
-                onChatClick(team)
+            if (isPending) {
+                // Pending state: Show message, don't allow access
+                itemView.setOnClickListener {
+                    android.widget.Toast.makeText(
+                        itemView.context,
+                        "Đang chờ phê duyệt. Bạn sẽ nhận được thông báo khi được chấp nhận.",
+                        android.widget.Toast.LENGTH_SHORT
+                    ).show()
+                }
+
+                btnChat.setOnClickListener {
+                    android.widget.Toast.makeText(
+                        itemView.context,
+                        "Không thể chat khi đang chờ phê duyệt",
+                        android.widget.Toast.LENGTH_SHORT
+                    ).show()
+                }
+            } else {
+                // Active state: Normal clicks
+                itemView.setOnClickListener { onTeamClick(team) }
+                btnChat.setOnClickListener { onChatClick(team) }
             }
         }
 

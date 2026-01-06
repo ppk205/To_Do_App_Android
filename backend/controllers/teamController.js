@@ -470,3 +470,127 @@ exports.updateMemberRole = async (req, res) => {
         res.status(500).json({ message: 'Server error' });
     }
 };
+
+// --- Handle Join Request (Approve/Reject) ---
+exports.handleJoinRequest = async (req, res) => {
+    const { teamId, userId, action } = req.body;
+    const actorId = req.user ? req.user.id : req.body.actorId;
+
+    if (!teamId || !userId || !action) {
+        return res.status(400).json({ message: 'teamId, userId, and action are required' });
+    }
+
+    if (action !== 'approve' && action !== 'reject') {
+        return res.status(400).json({ message: 'Action must be "approve" or "reject"' });
+    }
+
+    try {
+        // Check if actor is manager or co-manager
+        const [actorRows] = await db.execute(
+            'SELECT role FROM teammember WHERE teamId = ? AND userId = ? AND status = "active" LIMIT 1',
+            [teamId, actorId]
+        );
+
+        if (!actorRows || actorRows.length === 0) {
+            return res.status(403).json({ message: 'Not a team member' });
+        }
+
+        const actorRole = String(actorRows[0].role || '').toLowerCase();
+        if (actorRole !== 'manager' && actorRole !== 'co-manager') {
+            return res.status(403).json({ message: 'Only managers can handle join requests' });
+        }
+
+        // Check if request exists and is pending
+        const [requestRows] = await db.execute(
+            'SELECT id, status FROM teammember WHERE teamId = ? AND userId = ? LIMIT 1',
+            [teamId, userId]
+        );
+
+        if (!requestRows || requestRows.length === 0) {
+            return res.status(404).json({ message: 'Join request not found' });
+        }
+
+        const currentStatus = String(requestRows[0].status || '').toLowerCase();
+        if (currentStatus !== 'pending') {
+            return res.status(400).json({ message: 'Request is not pending' });
+        }
+
+        if (action === 'approve') {
+            // Approve: Set status to active
+            await db.execute(
+                'UPDATE teammember SET status = "active" WHERE teamId = ? AND userId = ?',
+                [teamId, userId]
+            );
+
+            // Notify the user
+            try {
+                const [teamRows] = await db.execute('SELECT name FROM team WHERE id = ? LIMIT 1', [teamId]);
+                const teamName = teamRows && teamRows[0] ? teamRows[0].name : 'the team';
+
+                const createdAt = Date.now();
+                await createNotificationsBulk([{
+                    userId: userId,
+                    channel: 'teams',
+                    title: 'Join request approved',
+                    message: `Your request to join "${teamName}" has been approved!`,
+                    dedupeKey: `team:${teamId}:joinApproved:${userId}`,
+                    createdAt,
+                }]);
+
+                // Realtime notification
+                const io = getIO();
+                if (io) {
+                    io.to(`user:${userId}`).emit('notification', {
+                        title: 'Join request approved',
+                        message: `Your request to join "${teamName}" has been approved!`,
+                        createdAt,
+                    });
+                }
+            } catch (notifErr) {
+                console.error('[handleJoinRequest] Notification error:', notifErr);
+            }
+
+            res.json({ success: true, message: 'Member approved' });
+        } else {
+            // Reject: Remove the member entry
+            await db.execute(
+                'DELETE FROM teammember WHERE teamId = ? AND userId = ?',
+                [teamId, userId]
+            );
+
+            // Notify the user
+            try {
+                const [teamRows] = await db.execute('SELECT name FROM team WHERE id = ? LIMIT 1', [teamId]);
+                const teamName = teamRows && teamRows[0] ? teamRows[0].name : 'the team';
+
+                const createdAt = Date.now();
+                await createNotificationsBulk([{
+                    userId: userId,
+                    channel: 'teams',
+                    title: 'Join request rejected',
+                    message: `Your request to join "${teamName}" was not approved.`,
+                    dedupeKey: `team:${teamId}:joinRejected:${userId}`,
+                    createdAt,
+                }]);
+
+                // Realtime notification
+                const io = getIO();
+                if (io) {
+                    io.to(`user:${userId}`).emit('notification', {
+                        title: 'Join request rejected',
+                        message: `Your request to join "${teamName}" was not approved.`,
+                        createdAt,
+                    });
+                }
+            } catch (notifErr) {
+                console.error('[handleJoinRequest] Notification error:', notifErr);
+            }
+
+            res.json({ success: true, message: 'Request rejected' });
+        }
+    } catch (err) {
+        console.error('handleJoinRequest error:', err);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+

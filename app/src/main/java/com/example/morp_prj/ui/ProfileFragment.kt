@@ -87,7 +87,8 @@ class ProfileFragment : Fragment() {
         }
 
         if (readOnly && targetUserId != null) {
-            updateUIWithArgsFallback()
+            // Fetch full profile from server by userId
+            fetchUserProfileById(targetUserId!!)
             setupListeners(readOnly = true)
             updateUIState(false)
             return
@@ -121,6 +122,31 @@ class ProfileFragment : Fragment() {
                 if (currentUser == null) {
                     Toast.makeText(context, "Không thể tải profile: ${error.message}", Toast.LENGTH_SHORT).show()
                 }
+            }
+        }
+    }
+
+    /**
+     * Fetch other user's profile by ID (for read-only view)
+     */
+    private fun fetchUserProfileById(userId: String) {
+        val authRepo = AuthRepository(requireContext())
+
+        lifecycleScope.launch {
+            val result = authRepo.fetchUserById(userId)
+
+            result.onSuccess { user ->
+                currentUser = user
+                // Update UI with fetched user data
+                updateUIWithUser(user)
+            }.onFailure { error ->
+                // Try to use fallback data from arguments
+                updateUIWithArgsFallback()
+                Toast.makeText(
+                    context,
+                    "Không thể tải đầy đủ thông tin profile",
+                    Toast.LENGTH_SHORT
+                ).show()
             }
         }
     }

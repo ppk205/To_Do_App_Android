@@ -919,6 +919,43 @@ async function getProfile(req, res) {
     }
 }
 
+// ============================================
+// 11. GET USER BY ID - Lấy thông tin User bất kỳ theo ID
+// ============================================
+async function getUserById(req, res) {
+    try {
+        const { userId } = req.params;
+
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                message: 'userId is required'
+            });
+        }
+
+        // Lấy user từ DB
+        const user = await User.findById(userId);
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        // Return sanitized user data (no password, etc.)
+        res.status(200).json(sanitizeUser(user));
+
+    } catch (error) {
+        console.error('Get user by ID error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error',
+            error: error.message
+        });
+    }
+}
+
 module.exports = {
     register,
     verifyOTP,
@@ -935,5 +972,6 @@ module.exports = {
     resetPassword,
     changePassword,
     getProfile,
+    getUserById,
     updateProfile
 };

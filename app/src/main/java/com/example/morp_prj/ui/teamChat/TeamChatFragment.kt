@@ -69,6 +69,15 @@ class TeamChatFragment : Fragment(R.layout.fragment_team_chat) {
             findNavController().popBackStack()
         }
 
+        // Auto-scroll to bottom when keyboard opens or new message arrives
+        binding.etMessage.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus && adapter.itemCount > 0) {
+                binding.rvChat.postDelayed({
+                    binding.rvChat.smoothScrollToPosition(adapter.itemCount - 1)
+                }, 100)
+            }
+        }
+
         viewModel.errorMessage.observe(viewLifecycleOwner) { error ->
             if (!error.isNullOrEmpty()) {
                 android.widget.Toast.makeText(context, error, android.widget.Toast.LENGTH_SHORT).show()

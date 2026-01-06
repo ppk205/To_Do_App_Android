@@ -9,6 +9,8 @@ import android.widget.ImageButton
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
+import androidx.core.view.GravityCompat
+import androidx.drawerlayout.widget.DrawerLayout
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -47,8 +49,8 @@ class MemberDirectoryFragment : Fragment(R.layout.fragment_member_directory) {
         progressBar = view.findViewById(R.id.progressBar)
         tvEmptyState = view.findViewById(R.id.tvEmptyState)
 
-        view.findViewById<ImageButton>(R.id.btnBack).setOnClickListener {
-            findNavController().navigateUp()
+        view.findViewById<ImageButton>(R.id.btnMore).setOnClickListener {
+            requireActivity().findViewById<DrawerLayout>(R.id.drawer_layout)?.openDrawer(GravityCompat.END)
         }
 
         setupRecyclerView()

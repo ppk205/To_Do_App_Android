@@ -218,6 +218,23 @@ class AuthRepository(private val context: Context) {
     }
 
     /**
+     * Fetch user profile by user ID (for viewing other users)
+     */
+    suspend fun fetchUserById(userId: String): Result<com.example.morp_prj.data.model.User> = withContext(Dispatchers.IO) {
+        try {
+            val response = apiService.getUserById(userId)
+
+            if (response.isSuccessful && response.body() != null) {
+                Result.success(response.body()!!)
+            } else {
+                Result.failure(Exception(response.message() ?: "Failed to fetch user profile"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
      * Update user profile with Cloudinary avatar URL only
      * @param avatarUrl Cloudinary HTTPS URL (uploaded from app)
      */
