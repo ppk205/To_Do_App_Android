@@ -33,6 +33,8 @@ class ProfileFragment : Fragment() {
     private var currentUser: User? = null
     private var selectedAvatarUri: Uri? = null // Store selected avatar URI
     private var uploadedCloudinaryLink: String? = null // Store uploaded Cloudinary link
+    private var readOnly: Boolean = false
+    private var targetUserId: String? = null
 
     // Launcher chọn ảnh
     private val pickImageLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -60,12 +62,18 @@ class ProfileFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Chặn back press - không cho người dùng quay lại màn hình trước login
-        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, object : OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() {
-                // Không làm gì - chặn back press hoàn toàn
-            }
-        })
+        arguments?.let {
+            readOnly = it.getBoolean("readOnly", false)
+            targetUserId = it.getString("userId")
+        }
+
+        if (!readOnly) {
+            requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, object : OnBackPressedCallback(true) {
+                override fun handleOnBackPressed() { }
+            })
+        }
+
+        binding.btnBack.setOnClickListener { findNavController().navigateUp() }
 
         // Initialize Cloudinary
         CloudinaryHelper.init(requireContext())
@@ -78,9 +86,16 @@ class ProfileFragment : Fragment() {
             return
         }
 
+        if (readOnly && targetUserId != null) {
+            updateUIWithArgsFallback()
+            setupListeners(readOnly = true)
+            updateUIState(false)
+            return
+        }
+
         loadUserData()
         fetchProfileFromServer() // Fetch fresh data from server
-        setupListeners()
+        setupListeners(readOnly = false)
         updateUIState(false) // Mặc định là chế độ View
     }
 
@@ -155,7 +170,30 @@ class ProfileFragment : Fragment() {
         }
     }
 
-    private fun setupListeners() {
+    private fun setupListeners(readOnly: Boolean = false) {
+        if (readOnly) {
+            binding.ivEdit.visibility = View.GONE
+            binding.btnSave.visibility = View.GONE
+            binding.btnCancel.visibility = View.GONE
+            binding.btnChangeAvatar.visibility = View.GONE
+            binding.btnChangePassword.visibility = View.GONE
+            binding.btnLogout.visibility = View.GONE
+            binding.socialIconsContainer.visibility = View.VISIBLE
+            binding.lblGithub.visibility = View.GONE
+            binding.etGithub.visibility = View.GONE
+            binding.lblLinkedin.visibility = View.GONE
+            binding.etLinkedin.visibility = View.GONE
+            binding.lblWebsite.visibility = View.GONE
+            binding.etWebsite.visibility = View.GONE
+            binding.etFullName.isEnabled = false
+            binding.etPhone.isEnabled = false
+            binding.etBio.isEnabled = false
+            binding.etGithub.isEnabled = false
+            binding.etLinkedin.isEnabled = false
+            binding.etWebsite.isEnabled = false
+            return
+        }
+
         // 1. Nút Bút Chì (Góc phải) -> Bật chế độ sửa
         binding.ivEdit.setOnClickListener {
             updateUIState(true)
@@ -370,6 +408,30 @@ class ProfileFragment : Fragment() {
         }
     }
 
+    private fun updateUIWithArgsFallback() {
+        if (!readOnly) return
+        val displayName = arguments?.getString("displayName")
+        val email = arguments?.getString("email")
+        val avatarUrl = arguments?.getString("avatarUrl")
+        if (displayName.isNullOrBlank() && email.isNullOrBlank() && avatarUrl.isNullOrBlank()) return
+        binding.tvUserName.text = displayName ?: ""
+        binding.etFullName.setText(displayName ?: "")
+        binding.etEmail.setText(email ?: "")
+        if (!avatarUrl.isNullOrBlank()) {
+            val baseUrl = "http://10.0.2.2:3001"
+            val fullUrl = if (avatarUrl.startsWith("http")) avatarUrl else "$baseUrl$avatarUrl"
+            Glide.with(this)
+                .load(fullUrl)
+                .placeholder(R.drawable.ic_profile_unselected)
+                .error(R.drawable.ic_profile_unselected)
+                .into(binding.ivAvatar)
+        }
+    }
+
+    private fun fetchProfileForDisplay(userId: String) {
+        // In read-only mode we already bind passed args; skip network fetch of current user
+        updateUIWithArgsFallback()
+    }
 
     private fun performLogout() {
         // Xóa dữ liệu preferences (clearLoginData sẽ reset hasSeenOnboarding về false)

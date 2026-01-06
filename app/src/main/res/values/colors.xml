@@ -57,4 +57,11 @@
     <color name="timeline_line_color">#E0E0E0</color>
 
     <color name="status_in_progress">#FF9800</color>
+
+    <color name="soft_blue_bg">#F0F7FF</color>
+    <color name="soft_blue_primary">#3B82F6</color>
+    <color name="soft_blue_text">#1E3A8A</color>
+    <color name="soft_blue_tag_bg">#DBEAFE</color>
+    <color name="soft_blue_tag_text">#2563EB</color>
+    <color name="gray_text">#64748B</color>
 </resources>

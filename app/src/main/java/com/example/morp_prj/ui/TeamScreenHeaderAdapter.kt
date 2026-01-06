@@ -38,11 +38,14 @@ class TeamScreenHeaderAdapter(
         holder.tvPinnedTitle.text = "Pinned Teams (${pinnedTeams.size})"
 
         val pinnedAdapter = TeamAdapter(
-            pinnedTeams,
-            R.layout.item_pinned_team,
-            onItemClick = onPinnedTeamClick,
-            onItemLongClick = onPinnedTeamLongClick,
-            onChatClick = null
+        teams = pinnedTeams,
+        onTeamClick = { team -> onPinnedTeamClick(team) }, // Callback khi click vào card
+        onChatClick = { team ->
+            // Xử lý chat nhanh cho team đã ghim nếu cần,
+            // hoặc gọi chung callback điều hướng chat của Fragment
+            onPinnedTeamClick(team)
+        },
+            onPinClick = { team -> onPinnedTeamLongClick(team)}
         )
 
         holder.rvPinnedTeamsInternal.layoutManager = LinearLayoutManager(holder.itemView.context, LinearLayoutManager.HORIZONTAL, false)

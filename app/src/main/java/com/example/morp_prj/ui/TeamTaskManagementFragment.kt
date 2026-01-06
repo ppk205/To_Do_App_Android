@@ -17,8 +17,10 @@ import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.morp_prj.R
+import com.example.morp_prj.data.api.RetrofitClient
 import com.example.morp_prj.data.model.CalendarDate
 import com.example.morp_prj.data.model.TeamTask
+import com.example.morp_prj.data.model.TeamMember
 import com.example.morp_prj.utils.DateUtils
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.chip.Chip
@@ -26,6 +28,9 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
 
 class TeamTaskManagementFragment : Fragment(R.layout.fragment_team_task_management) {
 
@@ -44,12 +49,15 @@ class TeamTaskManagementFragment : Fragment(R.layout.fragment_team_task_manageme
     private lateinit var fabCreateTask: FloatingActionButton
     private lateinit var progressBar: ProgressBar
     private lateinit var tvEmpty: TextView
+    private lateinit var chipAssignee: Chip
 
     // Data State
     private var allTasks: List<TeamTask> = emptyList()
     private var dateList = mutableListOf<CalendarDate>()
     private var selectedDateMillis: Long? = System.currentTimeMillis()
     private var statusFilter: String? = null
+    private var assigneeFilterId: String? = null
+    private var memberList: List<TeamMember> = emptyList()
 
     // Sort Logic
     enum class SortType { TIME, PRIORITY }
@@ -70,6 +78,7 @@ class TeamTaskManagementFragment : Fragment(R.layout.fragment_team_task_manageme
         fabCreateTask = view.findViewById(R.id.fabCreateTask)
         progressBar = view.findViewById(R.id.progressBar)
         tvEmpty = view.findViewById(R.id.tvEmptyState)
+        chipAssignee = view.findViewById(R.id.chipAssignee)
 
         viewModel = ViewModelProvider(requireActivity())[TeamTaskViewModel::class.java]
 
@@ -81,6 +90,7 @@ class TeamTaskManagementFragment : Fragment(R.layout.fragment_team_task_manageme
         val teamId = arguments?.getString("teamId")
         if (teamId != null) {
             observeTasks(teamId)
+            loadMembers(teamId)
 
             // Fab
             fabCreateTask.setOnClickListener {
@@ -225,6 +235,8 @@ class TeamTaskManagementFragment : Fragment(R.layout.fragment_team_task_manageme
         btnMenu.setOnClickListener {
             requireActivity().findViewById<DrawerLayout>(R.id.drawer_layout)?.openDrawer(GravityCompat.END)
         }
+
+        chipAssignee.setOnClickListener { showAssigneeMenu() }
     }
 
     // Helper Functions Logic
@@ -239,8 +251,8 @@ class TeamTaskManagementFragment : Fragment(R.layout.fragment_team_task_manageme
 
         val typeText = if (currentSortType == SortType.TIME) "Time" else "Priority"
         val orderText = when(currentSortOrder) {
-            SortOrder.DESC -> "Desc (High->Low)"
-            SortOrder.ASC -> "Asc (Low->High)"
+            SortOrder.DESC -> if (currentSortType == SortType.PRIORITY) "Desc (High->Low)" else "Desc (Soon -> Late)"
+            SortOrder.ASC -> if (currentSortType == SortType.PRIORITY) "Asc (Low->High)" else "Asc (Late -> Soon)"
             SortOrder.NONE -> "Default"
         }
         if (currentSortOrder != SortOrder.NONE) {
@@ -291,6 +303,40 @@ class TeamTaskManagementFragment : Fragment(R.layout.fragment_team_task_manageme
         }
     }
 
+    private fun loadMembers(teamId: String) {
+        RetrofitClient.teamApiService.getTeamMembers(teamId).enqueue(object : Callback<List<TeamMember>> {
+            override fun onResponse(call: Call<List<TeamMember>>, response: Response<List<TeamMember>>) {
+                if (response.isSuccessful) {
+                    memberList = response.body() ?: emptyList()
+                }
+            }
+            override fun onFailure(call: Call<List<TeamMember>>, t: Throwable) {
+                // no-op
+            }
+        })
+    }
+
+    private fun showAssigneeMenu() {
+        val popup = PopupMenu(context, chipAssignee)
+        popup.menu.add(0, 0, 0, "Assignee: All")
+        memberList.forEachIndexed { index, member ->
+            popup.menu.add(0, index + 1, index + 1, member.displayName ?: member.email ?: "(no name)")
+        }
+        popup.setOnMenuItemClickListener { item ->
+            if (item.itemId == 0) {
+                assigneeFilterId = null
+                chipAssignee.text = "Assignee: All"
+            } else {
+                val member = memberList.getOrNull(item.itemId - 1)
+                assigneeFilterId = member?.id
+                chipAssignee.text = "${member?.displayName ?: "(no name)"}"
+            }
+            applyFiltersAndSort()
+            true
+        }
+        popup.show()
+    }
+
     private fun applyFiltersAndSort() {
         var resultList = allTasks
 
@@ -310,6 +356,12 @@ class TeamTaskManagementFragment : Fragment(R.layout.fragment_team_task_manageme
             }
         }
 
+        if (assigneeFilterId != null) {
+            resultList = resultList.filter { task ->
+                task.assignees?.any { it.id == assigneeFilterId } == true
+            }
+        }
+
         if (currentSortOrder != SortOrder.NONE) {
             resultList = resultList.sortedWith(Comparator { t1, t2 ->
                 val p1 = getPriorityValue(t1.priority)
@@ -325,7 +377,20 @@ class TeamTaskManagementFragment : Fragment(R.layout.fragment_team_task_manageme
                     comparison = d1.compareTo(d2)
                     if (comparison == 0) comparison = p1.compareTo(p2)
                 }
-                if (currentSortOrder == SortOrder.DESC) comparison * -1 else comparison
+
+                if (currentSortType == SortType.PRIORITY){
+                    if (currentSortOrder == SortOrder.DESC) {
+                        comparison * -1
+                    } else {
+                        comparison
+                    }
+                } else {
+                    if (currentSortOrder == SortOrder.ASC) {
+                        comparison * -1
+                    } else {
+                        comparison
+                    }
+                }
             })
         }
 

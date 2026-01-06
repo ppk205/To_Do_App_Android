@@ -25,6 +25,7 @@ import com.example.morp_prj.data.api.RetrofitClient
 import com.example.morp_prj.data.model.HandleJoinRequest
 import com.example.morp_prj.data.model.RemoveMemberRequest
 import com.example.morp_prj.data.model.TeamMember
+import com.example.morp_prj.data.model.UpdateMemberRoleRequest
 import com.example.morp_prj.utils.PreferenceManager
 import com.google.android.material.tabs.TabLayout
 import retrofit2.Call
@@ -286,21 +287,76 @@ class MemberManagementFragment : Fragment(R.layout.fragment_member_management) {
         val canManage = currentUserRole.equals("manager", ignoreCase = true) ||
                 currentUserRole.equals("co-manager", ignoreCase = true)
 
+        // Hide remove/change for self
         if (!canManage || member.id == preferenceManager.getUserId()) {
             popup.menu.findItem(R.id.action_remove_member)?.isVisible = false
             popup.menu.findItem(R.id.action_change_role)?.isVisible = false
         }
 
+        // Hide change role if target is manager or actor is not allowed to change manager
+        val targetIsManager = member.role.equals("manager", true)
+        if (targetIsManager || (!currentUserRole.equals("manager", true) && member.role.equals("co-manager", true))) {
+            popup.menu.findItem(R.id.action_change_role)?.isVisible = false
+            popup.menu.findItem(R.id.action_remove_member)?.isVisible = false
+        }
+
         popup.setOnMenuItemClickListener { item ->
             when (item.itemId) {
-                R.id.action_remove_member -> {
-                    confirmRemoveMember(member)
-                    true
-                }
+                R.id.action_remove_member -> { confirmRemoveMember(member); true }
+                R.id.action_view_profile -> { openProfile(member); true }
+                R.id.action_change_role -> { showChangeRoleDialog(member); true }
                 else -> false
             }
         }
         popup.show()
+    }
+
+    private fun showChangeRoleDialog(member: TeamMember) {
+        val options = when {
+            member.role.equals("co-manager", true) -> arrayOf("Set as Member")
+            member.role.equals("member", true) -> arrayOf("Set as Co-Manager")
+            else -> emptyArray()
+        }
+        if (options.isEmpty()) return
+
+        AlertDialog.Builder(requireContext())
+            .setTitle("Change Role")
+            .setItems(options) { _, which ->
+                val newRole = if (options[which].contains("Co-Manager", true)) "co-manager" else "member"
+                performChangeRole(member, newRole)
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun performChangeRole(member: TeamMember, newRole: String) {
+        val currentTeamId = teamId ?: return
+        val request = UpdateMemberRoleRequest(teamId = currentTeamId, userId = member.id, newRole = newRole)
+        RetrofitClient.teamApiService.updateMemberRole(request).enqueue(object : Callback<Void> {
+            override fun onResponse(call: Call<Void>, response: Response<Void>) {
+                if (response.isSuccessful) {
+                    Toast.makeText(context, "Role updated", Toast.LENGTH_SHORT).show()
+                    loadMembers()
+                } else {
+                    Toast.makeText(context, "Failed: ${response.code()}", Toast.LENGTH_SHORT).show()
+                }
+            }
+            override fun onFailure(call: Call<Void>, t: Throwable) {
+                Toast.makeText(context, "Error: ${t.message}", Toast.LENGTH_SHORT).show()
+            }
+        })
+    }
+
+    private fun openProfile(member: TeamMember) {
+        val args = Bundle().apply {
+            putString("userId", member.id)
+            putBoolean("readOnly", true)
+            putString("displayName", member.displayName)
+            putString("email", member.email)
+            putString("avatarUrl", member.avatarUrl)
+            putString("role", member.role)
+        }
+        findNavController().navigate(R.id.action_memberManagementFragment_to_profileFragment, args)
     }
 
     private fun confirmRemoveMember(member: TeamMember) {
