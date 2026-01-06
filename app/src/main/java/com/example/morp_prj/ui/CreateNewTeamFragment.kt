@@ -49,6 +49,7 @@ class CreateNewTeamFragment : Fragment() {
     private lateinit var btnBack: ImageView
     private lateinit var imgTeamAvatar: ImageView
     private lateinit var btnChangeAvatar: ImageView
+    private lateinit var switchMemberDirectory: androidx.appcompat.widget.SwitchCompat
 
     private lateinit var preferenceManager: PreferenceManager
 
@@ -95,6 +96,7 @@ class CreateNewTeamFragment : Fragment() {
         btnBack = view.findViewById(R.id.btnBack)
         imgTeamAvatar = view.findViewById(R.id.imgTeamAvatar)
         btnChangeAvatar = view.findViewById(R.id.btnChangeAvatar)
+        switchMemberDirectory = view.findViewById(R.id.switchMemberDirectory)
     }
 
     private fun setupListeners() {
@@ -197,7 +199,8 @@ class CreateNewTeamFragment : Fragment() {
             description = description,
             createdBy = userId,
             tags = tagsList,
-            avatarUrl = uploadedAvatarUrl
+            avatarUrl = uploadedAvatarUrl,
+            allowMemberDirectory = switchMemberDirectory.isChecked
         )
 
         // Disable button to prevent double click

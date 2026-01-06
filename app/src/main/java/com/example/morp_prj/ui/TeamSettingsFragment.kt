@@ -58,6 +58,10 @@ class TeamSettingsFragment : Fragment(R.layout.fragment_team_settings) {
     private lateinit var btnChangeAvatar: ImageButton
     private var uploadedAvatarUrl: String? = null
     private var selectedAvatarUri: Uri? = null
+
+    // Allow member directory switch
+    private lateinit var switchMemberDirectory: androidx.appcompat.widget.SwitchCompat
+
     private val imagePickerLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == android.app.Activity.RESULT_OK) {
             val uri = result.data?.data
@@ -103,6 +107,9 @@ class TeamSettingsFragment : Fragment(R.layout.fragment_team_settings) {
         // Ánh xạ các view cho phần Avatar
         imgAvatar = view.findViewById(R.id.imgTeamAvatar)
         btnChangeAvatar = view.findViewById(R.id.btnChangeAvatar)
+
+        // Ánh xạ switch cho member directory
+        switchMemberDirectory = view.findViewById(R.id.switchMemberDirectory)
     }
 
     private fun setupRoleBasedUI() {
@@ -232,6 +239,9 @@ class TeamSettingsFragment : Fragment(R.layout.fragment_team_settings) {
                     team?.tags?.forEach { tag ->
                         addChipToGroup(tag)
                     }
+
+                    // Load member directory setting
+                    switchMemberDirectory.isChecked = team?.allowMemberDirectory ?: false
                 }
             }
             override fun onFailure(call: Call<Team>, t: Throwable) {
@@ -263,7 +273,8 @@ class TeamSettingsFragment : Fragment(R.layout.fragment_team_settings) {
             name = name,
             description = desc,
             tags = tagsList,
-            avatarUrl = uploadedAvatarUrl
+            avatarUrl = uploadedAvatarUrl,
+            allowMemberDirectory = switchMemberDirectory.isChecked
         )
 
         RetrofitClient.teamApiService.updateTeam(teamId, request).enqueue(object : Callback<Team> {
