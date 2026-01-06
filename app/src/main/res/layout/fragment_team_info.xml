@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/soft_blue_bg"
+    android:background="#F9F9F9"
     android:fillViewport="true">
 
     <LinearLayout
@@ -26,7 +26,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="Team Information"
-                android:textColor="#212121"
+                android:textColor="@color/black"
                 android:textSize="24sp"
                 android:textStyle="bold" />
 

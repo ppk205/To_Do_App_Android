@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F2F4F7"
+    android:background="#F9F9F9"
     android:focusable="true"
     android:focusableInTouchMode="true">
 
@@ -42,7 +42,7 @@
             android:layout_marginStart="48dp"
             android:fontFamily="sans-serif-medium"
             android:text="Workspaces"
-            android:textColor="#101828"
+            android:textColor="@color/black"
             android:textSize="24sp"
             android:textStyle="bold"
             app:layout_constraintBottom_toBottomOf="parent"
@@ -53,13 +53,13 @@
             android:id="@+id/btnNotifications"
             android:layout_width="40dp"
             android:layout_height="40dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
+            android:background="@drawable/bg_circle_green"
             android:padding="8dp"
             android:src="@drawable/ic_notification"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent"
-            app:tint="#667085" />
+            app:tint="@color/white" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
@@ -85,7 +85,7 @@
                 android:layout_width="20dp"
                 android:layout_height="20dp"
                 android:src="@drawable/ic_search"
-                app:tint="#667085" />
+                app:tint="#808080" />
 
             <EditText
                 android:id="@+id/edtSearch"
@@ -97,8 +97,8 @@
                 android:imeOptions="actionSearch"
                 android:inputType="text"
                 android:maxLines="1"
-                android:textColor="#101828"
-                android:textColorHint="#98A2B3"
+                android:textColor="#000000"
+                android:textColorHint="#808080"
                 android:textSize="14sp" />
         </LinearLayout>
     </androidx.constraintlayout.widget.ConstraintLayout>
