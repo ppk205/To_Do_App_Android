@@ -85,6 +85,12 @@ class MemberDirectoryFragment : Fragment(R.layout.fragment_member_directory) {
                 if (response.isSuccessful) {
                     allMembers = response.body() ?: emptyList()
                     filterMembers(etSearch.text.toString())
+                } else if (response.code() == 403) {
+                    // Permission denied
+                    tvEmptyState.text = "Access denied. Member directory is disabled by manager."
+                    tvEmptyState.visibility = View.VISIBLE
+                    rvMembers.visibility = View.GONE
+                    Toast.makeText(context, "Member directory access denied", Toast.LENGTH_SHORT).show()
                 } else {
                     Toast.makeText(context, "Failed to load members", Toast.LENGTH_SHORT).show()
                 }

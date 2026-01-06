@@ -5,7 +5,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@android:color/white"
+    android:background="#F9F9F9"
     android:clickable="true"
     android:focusable="true">
 
@@ -112,7 +112,7 @@
                 android:background="@drawable/bg_search_bar"
                 android:paddingHorizontal="12dp"
                 android:textSize="16sp"
-                android:textColor="#212121"
+                android:textColor="@color/black"
                 android:hint="Enter team name"
                 android:singleLine="true"/>
 
@@ -133,7 +133,7 @@
                 android:background="@drawable/bg_search_bar"
                 android:padding="12dp"
                 android:textSize="16sp"
-                android:textColor="#212121"
+                android:textColor="@color/black"
                 android:hint="Enter description"
                 android:gravity="top|start"/>
 
@@ -247,12 +247,11 @@
                 android:background="@drawable/bg_search_bar">
 
                 <TextView
-                    android:id="@+id/tvMemberDirectoryLabel"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:text="Allow members to view member directory"
                     android:textSize="14sp"
-                    android:textColor="#212121"
+                    android:textColor="@color/black"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintEnd_toStartOf="@id/switchMemberDirectory"
                     app:layout_constraintTop_toTopOf="parent"

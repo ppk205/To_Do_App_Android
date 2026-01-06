@@ -63,14 +63,14 @@ const Team = {
   },
 
   create: (teamData) => {
-    const { id, name, description, tags, createdBy, inviteCode, avatarUrl } = teamData;
+    const { id, name, description, tags, createdBy, inviteCode, avatarUrl, allowMemberDirectory } = teamData;
     const tagsJson = Array.isArray(tags) ? JSON.stringify(tags) : tags;
 
     const query = `
-        INSERT INTO team (id, name, description, tags, createdBy, inviteCode, avatarUrl, createdAt)
-        VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
+        INSERT INTO team (id, name, description, tags, createdBy, inviteCode, avatarUrl, allowMemberDirectory, createdAt)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
     `;
-    return db.query(query, [id, name, description, tagsJson, createdBy, inviteCode, avatarUrl || null]);
+    return db.query(query, [id, name, description, tagsJson, createdBy, inviteCode, avatarUrl || null, allowMemberDirectory || 0]);
   },
 
   // --- HÀM UPDATE ĐÃ ĐƯỢC SỬA (DYNAMIC UPDATE) ---
