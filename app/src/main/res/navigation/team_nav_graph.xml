@@ -17,7 +17,11 @@
         <!-- Action to open task detail from dashboard recent items -->
         <action
             android:id="@+id/action_teamDashboard_to_taskDetail"
-            app:destination="@id/teamTaskDetailFragment">
+            app:destination="@id/teamTaskDetailFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right">
             <argument
                 android:name="taskId"
                 app:argType="string" />
@@ -39,7 +43,11 @@
             android:defaultValue="" />
         <action
             android:id="@+id/action_memberManagementFragment_to_profileFragment"
-            app:destination="@id/profileFragment" />
+            app:destination="@id/profileFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
     </fragment>
 
     <fragment
@@ -64,7 +72,11 @@
         <!-- Action to open task detail from assigned tasks list -->
         <action
             android:id="@+id/action_assignedTasks_to_taskDetail"
-            app:destination="@id/teamTaskDetailFragment">
+            app:destination="@id/teamTaskDetailFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right">
             <argument
                 android:name="taskId"
                 app:argType="string" />
@@ -82,7 +94,11 @@
             android:defaultValue="" />
         <action
             android:id="@+id/action_teamTaskManagement_to_taskDetail"
-            app:destination="@id/teamTaskDetailFragment" />
+            app:destination="@id/teamTaskDetailFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
     </fragment>
     <fragment
         android:id="@+id/teamTaskDetailFragment"
@@ -163,6 +179,10 @@
             android:defaultValue="" />
         <action
             android:id="@+id/action_memberDirectory_to_profileFragment"
-            app:destination="@id/profileFragment" />
+            app:destination="@id/profileFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
     </fragment>
 </navigation>

@@ -311,7 +311,11 @@
         tools:layout="@layout/fragment_team">
         <action
             android:id="@+id/action_team_to_detail"
-            app:destination="@id/teamDetailFragment" />
+            app:destination="@id/teamDetailFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
         <action
             android:id="@+id/action_team_to_chat"
             app:destination="@id/teamChatFragment"
