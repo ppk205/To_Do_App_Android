@@ -68,6 +68,7 @@ class MainActivity : AppCompatActivity() {
             R.id.reset_password_success_fragment,
             // Other full-screen destinations where nav bar must be hidden
             R.id.taskFragment,
+            R.id.teamChatFragment,
             R.id.create_new_team_fragment,
             R.id.teamDetailFragment,
             R.id.change_password_fragment -> true
