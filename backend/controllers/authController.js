@@ -876,9 +876,8 @@ async function updateProfile(req, res) {
             return res.status(400).json({ success: false, message: 'Không có dữ liệu để cập nhật' });
         }
 
-        // Log để debug
-        console.log('📝 UPDATE PROFILE - userId:', userId);
-        console.log('📝 UPDATE PROFILE - updateData:', JSON.stringify(updateData, null, 2));
+        // REQ-PROF-01: KHÔNG log thông tin nhạy cảm (PII) - chỉ log userId và fields được update
+        console.log('📝 UPDATE PROFILE - userId:', userId, '- fields:', Object.keys(updateData).join(', '));
 
         // Gọi Model update
         await User.update(userId, updateData);
@@ -886,12 +885,14 @@ async function updateProfile(req, res) {
         // Lấy lại user mới nhất để trả về client
         const updatedUser = await User.findById(userId);
 
-        console.log('✅ UPDATED USER from DB:', JSON.stringify(updatedUser, null, 2));
+        // REQ-PROF-01: Sanitize user trước khi trả về client
+        const sanitizedUser = sanitizeUser(updatedUser);
+        console.log('✅ UPDATED PROFILE for userId:', userId);
 
         res.status(200).json({
             success: true,
             message: 'Cập nhật hồ sơ thành công',
-            user: sanitizeUser(updatedUser)
+            user: sanitizedUser
         });
 
     } catch (error) {

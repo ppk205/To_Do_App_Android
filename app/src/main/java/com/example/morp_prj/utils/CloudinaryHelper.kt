@@ -99,18 +99,23 @@ object CloudinaryHelper {
      * @return Result<String> - Success with secure URL or Failure with error
      */
     suspend fun uploadImage(uri: Uri): Result<String> {
-        // Bước 1: Lấy signature từ server
-        val signatureResult = getSignatureFromServer()
+        // TEMPORARY: Try signed upload first, fallback to unsigned if server endpoint not available
+        try {
+            // Bước 1: Lấy signature từ server
+            val signatureResult = getSignatureFromServer()
 
-        if (signatureResult.isFailure) {
-            return Result.failure(signatureResult.exceptionOrNull()
-                ?: Exception("Không thể lấy signature từ server"))
+            if (signatureResult.isSuccess) {
+                val signatureData = signatureResult.getOrNull()!!
+                // Bước 2: Upload với signature
+                return uploadWithSignature(uri, signatureData)
+            } else {
+                android.util.Log.w("CloudinaryHelper", "Signed upload not available, falling back to unsigned preset")
+                return uploadWithPreset(uri)
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("CloudinaryHelper", "Signed upload failed, falling back to unsigned preset", e)
+            return uploadWithPreset(uri)
         }
-
-        val signatureData = signatureResult.getOrNull()!!
-
-        // Bước 2: Upload với signature
-        return uploadWithSignature(uri, signatureData)
     }
 
     /**
@@ -164,6 +169,65 @@ object CloudinaryHelper {
                 }).dispatch()
         } catch (e: Exception) {
             android.util.Log.e("CloudinaryHelper", "Exception during signed upload", e)
+            continuation.resume(Result.failure(e))
+        }
+    }
+
+    /**
+     * Fallback: Upload ảnh với unsigned preset (ít bảo mật hơn nhưng không cần backend endpoint)
+     * Chỉ dùng khi signed upload endpoint chưa available trên production
+     *
+     * SETUP REQUIRED IN CLOUDINARY DASHBOARD:
+     * 1. Go to Settings → Upload → Add upload preset
+     * 2. Preset name: "morp_avatar_upload" (or change PRESET_NAME below)
+     * 3. Signing mode: Unsigned
+     * 4. Folder: upload_project/avatars
+     * 5. Save
+     */
+    private suspend fun uploadWithPreset(uri: Uri): Result<String> = suspendCancellableCoroutine { continuation ->
+        try {
+            android.util.Log.d("CloudinaryHelper", "Starting unsigned upload with preset")
+
+            // Upload với unsigned preset
+            // NOTE: Preset "morp_avatar_upload" must be created in Cloudinary dashboard first!
+            val PRESET_NAME = "upload_project"
+
+            MediaManager.get().upload(uri)
+                .unsigned(PRESET_NAME)
+                .option("folder", "upload_project/avatars")
+                .option("resource_type", "image")
+                .callback(object : UploadCallback {
+                    override fun onStart(requestId: String) {
+                        android.util.Log.d("CloudinaryHelper", "Unsigned upload started: $requestId")
+                    }
+
+                    override fun onProgress(requestId: String, bytes: Long, totalBytes: Long) {
+                        val progress = (bytes * 100 / totalBytes).toInt()
+                        android.util.Log.d("CloudinaryHelper", "Upload progress: $progress%")
+                    }
+
+                    override fun onSuccess(requestId: String, resultData: Map<*, *>) {
+                        val url = resultData["secure_url"] as? String
+                        android.util.Log.d("CloudinaryHelper", "Unsigned upload success: $url")
+
+                        if (url != null) {
+                            continuation.resume(Result.success(url))
+                        } else {
+                            continuation.resume(Result.failure(Exception("URL not found in response")))
+                        }
+                    }
+
+                    override fun onError(requestId: String, error: ErrorInfo) {
+                        android.util.Log.e("CloudinaryHelper", "Unsigned upload error: ${error.description}")
+                        continuation.resume(Result.failure(Exception(error.description)))
+                    }
+
+                    override fun onReschedule(requestId: String, error: ErrorInfo) {
+                        android.util.Log.w("CloudinaryHelper", "Upload rescheduled: ${error.description}")
+                    }
+                }).dispatch()
+        } catch (e: Exception) {
+            android.util.Log.e("CloudinaryHelper", "Exception during unsigned upload", e)
             continuation.resume(Result.failure(e))
         }
     }
