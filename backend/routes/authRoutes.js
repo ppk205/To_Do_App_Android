@@ -95,4 +95,7 @@ router.put('/profile', authenticateToken, authController.updateProfile);
 // Change password (requires old password verification)
 router.post('/change-password', authenticateToken, authController.changePassword);
 
+// REQ-UPLOAD-01: Get Cloudinary signature for signed uploads
+router.post('/cloudinary-signature', authenticateToken, authController.getCloudinarySignature);
+
 module.exports = router;

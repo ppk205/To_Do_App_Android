@@ -477,13 +477,22 @@ class ProfileFragment : Fragment() {
     }
 
 
+    /**
+     * REQ-HOME-03: Secure Logout
+     * Xóa hoàn toàn tất cả dữ liệu user để ngăn data leakage
+     */
     private fun performLogout() {
-        // Xóa dữ liệu preferences (clearLoginData sẽ reset hasSeenOnboarding về false)
+        // REQ-HOME-03: Xóa dữ liệu preferences (giữ lại onboarding state)
         PreferenceManager.clear(requireContext())
 
+        // REQ-HOME-03: Xóa tokens trong SecureTokenStorage (EncryptedSharedPreferences)
+        val tokenStorage = com.example.morp_prj.security.SecureTokenStorage(requireContext())
+        tokenStorage.clearAll()
 
-        // Xóa tokens trong SecureTokenStorage
-        com.example.morp_prj.security.SecureTokenStorage(requireContext()).clearAll()
+        // Clear Glide image cache để không hiển thị avatar của user trước
+        com.bumptech.glide.Glide.get(requireContext()).clearMemory()
+
+        android.util.Log.d("ProfileFragment", "🔐 Secure logout completed - all user data cleared")
 
         // Navigate đến màn hình login và xóa toàn bộ backstack
         val navOptions = androidx.navigation.NavOptions.Builder()

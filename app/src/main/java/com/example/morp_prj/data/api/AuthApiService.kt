@@ -59,4 +59,11 @@ interface AuthApiService {
         @Header("Authorization") token: String,
         @Body request: Map<String, String>
     ): Response<AuthResponse>
+
+    /**
+     * REQ-UPLOAD-01: Lấy signature cho Cloudinary signed upload
+     * App phải gọi endpoint này trước khi upload ảnh lên Cloudinary
+     */
+    @POST("api/auth/cloudinary-signature")
+    suspend fun getCloudinarySignature(): Response<CloudinarySignatureResponse>
 }

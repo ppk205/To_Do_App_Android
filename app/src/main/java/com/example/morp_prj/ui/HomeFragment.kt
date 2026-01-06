@@ -1,6 +1,8 @@
 package com.example.morp_prj.ui
 
 import android.os.Bundle
+import android.text.Html
+import android.text.TextUtils
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
@@ -32,6 +34,16 @@ import java.util.Calendar
 class HomeFragment : Fragment() {
     companion object {
         private const val GUEST_USER_ID = PreferenceManager.GUEST_USER_ID
+
+        /**
+         * REQ-HOME-02: Sanitize text để ngăn XSS
+         * Loại bỏ các ký tự đặc biệt HTML có thể gây XSS
+         */
+        private fun sanitizeForDisplay(text: String?): String {
+            if (text.isNullOrBlank()) return ""
+            // Escape các ký tự HTML đặc biệt
+            return TextUtils.htmlEncode(text)
+        }
     }
 
     private lateinit var toDoAdapter: ToDoAdapter
@@ -147,17 +159,21 @@ class HomeFragment : Fragment() {
 
     /**
      * Cập nhật UI greeting và avatar với dữ liệu user được truyền vào
+     * REQ-HOME-02: Sanitize name để ngăn XSS
      */
     private fun updateGreetingWithUser(user: com.example.morp_prj.data.model.User?) {
-        // Xử lý tên hiển thị
-        val name = when {
+        // Xử lý tên hiển thị - REQ-HOME-02: Sanitize để ngăn XSS
+        val rawName = when {
             prefs.isGuest() -> "Guest"
             user?.displayName?.isNotBlank() == true -> user.displayName
             user?.username?.isNotBlank() == true -> user.username
             user?.email?.isNotBlank() == true -> user.email
             else -> "User"
         }
-        tvGreeting.text = "Hi, $name"
+
+        // REQ-HOME-02: Sanitize text trước khi hiển thị để ngăn Stored XSS
+        val safeName = sanitizeForDisplay(rawName)
+        tvGreeting.text = "Hi, $safeName"
 
         // Load avatar using RetrofitClient for consistent URL handling
         if (user != null && !user.avatarUrl.isNullOrEmpty()) {

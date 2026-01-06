@@ -6,21 +6,21 @@ import com.cloudinary.android.MediaManager
 import com.cloudinary.android.callback.ErrorInfo
 import com.cloudinary.android.callback.UploadCallback
 import com.example.morp_prj.BuildConfig
+import com.example.morp_prj.data.api.RetrofitClient
+import com.example.morp_prj.data.model.CloudinarySignatureResponse
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
 import kotlin.coroutines.resume
 
 /**
  * Helper class for uploading images to Cloudinary
+ * REQ-UPLOAD-01: Sử dụng Signed Uploads để bảo mật
  *
- * Setup:
- * 1. Tạo tài khoản miễn phí tại https://cloudinary.com
- * 2. Lấy thông tin từ Dashboard và thêm vào local.properties:
- *    cloudinary.cloud_name=YOUR_CLOUD_NAME
- *    cloudinary.api_key=YOUR_API_KEY
- *    cloudinary.upload_preset=YOUR_UNSIGNED_PRESET
- * 3. Sync Gradle và Build project
- *
- * Xem hướng dẫn chi tiết trong file CLOUDINARY_SETUP.md
+ * Flow:
+ * 1. App gọi server để lấy signature (getCloudinarySignature)
+ * 2. App sử dụng signature để upload ảnh lên Cloudinary
+ * 3. Server validate signature -> chỉ user đã xác thực mới upload được
  */
 object CloudinaryHelper {
     private var isInitialized = false
@@ -69,29 +69,72 @@ object CloudinaryHelper {
     }
 
     /**
-     * Get upload preset from BuildConfig or default
+     * REQ-UPLOAD-01: Lấy signature từ server trước khi upload
+     * @return Result<CloudinarySignatureResponse> - Signature data hoặc lỗi
      */
-    private fun getUploadPreset(): String {
-        return try {
-            BuildConfig.CLOUDINARY_UPLOAD_PRESET
+    private suspend fun getSignatureFromServer(): Result<CloudinarySignatureResponse> = withContext(Dispatchers.IO) {
+        try {
+            val response = RetrofitClient.authApiService.getCloudinarySignature()
+
+            if (response.isSuccessful && response.body() != null) {
+                val signatureData = response.body()!!
+                android.util.Log.d("CloudinaryHelper", "Got signature from server: publicId=${signatureData.publicId}")
+                Result.success(signatureData)
+            } else {
+                val errorMessage = response.errorBody()?.string() ?: "Failed to get signature"
+                android.util.Log.e("CloudinaryHelper", "Signature error: $errorMessage")
+                Result.failure(Exception(errorMessage))
+            }
         } catch (e: Exception) {
-            "upload_project" // Default fallback
+            android.util.Log.e("CloudinaryHelper", "Exception getting signature", e)
+            Result.failure(e)
         }
     }
 
     /**
-     * Upload image to Cloudinary and return secure URL
+     * REQ-UPLOAD-01: Upload image to Cloudinary using SIGNED upload
+     * Bảo mật hơn unsigned preset - yêu cầu server-side signature
      *
      * @param uri Image URI from gallery or camera
      * @return Result<String> - Success with secure URL or Failure with error
      */
-    suspend fun uploadImage(uri: Uri): Result<String> = suspendCancellableCoroutine { continuation ->
+    suspend fun uploadImage(uri: Uri): Result<String> {
+        // Bước 1: Lấy signature từ server
+        val signatureResult = getSignatureFromServer()
+
+        if (signatureResult.isFailure) {
+            return Result.failure(signatureResult.exceptionOrNull()
+                ?: Exception("Không thể lấy signature từ server"))
+        }
+
+        val signatureData = signatureResult.getOrNull()!!
+
+        // Bước 2: Upload với signature
+        return uploadWithSignature(uri, signatureData)
+    }
+
+    /**
+     * REQ-UPLOAD-01: Upload ảnh với signature đã lấy từ server
+     */
+    private suspend fun uploadWithSignature(
+        uri: Uri,
+        signatureData: CloudinarySignatureResponse
+    ): Result<String> = suspendCancellableCoroutine { continuation ->
         try {
+            android.util.Log.d("CloudinaryHelper", "Starting signed upload: publicId=${signatureData.publicId}")
+
+            // REQ-UPLOAD-01: Signed upload với Cloudinary
+            // Không có method .signed() - thay vào đó set các options
             MediaManager.get().upload(uri)
-                .unsigned(getUploadPreset())
+                .option("signature", signatureData.signature)
+                .option("timestamp", signatureData.timestamp)
+                .option("public_id", signatureData.publicId)
+                .option("folder", signatureData.folder)
+                .option("api_key", signatureData.apiKey)
+                .option("resource_type", "image") // Chỉ định resource type
                 .callback(object : UploadCallback {
                     override fun onStart(requestId: String) {
-                        android.util.Log.d("CloudinaryHelper", "Upload started: $requestId")
+                        android.util.Log.d("CloudinaryHelper", "Signed upload started: $requestId")
                     }
 
                     override fun onProgress(requestId: String, bytes: Long, totalBytes: Long) {
@@ -101,7 +144,7 @@ object CloudinaryHelper {
 
                     override fun onSuccess(requestId: String, resultData: Map<*, *>) {
                         val url = resultData["secure_url"] as? String
-                        android.util.Log.d("CloudinaryHelper", "Upload success: $url")
+                        android.util.Log.d("CloudinaryHelper", "Signed upload success: $url")
 
                         if (url != null) {
                             continuation.resume(Result.success(url))
@@ -111,7 +154,7 @@ object CloudinaryHelper {
                     }
 
                     override fun onError(requestId: String, error: ErrorInfo) {
-                        android.util.Log.e("CloudinaryHelper", "Upload error: ${error.description}")
+                        android.util.Log.e("CloudinaryHelper", "Signed upload error: ${error.description}")
                         continuation.resume(Result.failure(Exception(error.description)))
                     }
 
@@ -120,7 +163,7 @@ object CloudinaryHelper {
                     }
                 }).dispatch()
         } catch (e: Exception) {
-            android.util.Log.e("CloudinaryHelper", "Exception during upload", e)
+            android.util.Log.e("CloudinaryHelper", "Exception during signed upload", e)
             continuation.resume(Result.failure(e))
         }
     }
