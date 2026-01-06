@@ -26,4 +26,7 @@ interface TeamTaskApiService {
 
     @PUT("api/team-tasks/{taskId}")
     fun updateTeamTask(@Path("taskId") taskId: String, @Body request: CreateTeamTaskRequest): Call<Void>
+
+    @GET("api/team-tasks/team/{teamId}/assigned")
+    fun getAssignedTeamTasks(@Path("teamId") teamId: String): Call<List<TeamTask>>
 }
