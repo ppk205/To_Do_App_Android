@@ -7,4 +7,61 @@
     <color name="danger_500">#e05353</color>
     <color name="selectedColor">#38B9FA</color>
     <color name="unselectedColor">#E91E63</color>
+
+    <!-- Branding used by onboarding button -->
+    <color name="brand_blue">#38B9FA</color>
+
+    <!-- Dot inactive color -->
+    <color name="dot_grey">#C4C4C4</color>
+
+    <!-- Added missing color used by onboarding layout -->
+    <color name="dark_gray">#707070</color>
+    <color name="gray_background">#F5F6F8</color>
+
+    <!-- OTP Screen Colors -->
+    <color name="primary">#007BFF</color>
+    <color name="primary_dark">#0056b3</color>
+    <color name="primary_light">#E7F1FF</color>
+
+    <!-- Status Colors -->
+    <color name="success">#28A745</color>
+    <color name="success_light">#E8F5E9</color>
+    <color name="error">#DC3545</color>
+    <color name="error_light">#FFEBEE</color>
+    <color name="warning">#FFC107</color>
+    <color name="warning_light">#FFF3E0</color>
+
+    <!-- Text Colors -->
+    <color name="text_primary">#212121</color>
+    <color name="text_secondary">#757575</color>
+    <color name="text_tertiary">#BDBDBD</color>
+
+    <!-- Background Colors -->
+    <color name="light_gray">#F5F5F5</color>
+    <color name="medium_gray">#EEEEEE</color>
+    <color name="divider_color">#E0E0E0</color>
+
+    <!-- Chip background for tag chips -->
+    <color name="chip_background_gray">#E0E0E0</color>
+
+    <!-- fallback color resource (team dashboard) -->
+    <color name="grey_light">#E0E0E0</color> <color name="grey_dark">#BDBDBD</color>
+
+    <color name="pastel_yellow">#FFF9C4</color>
+    <color name="pastel_gray">#F5F5F5</color>
+    <color name="pastel_green">#C8E6C9</color>
+    <color name="pastel_purple">#E1BEE7</color>
+    <color name="pastel_text_dark">#424242</color>
+
+    <color name="calendar_date_selected">#212121</color> <color name="calendar_date_unselected">#F5F5F5</color>
+    <color name="timeline_line_color">#E0E0E0</color>
+
+    <color name="status_in_progress">#FF9800</color>
+
+    <color name="soft_blue_bg">#F0F7FF</color>
+    <color name="soft_blue_primary">#3B82F6</color>
+    <color name="soft_blue_text">#1E3A8A</color>
+    <color name="soft_blue_tag_bg">#DBEAFE</color>
+    <color name="soft_blue_tag_text">#2563EB</color>
+    <color name="gray_text">#64748B</color>
 </resources>

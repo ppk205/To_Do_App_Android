@@ -1,13 +1,22 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.ksp)
+}
+
+// Read local.properties
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    FileInputStream(localPropertiesFile).use { localProperties.load(it) }
 }
 
 android {
     namespace = "com.example.morp_prj"
-    compileSdk {
-        version = release(36)
-    }
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.example.morp_prj"
@@ -17,10 +26,33 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // Add Cloudinary config to BuildConfig
+        buildConfigField("String", "CLOUDINARY_CLOUD_NAME", "\"${localProperties.getProperty("cloudinary.cloud_name", "dxohngowm")}\"")
+        buildConfigField("String", "CLOUDINARY_API_KEY", "\"${localProperties.getProperty("cloudinary.api_key", "687411225619873")}\"")
+        buildConfigField("String", "CLOUDINARY_UPLOAD_PRESET", "\"${localProperties.getProperty("cloudinary.upload_preset", "upload_project")}\"")
     }
 
     buildFeatures {
         dataBinding = true
+        buildConfig = true
+        viewBinding = true
+    }
+
+    packaging {
+        resources {
+            excludes += setOf(
+                "META-INF/DEPENDENCIES",
+                "META-INF/LICENSE",
+                "META-INF/LICENSE.txt",
+                "META-INF/license.txt",
+                "META-INF/NOTICE",
+                "META-INF/NOTICE.txt",
+                "META-INF/notice.txt",
+                "META-INF/ASL2.0",
+                "META-INF/*.kotlin_module"
+            )
+        }
     }
 
     buildTypes {
@@ -33,16 +65,21 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
-    kotlinOptions {
-        jvmTarget = "11"
+}
+
+// Configure Kotlin compiler options
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
     }
 }
 
 dependencies {
     implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.core.splashscreen)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
     implementation(libs.androidx.activity)
@@ -53,9 +90,46 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 
-    implementation("com.squareup.retrofit2:retrofit:2.9.0")
-    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
-    implementation("com.squareup.okhttp3:logging-interceptor:3.12.0")
-    implementation("com.github.bumptech.glide:glide:4.14.2")
-    annotationProcessor("com.github.bumptech.glide:compiler:4.14.2")
+    // Networking
+    implementation(libs.retrofit)
+    implementation(libs.retrofit.converter.gson)
+    implementation(libs.okhttp.logging.interceptor)
+
+    // Image loading
+    implementation(libs.glide)
+    ksp(libs.glide.compiler)
+
+    // Room (SQLite)
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    ksp(libs.androidx.room.compiler)
+
+    // Security - Encrypted SharedPreferences
+    implementation(libs.androidx.security.crypto)
+
+    // Biometric Authentication
+    implementation(libs.androidx.biometric)
+
+    // Donut Chart
+    implementation(libs.mp.android.chart)
+
+    // WorkManager (background notifications)
+    implementation(libs.androidx.work.runtime.ktx)
+
+    // Google Drive API
+    implementation(libs.play.services.auth)
+    implementation(libs.google.api.client.android)
+
+    // Cloudinary SDK for image upload
+    implementation(libs.cloudinary.android)
+    implementation(libs.google.http.client.gson)
+
+    // BCrypt for password hashing
+    implementation("org.mindrot:jbcrypt:0.4")
+
+    // SocketIO Client
+    implementation("io.socket:socket.io-client:2.1.1")
+
+    // Country Code Picker
+    implementation("com.hbb20:ccp:2.7.3")
 }

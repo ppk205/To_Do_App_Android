@@ -1,19 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
-    <style name="Base.Theme.MORPPRJ" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Customize your light theme here. -->
-        <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
+    <style name="Theme.MORPPRJ" parent="Theme.Material3.Light.NoActionBar">
+        <!-- Base app theme -->
     </style>
 
-    <style name="Theme.MORPPRJ" parent="Base.Theme.MORPPRJ" />
+    <!-- Android 12+ splash API -->
+    <style name="Theme.Taskly.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/white</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/logotaskly</item>
+        <item name="windowSplashScreenIconBackgroundColor">@color/white</item>
+        <item name="postSplashScreenTheme">@style/Theme.MORPPRJ</item>
+    </style>
 
-    <style name="ActiveTextStyle" parent="TextAppearance.MaterialComponents.Caption">
+    <!-- Backward-compatible splash for pre-Android 12 -->
+    <style name="Theme.Taskly.Splash.Compat" parent="Theme.MaterialComponents.Light.NoActionBar">
+        <item name="android:windowBackground">@drawable/splash_screen_background</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+    </style>
+
+    <style name="CalendarDayHeader">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:gravity">center</item>
+        <item name="android:textColor">#757575</item>
         <item name="android:textSize">12sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:paddingVertical">8dp</item>
     </style>
-
-
-    <style name="InactiveTextStyle" parent="TextAppearance.MaterialComponents.Caption">
-        <item name="android:textSize">12sp</item>
-    </style>
-
 </resources>

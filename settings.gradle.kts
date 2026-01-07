@@ -16,9 +16,10 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        maven { url = uri("https://jitpack.io") }
     }
 }
 
-rootProject.name = "MORP-PRJ"
+rootProject.name = "MOPR-PRJ"
 include(":app")
  
