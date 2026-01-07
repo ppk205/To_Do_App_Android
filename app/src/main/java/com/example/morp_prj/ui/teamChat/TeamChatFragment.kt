@@ -9,6 +9,8 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.morp_prj.R
 import com.example.morp_prj.databinding.FragmentTeamChatBinding
 import com.example.morp_prj.utils.PreferenceManager
+import com.example.morp_prj.data.remote.SocketManager
+import com.example.morp_prj.security.SecureTokenStorage
 
 class TeamChatFragment : Fragment(R.layout.fragment_team_chat) {
 
@@ -16,6 +18,7 @@ class TeamChatFragment : Fragment(R.layout.fragment_team_chat) {
     private lateinit var viewModel: TeamChatViewModel
     private lateinit var adapter: ChatAdapter
     private lateinit var preferenceManager: PreferenceManager
+    private var teamId: String = ""
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -30,10 +33,12 @@ class TeamChatFragment : Fragment(R.layout.fragment_team_chat) {
         val currentUserName = preferenceManager.getDisplayName() ?: "Me"
 
         // Nhận dữ liệu từ Bundle
-        val teamId = arguments?.getString("teamId") ?: return
+        teamId = arguments?.getString("teamId") ?: return
         val teamName = arguments?.getString("teamName") ?: "Team Chat"
 
         binding.tvTeamNameHeader.text = teamName
+
+        ensureSocketConnected()
 
         viewModel.loadHistory(teamId)
 
@@ -81,6 +86,23 @@ class TeamChatFragment : Fragment(R.layout.fragment_team_chat) {
         viewModel.errorMessage.observe(viewLifecycleOwner) { error ->
             if (!error.isNullOrEmpty()) {
                 android.widget.Toast.makeText(context, error, android.widget.Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        ensureSocketConnected()
+    }
+
+    private fun ensureSocketConnected() {
+        if (!SocketManager.isConnected()) {
+            android.util.Log.w("TeamChatFragment", "Socket disconnected, reconnecting...")
+            val token = SecureTokenStorage(requireContext()).getAccessToken()
+            if (!token.isNullOrEmpty()) {
+                SocketManager.connect(token)
+            } else {
+                android.util.Log.e("TeamChatFragment", "No access token available for socket connection")
             }
         }
     }
