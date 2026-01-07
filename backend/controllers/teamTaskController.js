@@ -173,8 +173,6 @@ const updateTaskStatus = async (req, res) => {
     const { taskId } = req.params;
     const { status } = req.body;
 
-    console.log('[teamTaskController] updateTaskStatus called', { taskId, body: req.body, auth: req.headers['authorization'] });
-
     if (!taskId || !status) {
         return res.status(400).json({ message: 'Missing taskId or status' });
     }

@@ -36,6 +36,10 @@ router.get('/user/:userId', authenticateToken, teamController.getMyTeams);
 // GET /team/:teamId/members
 router.get('/:teamId/members', authenticateToken, teamController.getMembersByTeamId);
 
+// 7b. Lấy danh sách leaders (Manager và Co-Manager) - Không cần permission
+// GET /team/:teamId/leaders
+router.get('/:teamId/leaders', authenticateToken, teamController.getTeamLeaders);
+
 // 8. Cập nhật thông tin team
 // PUT /team/:teamId
 router.put('/:teamId', authenticateToken, teamController.updateTeam);
