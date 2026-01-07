@@ -14,6 +14,8 @@ object SocketManager {
         get() = RetrofitClient.getBaseUrl()
 
     private var mSocket: Socket? = null
+    @Volatile
+    private var isConnecting = false
 
     /**
      * Khởi tạo Socket với Token lấy từ Login/AuthRepository
@@ -21,19 +23,26 @@ object SocketManager {
     @Synchronized
     fun connect(token: String) {
         if (mSocket != null && mSocket!!.connected()) {
+            Log.d(TAG, "Already connected, skipping")
             return // Đã kết nối rồi thì thôi
         }
 
+        if (isConnecting) {
+            Log.d(TAG, "Connection already in progress, skipping")
+            return
+        }
+
         try {
+            isConnecting = true
+
             val options = IO.Options().apply {
                 // Force new connection
                 forceNew = true
 
-                // Enable auto reconnection
                 reconnection = true
-                reconnectionAttempts = 5
-                reconnectionDelay = 1000
-                reconnectionDelayMax = 5000
+                reconnectionAttempts = Int.MAX_VALUE // Keep trying
+                reconnectionDelay = 2000 // Start with 2s
+                reconnectionDelayMax = 10000 // Max 10s between attempts
 
                 // Increase timeout
                 timeout = 20000
@@ -55,25 +64,31 @@ object SocketManager {
             setupGlobalListeners()
             mSocket?.connect()
 
+            Log.d(TAG, "Socket connection initiated")
+
         } catch (e: URISyntaxException) {
             Log.e(TAG, "Lỗi URI Socket: ${e.message}", e)
+            isConnecting = false
         } catch (e: Exception) {
             Log.e(TAG, "Lỗi khởi tạo Socket: ${e.message}", e)
+            isConnecting = false
         }
     }
 
     private fun setupGlobalListeners() {
         mSocket?.on(Socket.EVENT_CONNECT) {
-            Log.d(TAG, "✅ Đã kết nối Socket thành công! ID: ${mSocket?.id()}")
+            isConnecting = false
+            Log.d(TAG, "Đã kết nối Socket thành công!")
         }
 
         mSocket?.on("connecting") {
-            Log.d(TAG, "🔄 Đang kết nối Socket...")
+            Log.d(TAG, "Đang kết nối Socket...")
         }
 
         mSocket?.on(Socket.EVENT_CONNECT_ERROR) { args ->
+            isConnecting = false
             val error = if (args.isNotEmpty()) args[0] else "Unknown error"
-            Log.e(TAG, "❌ Lỗi kết nối Socket: $error")
+            Log.e(TAG, "Lỗi kết nối Socket: $error")
 
             // Log detailed error info
             if (args.isNotEmpty() && args[0] is Exception) {
@@ -82,33 +97,36 @@ object SocketManager {
         }
 
         mSocket?.on(Socket.EVENT_DISCONNECT) { args ->
+            isConnecting = false
             val reason = if (args.isNotEmpty()) args[0] else "Unknown"
-            Log.w(TAG, "⚠️ Socket đã ngắt kết nối: $reason")
+            Log.w(TAG, "Socket đã ngắt kết nối: $reason")
         }
 
         mSocket?.on("reconnect") { args ->
+            isConnecting = false
             val attempt = if (args.isNotEmpty()) args[0] else "?"
-            Log.d(TAG, "🔄 Reconnected sau $attempt lần thử")
+            Log.d(TAG, "Reconnected sau $attempt lần thử")
         }
 
         mSocket?.on("reconnect_attempt") { args ->
             val attempt = if (args.isNotEmpty()) args[0] else "?"
-            Log.d(TAG, "🔄 Đang thử reconnect lần thứ $attempt...")
+            Log.d(TAG, "Đang thử reconnect lần thứ $attempt...")
         }
 
         mSocket?.on("reconnect_error") { args ->
             val error = if (args.isNotEmpty()) args[0] else "Unknown"
-            Log.e(TAG, "❌ Lỗi reconnect: $error")
+            Log.e(TAG, "Lỗi reconnect: $error")
         }
 
         mSocket?.on("reconnect_failed") {
-            Log.e(TAG, "❌ Reconnect thất bại hoàn toàn!")
+            isConnecting = false
+            Log.e(TAG, "Reconnect thất bại hoàn toàn!")
         }
 
         mSocket?.on("error") { args ->
             // Bắt lỗi từ middleware (VD: TOKEN_INVALID)
             val error = if (args.isNotEmpty()) args[0] else "Unknown"
-            Log.e(TAG, "❌ Lỗi từ server: $error")
+            Log.e(TAG, "Lỗi từ server: $error")
         }
     }
 
@@ -118,6 +136,7 @@ object SocketManager {
 
     fun disconnect() {
         Log.d(TAG, "Ngắt kết nối Socket...")
+        isConnecting = false // Reset connecting flag
         mSocket?.disconnect()
         mSocket?.off() // Remove all listeners
         mSocket = null
