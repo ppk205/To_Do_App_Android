@@ -18,14 +18,19 @@ const Team = {
 
   findMembersByTeamId: async (teamId, status = 'active') => {
     const query = `
-      SELECT u.id, u.displayName, u.email, u.avatarUrl, tm.role, tm.status
+      SELECT u.id, u.displayName, u.username, u.email, u.avatarUrl, tm.role, tm.status, tm.joinedAt
       FROM users u
       JOIN teammember tm ON u.id = tm.userId
       WHERE tm.teamId = ? AND tm.status = ?
       ORDER BY tm.role = 'manager' DESC, u.displayName ASC
     `;
     const [rows] = await db.query(query, [teamId, status]);
-    return rows;
+
+    // Convert Date objects to ISO strings for consistent JSON serialization
+    return rows.map(row => ({
+      ...row,
+      joinedAt: row.joinedAt ? (row.joinedAt instanceof Date ? row.joinedAt.toISOString() : row.joinedAt) : null
+    }));
   },
 
   findByInviteCode: async (inviteCode) => {

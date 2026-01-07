@@ -360,6 +360,32 @@ exports.getMembersByTeamId = async (req, res) => {
     }
 };
 
+// Get team leaders (Manager and Co-Manager) - No permission check needed
+exports.getTeamLeaders = async (req, res) => {
+    try {
+        const teamId = req.params.teamId;
+        const userId = req.user ? req.user.id : req.query.userId;
+
+        // Only check if user is a member of the team (not permission-based)
+        const membership = await teamModel.findMember(teamId, userId);
+        if (!membership) {
+            return res.status(403).json({ message: 'Access denied. You are not a member.' });
+        }
+
+        // Get all active members and filter for managers and co-managers
+        const allMembers = await teamModel.findMembersByTeamId(teamId, 'active');
+        const leaders = allMembers.filter(member => {
+            const role = String(member.role || '').toLowerCase();
+            return role === 'manager' || role === 'co-manager';
+        });
+
+        res.json(leaders);
+    } catch (error) {
+        console.error('Error fetching team leaders:', error);
+        res.status(500).json({ message: 'Database error' });
+    }
+};
+
 exports.getTeamMessages = async (req, res) => {
     const { teamId } = req.params;
 

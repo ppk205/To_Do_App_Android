@@ -252,6 +252,10 @@ class ProfileFragment : Fragment() {
             return
         }
 
+        binding.imgLogo.setOnClickListener {
+            findNavController().navigateUp()
+        }
+
         // 1. Nút Bút Chì (Góc phải) -> Bật chế độ sửa
         binding.ivEdit.setOnClickListener {
             updateUIState(true)

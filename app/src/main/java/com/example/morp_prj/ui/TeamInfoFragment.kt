@@ -128,15 +128,15 @@ class TeamInfoFragment : Fragment(R.layout.fragment_team_info) {
 
     private fun loadManagers() {
         if (teamId.isEmpty()) return
-        RetrofitClient.teamApiService.getTeamMembers(teamId, "active").enqueue(object : Callback<List<TeamMember>> {
+        RetrofitClient.teamApiService.getTeamLeaders(teamId).enqueue(object : Callback<List<TeamMember>> {
             override fun onResponse(call: Call<List<TeamMember>>, response: Response<List<TeamMember>>) {
                 if (response.isSuccessful) {
-                    val managers = (response.body() ?: emptyList()).filter { it.role.equals("manager", true) || it.role.equals("co-manager", true) }
-                    managerAdapter.submit(managers)
+                    val leaders = response.body() ?: emptyList()
+                    managerAdapter.submit(leaders)
                 }
             }
             override fun onFailure(call: Call<List<TeamMember>>, t: Throwable) {
-                Toast.makeText(requireContext(), "Failed to load members", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), "Failed to load team leaders", Toast.LENGTH_SHORT).show()
             }
         })
     }
