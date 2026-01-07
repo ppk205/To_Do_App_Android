@@ -9,6 +9,7 @@ const { redisClient, connectRedis } = require('./config/redis'); // Import Redis
 const teamRoutes = require('./routes/teamRoutes');
 const teamTaskRoutes = require('./routes/teamTaskRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
+const encryptionRoutes = require('./routes/encryptionRoutes');
 
 const { initRealtime } = require('./services/realtime');
 const { startDuePoller } = require('./services/taskDueScheduler');
@@ -30,6 +31,7 @@ app.use('/api/tasks', taskRoutes);
 app.use('/api/team', teamRoutes);
 app.use('/api/team-tasks', teamTaskRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/encryption', encryptionRoutes);
 
 // Root route
 app.get('/', (req, res) => {

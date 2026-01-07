@@ -14,7 +14,6 @@ import com.example.morp_prj.R
 import com.example.morp_prj.data.TaskRepository
 import com.example.morp_prj.data.db.AppDatabase
 import com.example.morp_prj.utils.PreferenceManager
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import java.util.Calendar
@@ -93,31 +92,54 @@ class DashboardDetailFragment : Fragment() {
         val userId = currentUserId
 
         viewLifecycleOwner.lifecycleScope.launch {
-            // Observe all status counts and combine them
+            // === ✅ NEW UNIFIED BUSINESS LOGIC ===
+            // Observe toàn bộ task list để tính toán chính xác
             launch {
-                combine(
-                    repository.observeCountByStatusForUser(userId, "TODO"),
-                    repository.observeCountByStatusForUser(userId, "IN_PROGRESS"),
-                    repository.observeCountByStatusForUser(userId, "DONE")
-                ) { todo, inProgress, done ->
-                    Triple(todo, inProgress, done)
-                }.distinctUntilChanged().collect { (todo, inProgress, done) ->
-                    val total = todo + inProgress + done
+                repository.observeAllByUser(userId)
+                    .distinctUntilChanged()
+                    .collect { tasks ->
+                        val now = System.currentTimeMillis()
 
-                    // Update stats cards
-                    tvTotalCount.text = total.toString()
-                    tvTodoCount.text = todo.toString()
-                    tvInProgressCount.text = inProgress.toString()
-                    tvCompletedCount.text = done.toString()
+                        // Tính toán theo logic thống nhất: Time + Status
+                        val total = tasks.size
+                        val done = tasks.count { it.status.equals("DONE", ignoreCase = true) }
 
-                    // Update progress
-                    val progressPercent = if (total > 0) (done * 100 / total) else 0
-                    tvProgressPercent.text = "$progressPercent%"
-                    progressBar.progress = progressPercent
-                }
+                        // In Progress: Chưa DONE và còn deadline trong tương lai
+                        val inProgress = tasks.count {
+                            !it.status.equals("DONE", ignoreCase = true) &&
+                            it.deadlineAt != null &&
+                            it.deadlineAt!! > now
+                        }
+
+                        // Overdue: Chưa DONE và deadline đã quá hạn
+                        // Note: Biến overdue được tính toán để sẵn sàng cho tương lai
+                        // Có thể hiển thị trong UI bằng cách thêm TextView tương ứng
+                        val overdue = tasks.count {
+                            !it.status.equals("DONE", ignoreCase = true) &&
+                            it.deadlineAt != null &&
+                            it.deadlineAt!! < now
+                        }
+
+                        // TODO: Các task còn lại (hoặc có thể tính riêng nếu cần)
+                        val todo = tasks.count { it.status.equals("TODO", ignoreCase = true) }
+
+                        // Cập nhật UI với số liệu đã tính
+                        tvTotalCount.text = total.toString()
+                        tvTodoCount.text = todo.toString()
+                        tvInProgressCount.text = inProgress.toString()
+                        tvCompletedCount.text = done.toString()
+
+                        // Tính toán phần trăm hoàn thành
+                        val progressPercent = if (total > 0) (done * 100 / total) else 0
+                        tvProgressPercent.text = "$progressPercent%"
+                        progressBar.progress = progressPercent
+
+                        // Log overdue count for monitoring (có thể bỏ nếu không cần)
+                        android.util.Log.d("DashboardDetail", "Stats: Total=$total, Done=$done, InProgress=$inProgress, Overdue=$overdue")
+                    }
             }
 
-            // Today's summary
+            // Today's summary - giữ nguyên logic
             launch {
                 val calendar = Calendar.getInstance()
                 calendar.set(Calendar.HOUR_OF_DAY, 0)
@@ -133,7 +155,7 @@ class DashboardDetailFragment : Fragment() {
                     .distinctUntilChanged()
                     .collect { tasks ->
                         val todayTotal = tasks.size
-                        val todayCompleted = tasks.count { it.status == "DONE" }
+                        val todayCompleted = tasks.count { it.status.equals("DONE", ignoreCase = true) }
                         val todayPending = todayTotal - todayCompleted
 
                         tvTodayTasksCount.text = todayTotal.toString()

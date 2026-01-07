@@ -129,4 +129,7 @@ dependencies {
 
     // SocketIO Client
     implementation("io.socket:socket.io-client:2.1.1")
+
+    // Country Code Picker
+    implementation("com.hbb20:ccp:2.7.3")
 }

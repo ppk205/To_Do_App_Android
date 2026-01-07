@@ -82,6 +82,9 @@ router.post('/reset-password',
 // Get current user profile
 router.get('/profile', authenticateToken, authController.getProfile);
 
+// Get user profile by ID (for viewing other users)
+router.get('/user/:userId', authenticateToken, authController.getUserById);
+
 // Get user's active sessions
 router.get('/sessions', authenticateToken, authController.getUserSessions);
 
@@ -94,5 +97,8 @@ router.put('/profile', authenticateToken, authController.updateProfile);
 
 // Change password (requires old password verification)
 router.post('/change-password', authenticateToken, authController.changePassword);
+
+// REQ-UPLOAD-01: Get Cloudinary signature for signed uploads
+router.post('/cloudinary-signature', authenticateToken, authController.getCloudinarySignature);
 
 module.exports = router;

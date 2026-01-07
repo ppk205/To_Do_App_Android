@@ -4,7 +4,8 @@ const { createNotificationsBulk } = require('../services/notificationService');
 const { getIO } = require('../services/realtime');
 
 const createTeamTask = async (req, res) => {
-    const { teamId, title, description, dueDate, priority, assignees, createdBy, tagsCsv } = req.body;
+    // UPDATED: Nhận 'tags' (mảng) thay vì 'tagsCsv'
+    const { teamId, title, description, dueDate, priority, assignees, createdBy, tags } = req.body;
 
     if (!teamId || !title || !createdBy || !Array.isArray(assignees)) {
         return res.status(400).json({ message: 'Missing required fields.' });
@@ -18,12 +19,15 @@ const createTeamTask = async (req, res) => {
 
         const createdAt = Date.now();
 
-        // 1. Insert vào bảng team_tasks
+        // Chuẩn bị tags JSON
+        const tagsJson = tags ? JSON.stringify(tags) : JSON.stringify([]);
+
+        // UPDATED: Insert vào cột 'tags'
         const taskQuery = `
-            INSERT INTO team_tasks (id, teamId, title, description, dueDate, priority, status, createdBy, createdAt, tagsCsv)
+            INSERT INTO team_tasks (id, teamId, title, description, dueDate, priority, status, createdBy, createdAt, tags)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
-        await conn.query(taskQuery, [taskId, teamId, title, description, dueDate, priority, 'TODO', createdBy, createdAt, tagsCsv || null]);
+        await conn.query(taskQuery, [taskId, teamId, title, description, dueDate, priority, 'TODO', createdBy, createdAt, tagsJson]);
 
         // 2. Insert vào bảng team_task_assignees
         if (assignees.length > 0) {
@@ -58,7 +62,7 @@ const createTeamTask = async (req, res) => {
                 createdBy,
                 createdAt,
                 assignees: uniqueAssignees,
-                tagsCsv: tagsCsv || null,
+                tags: tags || [], // Emit mảng tags
             });
         }
 
@@ -91,12 +95,11 @@ const getTeamTasks = async (req, res) => {
             AND status NOT IN ('DONE', 'COMPLETED', 'OVERDUE')
         `;
         await conn.query(updateQuery, [teamId, now]);
-        // --------------------------------------------
 
         // Query tasks and their assignees via JOIN
         const query = `
-            SELECT 
-                t.id, t.teamId, t.title, t.description, t.dueDate, t.priority, t.status, t.createdAt, t.createdBy, t.tagsCsv,
+            SELECT
+                t.id, t.teamId, t.title, t.description, t.dueDate, t.priority, t.status, t.createdAt, t.createdBy, t.tags,
                 u.id as assigneeId, u.username, u.avatarUrl, u.email
             FROM team_tasks t
             LEFT JOIN team_task_assignees ta ON t.id = ta.taskId
@@ -112,6 +115,19 @@ const getTeamTasks = async (req, res) => {
         
         for (const row of rows) {
             if (!tasksMap.has(row.id)) {
+                let parsedTags = [];
+                try {
+                    // Kiểm tra nếu tags là chuỗi thì parse ra JSON, nếu là null/undefined thì mảng rỗng
+                    if (typeof row.tags === 'string') {
+                        parsedTags = JSON.parse(row.tags);
+                    } else if (Array.isArray(row.tags)) {
+                        parsedTags = row.tags;
+                    }
+                } catch (e) {
+                    console.error("Error parsing tags:", e);
+                    parsedTags = []; // Fallback nếu dữ liệu trong DB bị lỗi
+                }
+
                 tasksMap.set(row.id, {
                     id: row.id,
                     teamId: row.teamId,
@@ -120,7 +136,7 @@ const getTeamTasks = async (req, res) => {
                     dueDate: row.dueDate,
                     priority: row.priority,
                     status: row.status,
-                    tagsCsv: row.tagsCsv,
+                    tags: row.tags, // MySQL driver thường tự parse JSON
                     createdAt: row.createdAt,
                     createdBy: row.createdBy,
                     assignees: []
@@ -156,8 +172,6 @@ const getTeamTasks = async (req, res) => {
 const updateTaskStatus = async (req, res) => {
     const { taskId } = req.params;
     const { status } = req.body;
-
-    console.log('[teamTaskController] updateTaskStatus called', { taskId, body: req.body, auth: req.headers['authorization'] });
 
     if (!taskId || !status) {
         return res.status(400).json({ message: 'Missing taskId or status' });
@@ -254,4 +268,172 @@ const updateTaskStatus = async (req, res) => {
     }
 };
 
-module.exports = { createTeamTask, getTeamTasks, updateTaskStatus };
+// --- 4. UPDATE FULL TASK (PUT) - MỚI THÊM ---
+const updateTeamTask = async (req, res) => {
+    const { taskId } = req.params;
+    const { title, description, dueDate, priority, assignees, tags } = req.body;
+
+    if (!taskId || !title) {
+        return res.status(400).json({ message: 'Missing required fields' });
+    }
+
+    const conn = await pool.getConnection();
+    try {
+        await conn.beginTransaction();
+
+        // 1. Update bảng team_tasks
+        const tagsJson = tags ? JSON.stringify(tags) : JSON.stringify([]);
+        const updateQuery = `
+            UPDATE team_tasks
+            SET title = ?, description = ?, dueDate = ?, priority = ?, tags = ?
+            WHERE id = ?
+        `;
+
+        const [result] = await conn.query(updateQuery, [
+            title, description, dueDate, priority, tagsJson, taskId
+        ]);
+
+        if (result.affectedRows === 0) {
+            await conn.rollback();
+            return res.status(404).json({ message: 'Task not found' });
+        }
+
+        // 2. Update Assignees (Xóa cũ -> Thêm mới)
+        if (Array.isArray(assignees)) {
+            // Xóa hết assignee cũ
+            await conn.query('DELETE FROM team_task_assignees WHERE taskId = ?', [taskId]);
+
+            // Thêm lại assignee mới
+            if (assignees.length > 0) {
+                const assigneeValues = assignees.map(userId => [taskId, userId]);
+                await conn.query('INSERT INTO team_task_assignees (taskId, userId) VALUES ?', [assigneeValues]);
+            }
+        }
+
+        await conn.commit();
+        res.json({ success: true, message: 'Task updated successfully' });
+
+    } catch (error) {
+        await conn.rollback();
+        console.error('Error updating task:', error);
+        res.status(500).json({ message: 'Failed to update task' });
+    } finally {
+        conn.release();
+    }
+};
+
+// --- 5. DELETE TASK (DELETE) - MỚI THÊM ---
+const deleteTeamTask = async (req, res) => {
+    const { taskId } = req.params;
+
+    if (!taskId) {
+        return res.status(400).json({ message: 'Missing taskId' });
+    }
+
+    const conn = await pool.getConnection();
+    try {
+        // Chỉ cần xóa ở bảng team_tasks.
+        // Bảng team_task_assignees sẽ tự xóa nhờ ON DELETE CASCADE (đã thiết kế trong DB Schema)
+        const deleteQuery = `DELETE FROM team_tasks WHERE id = ?`;
+        const [result] = await conn.query(deleteQuery, [taskId]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: 'Task not found' });
+        }
+
+        res.json({ success: true, message: 'Task deleted successfully' });
+
+    } catch (error) {
+        console.error('Error deleting task:', error);
+        res.status(500).json({ message: 'Failed to delete task' });
+    } finally {
+        conn.release();
+    }
+};
+
+const getAssignedTeamTasks = async (req, res) => {
+    const { teamId } = req.params;
+    const userId = req.user.id; // Lấy ID user từ token (đã qua middleware authenticateToken)
+
+    if (!teamId) {
+        return res.status(400).json({ message: 'Missing teamId parameter' });
+    }
+
+    const conn = await pool.getConnection();
+    try {
+        const query = `
+            SELECT
+                t.id, t.teamId, t.title, t.description, t.dueDate, t.priority, t.status, t.createdAt, t.createdBy, t.tags,
+                u.id as assigneeId, u.username, u.avatarUrl, u.email
+            FROM team_tasks t
+            INNER JOIN team_task_assignees my_assign ON t.id = my_assign.taskId
+            LEFT JOIN team_task_assignees ta ON t.id = ta.taskId
+            LEFT JOIN users u ON ta.userId = u.id
+            WHERE t.teamId = ? AND my_assign.userId = ?
+            ORDER BY t.dueDate ASC, t.createdAt DESC
+        `;
+
+        const [rows] = await conn.query(query, [teamId, userId]);
+
+        const tasksMap = new Map();
+
+        for (const row of rows) {
+            if (!tasksMap.has(row.id)) {
+                let parsedTags = [];
+                try {
+                    if (typeof row.tags === 'string') {
+                        parsedTags = JSON.parse(row.tags);
+                    } else if (Array.isArray(row.tags)) {
+                        parsedTags = row.tags;
+                    }
+                } catch (e) {
+                    parsedTags = [];
+                }
+
+                tasksMap.set(row.id, {
+                    id: row.id,
+                    teamId: row.teamId,
+                    title: row.title,
+                    description: row.description,
+                    dueDate: row.dueDate,
+                    priority: row.priority,
+                    status: row.status,
+                    tags: parsedTags,
+                    createdAt: row.createdAt,
+                    createdBy: row.createdBy,
+                    assignees: []
+                });
+            }
+
+            if (row.assigneeId) {
+                const task = tasksMap.get(row.id);
+                if (!task.assignees.some(a => a.id === row.assigneeId)) {
+                    task.assignees.push({
+                        id: row.assigneeId,
+                        username: row.username,
+                        avatarUrl: row.avatarUrl,
+                        email: row.email
+                    });
+                }
+            }
+        }
+
+        const tasks = Array.from(tasksMap.values());
+        res.json(tasks);
+
+    } catch (error) {
+        console.error('Error fetching assigned team tasks:', error);
+        res.status(500).json({ message: 'Failed to fetch assigned tasks' });
+    } finally {
+        conn.release();
+    }
+};
+
+module.exports = {
+    createTeamTask,
+    getTeamTasks,
+    updateTaskStatus,
+    updateTeamTask,
+    deleteTeamTask,
+    getAssignedTeamTasks
+};

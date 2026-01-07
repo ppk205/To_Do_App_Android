@@ -1,4 +1,4 @@
-// models/Team.js
+// models/team.js
 const db = require('../config/database');
 
 const Team = {
@@ -18,14 +18,19 @@ const Team = {
 
   findMembersByTeamId: async (teamId, status = 'active') => {
     const query = `
-      SELECT u.id, u.displayName, u.email, u.avatarUrl, tm.role, tm.status
+      SELECT u.id, u.displayName, u.username, u.email, u.avatarUrl, tm.role, tm.status, tm.joinedAt
       FROM users u
       JOIN teammember tm ON u.id = tm.userId
       WHERE tm.teamId = ? AND tm.status = ?
       ORDER BY tm.role = 'manager' DESC, u.displayName ASC
     `;
     const [rows] = await db.query(query, [teamId, status]);
-    return rows;
+
+    // Convert Date objects to ISO strings for consistent JSON serialization
+    return rows.map(row => ({
+      ...row,
+      joinedAt: row.joinedAt ? (row.joinedAt instanceof Date ? row.joinedAt.toISOString() : row.joinedAt) : null
+    }));
   },
 
   findByInviteCode: async (inviteCode) => {
@@ -63,29 +68,61 @@ const Team = {
   },
 
   create: (teamData) => {
-    const { id, name, description, tags, createdBy, inviteCode, avatarUrl } = teamData;
+    const { id, name, description, tags, createdBy, inviteCode, avatarUrl, allowMemberDirectory } = teamData;
     const tagsJson = Array.isArray(tags) ? JSON.stringify(tags) : tags;
 
     const query = `
-        INSERT INTO team (id, name, description, tags, createdBy, inviteCode, avatarUrl, createdAt)
-        VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
+        INSERT INTO team (id, name, description, tags, createdBy, inviteCode, avatarUrl, allowMemberDirectory, createdAt)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
     `;
-    return db.query(query, [id, name, description, tagsJson, createdBy, inviteCode, avatarUrl || null]);
+    return db.query(query, [id, name, description, tagsJson, createdBy, inviteCode, avatarUrl || null, allowMemberDirectory || 0]);
   },
 
-  update: (teamId, teamData) => {
-    const { name, description, tags } = teamData;
-    const tagsJson = Array.isArray(tags) ? JSON.stringify(tags) : tags;
+  // --- HÀM UPDATE ĐÃ ĐƯỢC SỬA (DYNAMIC UPDATE) ---
+  update: async (teamId, data) => {
+    // 1. Lấy danh sách các cặp key-value từ data gửi lên
+    const keys = Object.keys(data);
+    const values = [];
+    const fields = [];
 
-    const query = 'UPDATE team SET name = ?, description = ?, tags = ? WHERE id = ?';
-    return db.query(query, [name, description, tagsJson, teamId]);
+    // 2. Nếu không có dữ liệu gì để update thì return luôn
+    if (keys.length === 0) return;
+
+    // 3. Xây dựng câu query động
+    keys.forEach((key) => {
+        fields.push(`${key} = ?`);
+        // Xử lý đặc biệt cho mảng tags
+        if (key === 'tags' && Array.isArray(data[key])) {
+            values.push(JSON.stringify(data[key]));
+        } else {
+            values.push(data[key]);
+        }
+    });
+
+    // Thêm teamId vào cuối mảng values cho điều kiện WHERE
+    values.push(teamId);
+
+    // 4. Tạo câu SQL
+    const sql = `UPDATE team SET ${fields.join(', ')} WHERE id = ?`;
+
+    return db.execute(sql, values);
   },
 
   addMember: (memberData) => {
     const { id, teamId, userId, role, status = 'pending' } = memberData;
     const query = 'INSERT INTO teammember (id, teamId, userId, role, status, isPinned, joinedAt) VALUES (?, ?, ?, ?, ?, 0, NOW())';
     return db.query(query, [id, teamId, userId, role, status]);
-  }
+  },
+
+  // Thêm hàm delete vào trong object Team luôn
+  delete: async (teamId) => {
+    await db.execute('DELETE FROM team WHERE id = ?', [teamId]);
+  },
+
+  updateMemberRole: (teamId, userId, newRole) => {
+    const query = 'UPDATE teammember SET role = ? WHERE teamId = ? AND userId = ?';
+    return db.query(query, [newRole, teamId, userId]);
+  },
 };
 
 module.exports = Team;

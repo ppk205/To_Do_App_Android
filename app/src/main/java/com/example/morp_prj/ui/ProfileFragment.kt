@@ -21,6 +21,7 @@ import com.example.morp_prj.utils.PreferenceManager
 import com.example.morp_prj.data.model.User
 import com.example.morp_prj.data.repository.AuthRepository
 import com.example.morp_prj.utils.CloudinaryHelper
+import com.example.morp_prj.data.api.RetrofitClient
 import kotlinx.coroutines.launch
 
 class ProfileFragment : Fragment() {
@@ -33,6 +34,8 @@ class ProfileFragment : Fragment() {
     private var currentUser: User? = null
     private var selectedAvatarUri: Uri? = null // Store selected avatar URI
     private var uploadedCloudinaryLink: String? = null // Store uploaded Cloudinary link
+    private var readOnly: Boolean = false
+    private var targetUserId: String? = null
 
     // Launcher chọn ảnh
     private val pickImageLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -60,12 +63,17 @@ class ProfileFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Chặn back press - không cho người dùng quay lại màn hình trước login
-        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, object : OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() {
-                // Không làm gì - chặn back press hoàn toàn
-            }
-        })
+        arguments?.let {
+            readOnly = it.getBoolean("readOnly", false)
+            targetUserId = it.getString("userId")
+        }
+
+        if (!readOnly) {
+            requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, object : OnBackPressedCallback(true) {
+                override fun handleOnBackPressed() { }
+            })
+        }
+
 
         // Initialize Cloudinary
         CloudinaryHelper.init(requireContext())
@@ -78,34 +86,53 @@ class ProfileFragment : Fragment() {
             return
         }
 
+        if (readOnly && targetUserId != null) {
+            // Fetch full profile from server by userId
+            fetchUserProfileById(targetUserId!!)
+            setupListeners(readOnly = true)
+            updateUIState(false)
+            return
+        }
+
         loadUserData()
-        fetchProfileFromServer() // Fetch fresh data from server
-        setupListeners()
+        setupListeners(readOnly = false)
         updateUIState(false) // Mặc định là chế độ View
+
+        // Refresh profile on load
+        refreshProfile()
+    }
+
+    override fun onResume() {
+        super.onResume()
+
+        // Refresh profile data every time fragment becomes visible
+        // This ensures data is up-to-date when switching between tabs
+        if (!readOnly) {
+            refreshProfile()
+        }
     }
 
     /**
-     * Fetch profile from server and update UI
+     * Fetch other user's profile by ID (for read-only view)
      */
-    private fun fetchProfileFromServer() {
+    private fun fetchUserProfileById(userId: String) {
         val authRepo = AuthRepository(requireContext())
 
         lifecycleScope.launch {
-            val result = authRepo.fetchProfile()
+            val result = authRepo.fetchUserById(userId)
 
             result.onSuccess { user ->
-                // Save to local cache
-                PreferenceManager.saveUser(requireContext(), user)
                 currentUser = user
-
-                // Update UI with fresh data
+                // Update UI with fetched user data
                 updateUIWithUser(user)
             }.onFailure { error ->
-                // Silently fail - keep using cached data
-                // Only show error if it's critical
-                if (currentUser == null) {
-                    Toast.makeText(context, "Không thể tải profile: ${error.message}", Toast.LENGTH_SHORT).show()
-                }
+                // Try to use fallback data from arguments
+                updateUIWithArgsFallback()
+                Toast.makeText(
+                    context,
+                    "Không thể tải đầy đủ thông tin profile",
+                    Toast.LENGTH_SHORT
+                ).show()
             }
         }
     }
@@ -114,6 +141,45 @@ class ProfileFragment : Fragment() {
         currentUser = PreferenceManager.getUser(requireContext())
         currentUser?.let { user ->
             updateUIWithUser(user)
+        }
+    }
+
+    /**
+     * Refresh profile - Load from cache và fetch từ server
+     * Gọi hàm này sau mỗi lần có thay đổi để đảm bảo UI luôn updated
+     */
+    private fun refreshProfile() {
+        android.util.Log.d("ProfileFragment", "🔄 Refreshing profile...")
+
+        // 1. Load từ cache ngay lập tức (fast)
+        val cachedUser = PreferenceManager.getUser(requireContext())
+        if (cachedUser != null) {
+            currentUser = cachedUser
+            updateUIWithUser(cachedUser)
+            android.util.Log.d("ProfileFragment", "📦 Loaded from cache: ${cachedUser.displayName}")
+        }
+
+        // 2. Fetch từ server để đảm bảo data mới nhất (background)
+        val authRepo = AuthRepository(requireContext())
+        lifecycleScope.launch {
+            val result: Result<com.example.morp_prj.data.model.User> = authRepo.fetchProfile()
+
+            if (result.isSuccess) {
+                val freshUser = result.getOrNull()
+                if (freshUser != null) {
+                    // Save to cache
+                    PreferenceManager.saveUser(requireContext(), freshUser)
+                    currentUser = freshUser
+
+                    // Update UI with fresh server data
+                    requireActivity().runOnUiThread {
+                        updateUIWithUser(freshUser)
+                        android.util.Log.d("ProfileFragment", "🌐 Updated from server: ${freshUser.displayName}")
+                    }
+                }
+            } else {
+                android.util.Log.e("ProfileFragment", "❌ Failed to fetch from server: ${result.exceptionOrNull()?.message}")
+            }
         }
     }
 
@@ -130,32 +196,66 @@ class ProfileFragment : Fragment() {
         binding.etUsername.setText(user.username)
         binding.etBio.setText(user.bio ?: "")
 
-        // Bind social URLs
+        // Bind social URLs - force update immediately
         binding.etGithub.setText(user.githubUrl ?: "")
         binding.etLinkedin.setText(user.linkedinUrl ?: "")
         binding.etWebsite.setText(user.websiteUrl ?: "")
 
+        // Update currentUser reference to ensure social icons have latest data
+        currentUser = user
+
         // Load Avatar từ server URL
         if (!user.avatarUrl.isNullOrEmpty()) {
-            // Build full URL: http://localhost:3001/uploads/avatars/filename.jpg
-            val baseUrl = "http://10.0.2.2:3001" // Android emulator localhost
-            val fullUrl = if (user.avatarUrl.startsWith("http")) {
-                user.avatarUrl
-            } else {
-                "$baseUrl${user.avatarUrl}"
-            }
+            // Use RetrofitClient to build full URL consistently
+            val fullUrl = RetrofitClient.buildFullUrl(user.avatarUrl) ?: user.avatarUrl
 
+            // Force reload by clearing Glide cache for this specific URL
             Glide.with(this)
                 .load(fullUrl)
                 .placeholder(R.drawable.ic_profile_unselected)
                 .error(R.drawable.ic_profile_unselected)
+                .circleCrop()
+                .skipMemoryCache(true) // Skip cache to force reload
+                .diskCacheStrategy(com.bumptech.glide.load.engine.DiskCacheStrategy.NONE) // Skip disk cache
                 .into(binding.ivAvatar)
         } else {
             binding.ivAvatar.setImageResource(R.drawable.ic_profile_unselected)
         }
     }
 
-    private fun setupListeners() {
+    private fun setupListeners(readOnly: Boolean = false) {
+        if (readOnly) {
+            binding.ivEdit.visibility = View.GONE
+            binding.btnSave.visibility = View.GONE
+            binding.btnCancel.visibility = View.GONE
+            binding.btnChangeAvatar.visibility = View.GONE
+            binding.btnChangePassword.visibility = View.GONE
+            binding.btnLogout.visibility = View.GONE
+            binding.socialIconsContainer.visibility = View.VISIBLE
+            binding.lblGithub.visibility = View.GONE
+            binding.etGithub.visibility = View.GONE
+            binding.lblLinkedin.visibility = View.GONE
+            binding.etLinkedin.visibility = View.GONE
+            binding.lblWebsite.visibility = View.GONE
+            binding.etWebsite.visibility = View.GONE
+            // Bio luôn hiện để xem trong chế độ read-only
+            binding.lblBio.visibility = View.VISIBLE
+            binding.etBio.visibility = View.VISIBLE
+            binding.etFullName.isEnabled = false
+            binding.etPhone.isEnabled = false
+            binding.etBio.isEnabled = false
+            binding.etBio.isFocusable = false
+            binding.etBio.isFocusableInTouchMode = false
+            binding.etGithub.isEnabled = false
+            binding.etLinkedin.isEnabled = false
+            binding.etWebsite.isEnabled = false
+            return
+        }
+
+        binding.imgLogo.setOnClickListener {
+            findNavController().navigateUp()
+        }
+
         // 1. Nút Bút Chì (Góc phải) -> Bật chế độ sửa
         binding.ivEdit.setOnClickListener {
             updateUIState(true)
@@ -179,6 +279,7 @@ class ProfileFragment : Fragment() {
 
         // 5. Logout
         binding.btnLogout.setOnClickListener {
+            (requireActivity() as? MainActivity)?.disconnectSocket()
             performLogout()
         }
 
@@ -221,6 +322,10 @@ class ProfileFragment : Fragment() {
             binding.etLinkedin.visibility = View.VISIBLE
             binding.lblWebsite.visibility = View.VISIBLE
             binding.etWebsite.visibility = View.VISIBLE
+
+            // HIỆN label và EditText cho Bio
+            binding.lblBio.visibility = View.VISIBLE
+            binding.etBio.visibility = View.VISIBLE
         } else {
             // Đang xem: Hiện nút Edit, Ẩn bộ nút Save/Cancel
             binding.ivEdit.visibility = View.VISIBLE
@@ -237,6 +342,10 @@ class ProfileFragment : Fragment() {
             binding.etLinkedin.visibility = View.GONE
             binding.lblWebsite.visibility = View.GONE
             binding.etWebsite.visibility = View.GONE
+
+            // HIỆN label và EditText cho Bio (luôn hiện trong view mode)
+            binding.lblBio.visibility = View.VISIBLE
+            binding.etBio.visibility = View.VISIBLE
         }
 
         // Enable/Disable các ô nhập liệu
@@ -251,6 +360,17 @@ class ProfileFragment : Fragment() {
         binding.etGithub.isEnabled = enableEdit
         binding.etLinkedin.isEnabled = enableEdit
         binding.etWebsite.isEnabled = enableEdit
+
+        // Cập nhật style của etBio dựa trên trạng thái
+        if (enableEdit) {
+            binding.etBio.setBackgroundResource(R.drawable.bg_input_field)
+            binding.etBio.isFocusable = true
+            binding.etBio.isFocusableInTouchMode = true
+        } else {
+            binding.etBio.setBackgroundResource(R.drawable.bg_input_field)
+            binding.etBio.isFocusable = false
+            binding.etBio.isFocusableInTouchMode = false
+        }
     }
 
     private fun openGallery() {
@@ -339,13 +459,8 @@ class ProfileFragment : Fragment() {
             )
 
             result.onSuccess { response ->
-                // Log response để debug
-                android.util.Log.d("ProfileFragment", "✅ Update success response: ${response.user}")
-
                 // Update thành công trên Server
                 response.user?.let { updatedUser ->
-                    android.util.Log.d("ProfileFragment", "📝 Avatar URL from server: ${updatedUser.avatarUrl}")
-
                     PreferenceManager.saveUser(requireContext(), updatedUser)
                     currentUser = updatedUser
 
@@ -358,8 +473,10 @@ class ProfileFragment : Fragment() {
                 updateUIState(false)
                 selectedAvatarUri = null
                 uploadedCloudinaryLink = null
+
+                // Refresh profile để đảm bảo UI có data mới nhất từ server
+                refreshProfile()
             }.onFailure { error ->
-                android.util.Log.e("ProfileFragment", "❌ Update failed: ${error.message}")
                 Toast.makeText(context, "Lỗi cập nhật: ${error.message}", Toast.LENGTH_LONG).show()
             }
 
@@ -369,14 +486,43 @@ class ProfileFragment : Fragment() {
         }
     }
 
+    private fun updateUIWithArgsFallback() {
+        if (!readOnly) return
+        val displayName = arguments?.getString("displayName")
+        val email = arguments?.getString("email")
+        val avatarUrl = arguments?.getString("avatarUrl")
+        if (displayName.isNullOrBlank() && email.isNullOrBlank() && avatarUrl.isNullOrBlank()) return
+        binding.tvUserName.text = displayName ?: ""
+        binding.etFullName.setText(displayName ?: "")
+        binding.etEmail.setText(email ?: "")
+        if (!avatarUrl.isNullOrBlank()) {
+            // Use RetrofitClient to build full URL consistently
+            val fullUrl = RetrofitClient.buildFullUrl(avatarUrl) ?: avatarUrl
+            Glide.with(this)
+                .load(fullUrl)
+                .placeholder(R.drawable.ic_profile_unselected)
+                .error(R.drawable.ic_profile_unselected)
+                .into(binding.ivAvatar)
+        }
+    }
 
+
+    /**
+     * REQ-HOME-03: Secure Logout
+     * Xóa hoàn toàn tất cả dữ liệu user để ngăn data leakage
+     */
     private fun performLogout() {
-        // Xóa dữ liệu preferences (clearLoginData sẽ reset hasSeenOnboarding về false)
+        // REQ-HOME-03: Xóa dữ liệu preferences (giữ lại onboarding state)
         PreferenceManager.clear(requireContext())
 
+        // REQ-HOME-03: Xóa tokens trong SecureTokenStorage (EncryptedSharedPreferences)
+        val tokenStorage = com.example.morp_prj.security.SecureTokenStorage(requireContext())
+        tokenStorage.clearAll()
 
-        // Xóa tokens trong SecureTokenStorage
-        com.example.morp_prj.security.SecureTokenStorage(requireContext()).clearAll()
+        // Clear Glide image cache để không hiển thị avatar của user trước
+        com.bumptech.glide.Glide.get(requireContext()).clearMemory()
+
+        android.util.Log.d("ProfileFragment", "🔐 Secure logout completed - all user data cleared")
 
         // Navigate đến màn hình login và xóa toàn bộ backstack
         val navOptions = androidx.navigation.NavOptions.Builder()

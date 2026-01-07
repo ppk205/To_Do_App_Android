@@ -14,5 +14,6 @@ data class Team(
     @SerializedName("role") val role: String? = "member",
     @SerializedName("isPinned") var isPinned: Boolean = false,
     @SerializedName("status") val status: String? = "active",
-    @SerializedName("tags") var tags: List<String> = emptyList()
+    @SerializedName("tags") var tags: List<String> = emptyList(),
+    @SerializedName("allowMemberDirectory") var allowMemberDirectory: Boolean = false
 )

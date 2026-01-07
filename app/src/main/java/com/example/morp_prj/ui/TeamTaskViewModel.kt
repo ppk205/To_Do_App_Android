@@ -86,6 +86,41 @@ class TeamTaskViewModel : ViewModel() {
         })
     }
 
+    fun fetchAssignedTasks(teamId: String) {
+        _isLoading.postValue(true)
+        _errorMessage.postValue(null)
+
+        apiService.getAssignedTeamTasks(teamId).enqueue(object : Callback<List<TeamTask>> {
+            override fun onResponse(call: Call<List<TeamTask>>, response: Response<List<TeamTask>>) {
+                _isLoading.postValue(false)
+                if (response.isSuccessful) {
+                    val taskList = response.body() ?: emptyList()
+                    val now = System.currentTimeMillis()
+                    val merged = taskList.map { t ->
+                        val conf = confirmedUpdates[t.id]
+                        if (conf != null && (now - conf.second) < 5_000L) {
+                            t.copy(status = conf.first)
+                        } else {
+                            val pending = pendingUpdates[t.id]
+                            if (!pending.isNullOrEmpty()) t.copy(status = pending) else t
+                        }
+                    }
+
+                    _tasks.value = merged
+                    calculateSummary(merged)
+                    _errorMessage.postValue(null)
+                } else {
+                    _errorMessage.postValue("Server error: ${response.code()}")
+                }
+            }
+
+            override fun onFailure(call: Call<List<TeamTask>>, t: Throwable) {
+                _isLoading.postValue(false)
+                _errorMessage.postValue(t.message ?: "Network error")
+            }
+        })
+    }
+
     fun updateTaskStatus(taskId: String, newStatus: String, onComplete: (Boolean, String?) -> Unit = { _, _ -> }) {
         val body = mapOf("status" to newStatus)
         // Mark as pending and apply optimistic update in ViewModel cache
@@ -107,7 +142,6 @@ class TeamTaskViewModel : ViewModel() {
                 } else {
                     val err = try { response.errorBody()?.string() } catch (e: Exception) { null }
                     android.util.Log.w("TeamTaskViewModel", "updateTaskStatus failed: code=${response.code()} body=$err")
-                    // On failure remove pending marker so future fetch won't keep applying it
                     pendingUpdates.remove(taskId)
                     confirmedUpdates.remove(taskId)
                     _errorMessage.postValue("Update failed: ${response.code()} ${err ?: ""}")
@@ -119,6 +153,29 @@ class TeamTaskViewModel : ViewModel() {
                 android.util.Log.e("TeamTaskViewModel", "updateTaskStatus onFailure", t)
                 _errorMessage.postValue(t.message ?: "Network error")
                 onComplete(false, t.message)
+            }
+        })
+    }
+
+    fun deleteTask(taskId: String, onSuccess: () -> Unit) {
+        _isLoading.postValue(true)
+        apiService.deleteTeamTask(taskId).enqueue(object : Callback<Void> {
+            override fun onResponse(call: Call<Void>, response: Response<Void>) {
+                _isLoading.postValue(false)
+                if (response.isSuccessful) {
+                    val currentList = _tasks.value.orEmpty().toMutableList()
+                    currentList.removeAll { it.id == taskId }
+                    _tasks.value = currentList
+                    calculateSummary(currentList)
+                    onSuccess()
+                } else {
+                    _errorMessage.postValue("Failed to delete task: ${response.code()}")
+                }
+            }
+
+            override fun onFailure(call: Call<Void>, t: Throwable) {
+                _isLoading.postValue(false)
+                _errorMessage.postValue(t.message ?: "Network error")
             }
         })
     }

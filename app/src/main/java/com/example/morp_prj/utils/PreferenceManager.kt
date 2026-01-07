@@ -217,9 +217,35 @@ class PreferenceManager(context: Context) {
     }
 
     fun clearLoginData() {
-        // Clear all login data completely
-        // After logout and app restart, user will see onboarding (fresh start)
-        // hasSeenOnboarding will be false (default) after clear
+        // REQ-HOME-03: Xóa hoàn toàn tất cả login data để ngăn data leakage
+        // Điều này đảm bảo không có dữ liệu người dùng trước bị lộ cho người dùng mới
+        sharedPreferences.edit().apply {
+            // Xóa tất cả user data
+            remove(KEY_USER_ID)
+            remove(KEY_USERNAME)
+            remove(KEY_DISPLAY_NAME)
+            remove(KEY_EMAIL)
+            remove(KEY_PHONE)
+            remove(KEY_AVATAR_URL)
+            remove(KEY_AVATAR_ID)
+            remove(KEY_BIO)
+            remove(KEY_VERIFIED)
+            remove(KEY_TOKEN)
+            remove(KEY_IS_LOGGED_IN)
+            remove(KEY_IS_GUEST)
+            remove(KEY_PASSWORD_FAIL_COUNT)
+            // Giữ lại KEY_HAS_SEEN_ONBOARDING để không show onboarding lại
+            // Giữ lại KEY_JUST_LOGGED_OUT để điều hướng đúng
+            apply()
+        }
+    }
+
+    /**
+     * REQ-HOME-03: Secure complete logout
+     * Xóa hoàn toàn TẤT CẢ data bao gồm cả onboarding state
+     * Sử dụng khi cần reset app về trạng thái ban đầu
+     */
+    fun secureCompleteLogout() {
         sharedPreferences.edit().clear().apply()
     }
 }

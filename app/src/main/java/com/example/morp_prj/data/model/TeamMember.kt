@@ -7,6 +7,8 @@ data class TeamMember(
     val id: String,
     @SerializedName("displayName")
     val displayName: String,
+    @SerializedName("username")
+    val username: String? = null,
     @SerializedName("email")
     val email: String,
     @SerializedName("avatarUrl")
@@ -14,5 +16,7 @@ data class TeamMember(
     @SerializedName("role")
     val role: String,
     @SerializedName("status")
-    val status: String
+    val status: String,
+    @SerializedName("joinedAt")
+val joinedAt: String? = null
 )

@@ -19,7 +19,7 @@ const parseTags = (tagsData) => {
 // --- 1. Tạo nhóm mới ---
 exports.createTeam = async (req, res) => {
     try {
-        const { name, description, tags } = req.body;
+        const { name, description, tags, avatarUrl, allowMemberDirectory } = req.body;
         const createdBy = req.user ? req.user.id : req.body.createdBy;
 
         if (!name || !createdBy) {
@@ -35,7 +35,9 @@ exports.createTeam = async (req, res) => {
             description,
             tags: tags || [],
             createdBy,
-            inviteCode
+            inviteCode,
+            avatarUrl: avatarUrl || null,
+            allowMemberDirectory: allowMemberDirectory ? 1 : 0
         };
 
         // 1. Tạo Team
@@ -265,7 +267,7 @@ exports.getTeamDetail = async (req, res) => {
 exports.updateTeam = async (req, res) => {
     try {
         const { teamId } = req.params;
-        const { name, description, tags } = req.body;
+        const { name, description, tags, avatarUrl, allowMemberDirectory } = req.body;
         const userId = req.user ? req.user.id : req.body.userId;
 
         // 1. Kiểm tra quyền Manager
@@ -275,8 +277,15 @@ exports.updateTeam = async (req, res) => {
             return res.status(403).json({ message: 'Only manager can update team info' });
         }
 
-        // 2. Cập nhật
-        await teamModel.update(teamId, { name, description, tags });
+        // 2. Cập nhật - build update object dynamically
+        const updateData = {};
+        if (name !== undefined) updateData.name = name;
+        if (description !== undefined) updateData.description = description;
+        if (tags !== undefined) updateData.tags = tags;
+        if (avatarUrl !== undefined) updateData.avatarUrl = avatarUrl;
+        if (allowMemberDirectory !== undefined) updateData.allowMemberDirectory = allowMemberDirectory ? 1 : 0;
+
+        await teamModel.update(teamId, updateData);
 
         res.json({ message: 'Team updated successfully' });
     } catch (error) {
@@ -324,10 +333,55 @@ exports.getMembersByTeamId = async (req, res) => {
     try {
         const teamId = req.params.teamId;
         const status = req.query.status || 'active';
+        const userId = req.user ? req.user.id : req.query.userId;
+
+        // Check if user is a member of this team
+        const membership = await teamModel.findMember(teamId, userId);
+        if (!membership) {
+            return res.status(403).json({ message: 'Access denied. You are not a member.' });
+        }
+
+        // Check if user is manager/co-manager OR if allowMemberDirectory is enabled
+        const isManagerOrCoManager = membership.role === 'manager' || membership.role === 'co-manager';
+
+        if (!isManagerOrCoManager) {
+            // Check team settings
+            const team = await teamModel.findById(teamId);
+            if (!team || !team.allowMemberDirectory) {
+                return res.status(403).json({ message: 'Access denied. Member directory is disabled.' });
+            }
+        }
+
         const members = await teamModel.findMembersByTeamId(teamId, status);
         res.json(members);
     } catch (error) {
         console.error('Error fetching members:', error);
+        res.status(500).json({ message: 'Database error' });
+    }
+};
+
+// Get team leaders (Manager and Co-Manager) - No permission check needed
+exports.getTeamLeaders = async (req, res) => {
+    try {
+        const teamId = req.params.teamId;
+        const userId = req.user ? req.user.id : req.query.userId;
+
+        // Only check if user is a member of the team (not permission-based)
+        const membership = await teamModel.findMember(teamId, userId);
+        if (!membership) {
+            return res.status(403).json({ message: 'Access denied. You are not a member.' });
+        }
+
+        // Get all active members and filter for managers and co-managers
+        const allMembers = await teamModel.findMembersByTeamId(teamId, 'active');
+        const leaders = allMembers.filter(member => {
+            const role = String(member.role || '').toLowerCase();
+            return role === 'manager' || role === 'co-manager';
+        });
+
+        res.json(leaders);
+    } catch (error) {
+        console.error('Error fetching team leaders:', error);
         res.status(500).json({ message: 'Database error' });
     }
 };
@@ -359,3 +413,210 @@ exports.getTeamMessages = async (req, res) => {
         res.status(500).json({ message: 'Database error' });
     }
 };
+
+exports.regenerateInviteCode = async (req, res) => {
+    try {
+        const { teamId } = req.params;
+        // Logic tạo code ngẫu nhiên
+        const newInviteCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+
+        // Cập nhật vào DB (Giờ sẽ gọi hàm update Dynamic, không bị lỗi NULL nữa)
+        await teamModel.update(teamId, { inviteCode: newInviteCode });
+
+        // Trả về thông tin team mới nhất
+        const updatedTeam = await teamModel.findById(teamId);
+        res.json(updatedTeam);
+    } catch (error) {
+        console.error('Regenerate Code Error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+// --- 9. Xóa Team (Đã đưa ra ngoài) ---
+exports.deleteTeam = async (req, res) => {
+    try {
+        const { teamId } = req.params;
+        const userId = req.user ? req.user.id : req.body.userId;
+
+        const team = await teamModel.findById(teamId);
+        if (!team) {
+            return res.status(404).json({ message: 'Team not found' });
+        }
+
+        if (team.createdBy !== userId) {
+            return res.status(403).json({ message: 'Access denied. Only team owner can delete.' });
+        }
+
+        await teamModel.delete(teamId);
+        res.json({ success: true, message: 'Team deleted successfully' });
+    } catch (error) {
+        console.error('Delete Team Error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+// --- 10. Cập nhật vai trò thành viên (Manager, Co-manager) ---
+exports.updateMemberRole = async (req, res) => {
+    try {
+        const { teamId, userId, newRole } = req.body;
+        const actorId = req.user ? req.user.id : req.body.actorId;
+        if (!teamId || !userId || !newRole) {
+            return res.status(400).json({ message: 'Missing fields' });
+        }
+
+        // Fetch memberships
+        const actor = await teamModel.findMember(teamId, actorId);
+        const target = await teamModel.findMember(teamId, userId);
+        if (!actor || !target) {
+            return res.status(404).json({ message: 'Member not found' });
+        }
+
+        const actorRole = String(actor.role || '').toLowerCase();
+        const targetRole = String(target.role || '').toLowerCase();
+        const desiredRole = String(newRole).toLowerCase();
+
+        // Permissions: manager can toggle member<->co-manager; co-manager can toggle member<->co-manager but cannot change managers.
+        const isManager = actorRole === 'manager';
+        const isCoManager = actorRole === 'co-manager';
+
+        if (!isManager && !isCoManager) {
+            return res.status(403).json({ message: 'No permission' });
+        }
+        if (targetRole === 'manager') {
+            return res.status(403).json({ message: 'Cannot change manager role' });
+        }
+        if (desiredRole !== 'member' && desiredRole !== 'co-manager') {
+            return res.status(400).json({ message: 'Invalid role' });
+        }
+
+        await teamModel.updateMemberRole(teamId, userId, desiredRole);
+        res.json({ success: true });
+    } catch (err) {
+        console.error('updateMemberRole error:', err);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+// --- Handle Join Request (Approve/Reject) ---
+exports.handleJoinRequest = async (req, res) => {
+    const { teamId, userId, action } = req.body;
+    const actorId = req.user ? req.user.id : req.body.actorId;
+
+    if (!teamId || !userId || !action) {
+        return res.status(400).json({ message: 'teamId, userId, and action are required' });
+    }
+
+    if (action !== 'approve' && action !== 'reject') {
+        return res.status(400).json({ message: 'Action must be "approve" or "reject"' });
+    }
+
+    try {
+        // Check if actor is manager or co-manager
+        const [actorRows] = await db.execute(
+            'SELECT role FROM teammember WHERE teamId = ? AND userId = ? AND status = "active" LIMIT 1',
+            [teamId, actorId]
+        );
+
+        if (!actorRows || actorRows.length === 0) {
+            return res.status(403).json({ message: 'Not a team member' });
+        }
+
+        const actorRole = String(actorRows[0].role || '').toLowerCase();
+        if (actorRole !== 'manager' && actorRole !== 'co-manager') {
+            return res.status(403).json({ message: 'Only managers can handle join requests' });
+        }
+
+        // Check if request exists and is pending
+        const [requestRows] = await db.execute(
+            'SELECT id, status FROM teammember WHERE teamId = ? AND userId = ? LIMIT 1',
+            [teamId, userId]
+        );
+
+        if (!requestRows || requestRows.length === 0) {
+            return res.status(404).json({ message: 'Join request not found' });
+        }
+
+        const currentStatus = String(requestRows[0].status || '').toLowerCase();
+        if (currentStatus !== 'pending') {
+            return res.status(400).json({ message: 'Request is not pending' });
+        }
+
+        if (action === 'approve') {
+            // Approve: Set status to active
+            await db.execute(
+                'UPDATE teammember SET status = "active" WHERE teamId = ? AND userId = ?',
+                [teamId, userId]
+            );
+
+            // Notify the user
+            try {
+                const [teamRows] = await db.execute('SELECT name FROM team WHERE id = ? LIMIT 1', [teamId]);
+                const teamName = teamRows && teamRows[0] ? teamRows[0].name : 'the team';
+
+                const createdAt = Date.now();
+                await createNotificationsBulk([{
+                    userId: userId,
+                    channel: 'teams',
+                    title: 'Join request approved',
+                    message: `Your request to join "${teamName}" has been approved!`,
+                    dedupeKey: `team:${teamId}:joinApproved:${userId}`,
+                    createdAt,
+                }]);
+
+                // Realtime notification
+                const io = getIO();
+                if (io) {
+                    io.to(`user:${userId}`).emit('notification', {
+                        title: 'Join request approved',
+                        message: `Your request to join "${teamName}" has been approved!`,
+                        createdAt,
+                    });
+                }
+            } catch (notifErr) {
+                console.error('[handleJoinRequest] Notification error:', notifErr);
+            }
+
+            res.json({ success: true, message: 'Member approved' });
+        } else {
+            // Reject: Remove the member entry
+            await db.execute(
+                'DELETE FROM teammember WHERE teamId = ? AND userId = ?',
+                [teamId, userId]
+            );
+
+            // Notify the user
+            try {
+                const [teamRows] = await db.execute('SELECT name FROM team WHERE id = ? LIMIT 1', [teamId]);
+                const teamName = teamRows && teamRows[0] ? teamRows[0].name : 'the team';
+
+                const createdAt = Date.now();
+                await createNotificationsBulk([{
+                    userId: userId,
+                    channel: 'teams',
+                    title: 'Join request rejected',
+                    message: `Your request to join "${teamName}" was not approved.`,
+                    dedupeKey: `team:${teamId}:joinRejected:${userId}`,
+                    createdAt,
+                }]);
+
+                // Realtime notification
+                const io = getIO();
+                if (io) {
+                    io.to(`user:${userId}`).emit('notification', {
+                        title: 'Join request rejected',
+                        message: `Your request to join "${teamName}" was not approved.`,
+                        createdAt,
+                    });
+                }
+            } catch (notifErr) {
+                console.error('[handleJoinRequest] Notification error:', notifErr);
+            }
+
+            res.json({ success: true, message: 'Request rejected' });
+        }
+    } catch (err) {
+        console.error('handleJoinRequest error:', err);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+

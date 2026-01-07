@@ -93,7 +93,15 @@ class AuthRepository(private val context: Context) {
 
                 Result.success(body)
             } else {
-                Result.failure(Exception(response.body()?.message ?: response.message() ?: "Unknown error"))
+                // Extract error message from response body, prioritizing server message
+                val errorMessage = when {
+                    response.body()?.message?.isNotBlank() == true -> response.body()!!.message
+                    response.code() == 401 -> "Incorrect password. Please try again."
+                    response.code() == 404 -> "User not found. Please check your username or email."
+                    !response.isSuccessful -> "Login failed: ${response.message()}"
+                    else -> "Login failed. Please try again."
+                }
+                Result.failure(Exception(errorMessage))
             }
         } catch (e: Exception) {
             Result.failure(e)
@@ -211,6 +219,23 @@ class AuthRepository(private val context: Context) {
                 Result.success(response.body()!!)
             } else {
                 Result.failure(Exception(response.message() ?: "Failed to fetch profile"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Fetch user profile by user ID (for viewing other users)
+     */
+    suspend fun fetchUserById(userId: String): Result<com.example.morp_prj.data.model.User> = withContext(Dispatchers.IO) {
+        try {
+            val response = apiService.getUserById(userId)
+
+            if (response.isSuccessful && response.body() != null) {
+                Result.success(response.body()!!)
+            } else {
+                Result.failure(Exception(response.message() ?: "Failed to fetch user profile"))
             }
         } catch (e: Exception) {
             Result.failure(e)

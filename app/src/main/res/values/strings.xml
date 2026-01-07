@@ -29,8 +29,11 @@
     <string name="email_note">A verification link will be sent to this email.</string>
     <string name="hint_password">Password</string>
     <string name="hint_phone">Phone Number (Optional)</string>
+    <string name="phone_number_hint">Phone number</string>
+    <string name="phone_validation_note">Select your country code and enter phone number</string>
     <string name="security_note">Your password will be encrypted using industry-standard protocols. We utilize JWT tokens for secure session management.</string>
     <string name="privacy_note">TaskFlow prioritizes your data privacy and security.</string>
+    <string name="terms_and_privacy">I agree to the Terms of Service and Privacy Policy</string>
     <string name="register_button">Register Account</string>
 
     <!-- Login strings -->

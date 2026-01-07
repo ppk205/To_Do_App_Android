@@ -213,4 +213,35 @@ class ResetPasswordFragment : Fragment(R.layout.fragment_reset_password) {
             }
         }
     }
+
+    override fun onResume() {
+        super.onResume()
+        hideBottomNavigation()
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        showBottomNavigationIfLoggedIn()
+    }
+
+    private fun hideBottomNavigation() {
+        try {
+            val bottomNav = activity?.findViewById<View>(R.id.bottom_nav_view)
+            bottomNav?.visibility = View.GONE
+        } catch (e: Exception) {
+            Log.e("ResetPasswordFragment", "Error hiding bottom navigation", e)
+        }
+    }
+
+    private fun showBottomNavigationIfLoggedIn() {
+        try {
+            val prefs = com.example.morp_prj.utils.PreferenceManager(requireContext())
+            val tokenStorage = com.example.morp_prj.security.SecureTokenStorage(requireContext())
+            val shouldShow = prefs.isLoggedIn() || tokenStorage.hasValidRefreshToken()
+            val bottomNav = activity?.findViewById<View>(R.id.bottom_nav_view)
+            bottomNav?.visibility = if (shouldShow) View.VISIBLE else View.GONE
+        } catch (e: Exception) {
+            Log.e("ResetPasswordFragment", "Error showing bottom navigation", e)
+        }
+    }
 }

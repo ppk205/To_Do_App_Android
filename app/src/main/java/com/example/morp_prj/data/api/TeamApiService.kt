@@ -14,6 +14,9 @@ interface TeamApiService {
         @Query("status") status: String = "active"
     ): Call<List<TeamMember>>
 
+    @GET("api/team/{teamId}/leaders")
+    fun getTeamLeaders(@Path("teamId") teamId: String): Call<List<TeamMember>>
+
     @GET("api/team/{teamId}/messages")
     fun getTeamMessages(@Path("teamId") teamId: String): Call<List<ChatMessage>>
 
@@ -39,5 +42,14 @@ interface TeamApiService {
     fun updateTeam(
         @Path("teamId") teamId: String,
         @Body request: UpdateTeamRequest
-    ): Call<Void>
+    ): Call<Team>
+
+    @PUT("api/team/{teamId}/invite-code")
+    fun regenerateInviteCode(@Path("teamId") teamId: String): Call<Team>
+
+    @DELETE("api/team/{teamId}")
+    fun deleteTeam(@Path("teamId") teamId: String): Call<Void>
+
+    @POST("api/team/update-member-role")
+    fun updateMemberRole(@Body request: UpdateMemberRoleRequest): Call<Void>
 }

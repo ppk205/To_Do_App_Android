@@ -1,5 +1,6 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const User = require('../models/User');
 const RedisOTPService = require('../services/redisOTPService');
 const tokenService = require('../services/tokenService');
@@ -56,7 +57,7 @@ async function register(req, res) {
             });
         }
 
-        // ✅ CRITICAL: Wait for email to be sent (Option 1: Synchronous)
+        // CRITICAL: Wait for email to be sent (Option 1: Synchronous)
         // This ensures user only gets success response if email was actually sent
         const emailResult = await sendOTPEmail(email, otpData.otpCode, displayName);
 
@@ -272,7 +273,7 @@ async function login(req, res) {
             });
         }
 
-        // ✅ Kiểm tra user đã verified
+        // Kiểm tra user đã verified
         if (!user.verified) {
             return res.status(403).json({
                 success: false,
@@ -654,7 +655,9 @@ async function resendResetOTP(req, res) {
 
         res.status(200).json({
             success: true,
-            message: 'If the email exists, a new OTP has been sent'
+            message: 'If the email exists, a new OTP has been sent',
+            expiresIn: (result.ttl || 10) * 60, // seconds (default 10 minutes)
+            resendAvailableIn: RedisOTPService.config.RESEND_COOLDOWN_SECONDS
         });
 
     } catch (error) {
@@ -828,13 +831,24 @@ async function changePassword(req, res) {
 
 // ============================================
 // 10. UPDATE PROFILE - Cập nhật thông tin User (Cloudinary only)
+// REQ-PROF-02: Anti-IDOR - Chỉ sử dụng userId từ Access Token
+// REQ-PROF-03: Input đã được sanitize bởi middleware validation
 // ============================================
 async function updateProfile(req, res) {
     try {
+        // REQ-PROF-02: Anti-IDOR - CHỈ lấy userId từ authenticated token
+        // KHÔNG BAO GIỜ sử dụng userId từ body hoặc URL params
         const userId = req.user.id;
+
+        // REQ-PROF-02: Log cảnh báo nếu client cố gắng gửi userId trong body
+        if (req.body.userId || req.body.id) {
+            console.warn(`⚠️ IDOR_ATTEMPT: Client tried to send userId in body. Ignored. Token userId: ${userId}`);
+        }
+
+        // REQ-PROF-03: Các field đã được sanitize bởi updateProfileValidation middleware
         const { displayName, phone, bio, avatarUrl, githubUrl, linkedinUrl, websiteUrl } = req.body;
 
-        // Whitelist các field được phép update
+        // Whitelist các field được phép update (KHÔNG có userId, email, username)
         const updateData = {};
         if (displayName !== undefined) updateData.displayName = displayName;
         if (phone !== undefined) updateData.phone = phone;
@@ -862,9 +876,8 @@ async function updateProfile(req, res) {
             return res.status(400).json({ success: false, message: 'Không có dữ liệu để cập nhật' });
         }
 
-        // Log để debug
-        console.log('📝 UPDATE PROFILE - userId:', userId);
-        console.log('📝 UPDATE PROFILE - updateData:', JSON.stringify(updateData, null, 2));
+        // REQ-PROF-01: KHÔNG log thông tin nhạy cảm (PII) - chỉ log userId và fields được update
+        console.log('📝 UPDATE PROFILE - userId:', userId, '- fields:', Object.keys(updateData).join(', '));
 
         // Gọi Model update
         await User.update(userId, updateData);
@@ -872,12 +885,14 @@ async function updateProfile(req, res) {
         // Lấy lại user mới nhất để trả về client
         const updatedUser = await User.findById(userId);
 
-        console.log('✅ UPDATED USER from DB:', JSON.stringify(updatedUser, null, 2));
+        // REQ-PROF-01: Sanitize user trước khi trả về client
+        const sanitizedUser = sanitizeUser(updatedUser);
+        console.log('✅ UPDATED PROFILE for userId:', userId);
 
         res.status(200).json({
             success: true,
             message: 'Cập nhật hồ sơ thành công',
-            user: sanitizeUser(updatedUser)
+            user: sanitizedUser
         });
 
     } catch (error) {
@@ -919,6 +934,116 @@ async function getProfile(req, res) {
     }
 }
 
+// ============================================
+// REQ-UPLOAD-01: Signed Upload - Sinh signature cho Cloudinary
+// App phải gọi endpoint này trước khi upload ảnh lên Cloudinary
+// ============================================
+
+async function getCloudinarySignature(req, res) {
+    try {
+        const userId = req.user.id;
+
+        // Lấy cấu hình Cloudinary từ environment
+        const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+        const apiKey = process.env.CLOUDINARY_API_KEY;
+        const apiSecret = process.env.CLOUDINARY_API_SECRET;
+
+        if (!cloudName || !apiKey || !apiSecret) {
+            console.error('❌ CLOUDINARY_CONFIG_MISSING: Missing Cloudinary environment variables');
+            return res.status(500).json({
+                success: false,
+                message: 'Cấu hình Cloudinary chưa được thiết lập'
+            });
+        }
+
+        // Tạo timestamp (có hiệu lực trong 1 giờ)
+        const timestamp = Math.floor(Date.now() / 1000);
+
+        // Tạo public_id duy nhất cho user này
+        const publicId = `avatars/${userId}_${timestamp}`;
+
+        // Các tham số cần ký - CHỈ BAO GỒM CÁC THAM SỐ ĐƯỢC GỬI TỪ CLIENT
+        // Client chỉ gửi: folder, public_id, timestamp
+        const paramsToSign = {
+            folder: 'upload_project', // Thư mục lưu trữ trên Cloudinary
+            public_id: publicId,
+            timestamp: timestamp
+        };
+
+        // Sắp xếp params theo thứ tự alphabet và tạo chuỗi để ký
+        const sortedParams = Object.keys(paramsToSign)
+            .sort()
+            .map(key => `${key}=${paramsToSign[key]}`)
+            .join('&');
+
+        // Tạo signature: SHA1(params + api_secret)
+        const signature = crypto
+            .createHash('sha1')
+            .update(sortedParams + apiSecret)
+            .digest('hex');
+
+        console.log(`🔐 String to sign: ${sortedParams}`);
+
+        console.log(`🔐 Generated Cloudinary signature for user ${userId}`);
+
+        res.status(200).json({
+            success: true,
+            signature: signature,
+            timestamp: timestamp,
+            publicId: publicId,
+            cloudName: cloudName,
+            apiKey: apiKey,
+            folder: paramsToSign.folder,
+            // Không trả về apiSecret!
+        });
+
+    } catch (error) {
+        console.error('Cloudinary signature error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi khi tạo signature upload',
+            error: error.message
+        });
+    }
+}
+
+// ============================================
+// 11. GET USER BY ID - Lấy thông tin User bất kỳ theo ID
+// ============================================
+async function getUserById(req, res) {
+    try {
+        const { userId } = req.params;
+
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                message: 'userId is required'
+            });
+        }
+
+        // Lấy user từ DB
+        const user = await User.findById(userId);
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        // Return sanitized user data (no password, etc.)
+        res.status(200).json(sanitizeUser(user));
+
+    } catch (error) {
+        console.error('Get user by ID error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error',
+            error: error.message
+        });
+    }
+}
+
 module.exports = {
     register,
     verifyOTP,
@@ -935,5 +1060,7 @@ module.exports = {
     resetPassword,
     changePassword,
     getProfile,
-    updateProfile
+    getUserById,
+    updateProfile,
+    getCloudinarySignature // REQ-UPLOAD-01: Signed uploads
 };

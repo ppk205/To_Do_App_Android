@@ -10,6 +10,11 @@ import com.google.android.material.button.MaterialButton
 
 class ResetPasswordSuccessFragment : Fragment(R.layout.fragment_reset_password_success) {
 
+    override fun onStart() {
+        super.onStart()
+        hideBottomNavigation()
+    }
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -23,6 +28,7 @@ class ResetPasswordSuccessFragment : Fragment(R.layout.fragment_reset_password_s
         val btnContinueLogin = view.findViewById<MaterialButton>(R.id.btn_continue_login_reset)
 
         btnContinueLogin.setOnClickListener {
+            hideBottomNavigation()
             try {
                 findNavController().navigate(R.id.action_resetSuccess_to_login)
             } catch (e: Exception) {
@@ -34,11 +40,16 @@ class ResetPasswordSuccessFragment : Fragment(R.layout.fragment_reset_password_s
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        hideBottomNavigation()
+    }
+
     override fun onDestroyView() {
         super.onDestroyView()
 
-        // ✅ Hiện lại bottom navigation khi thoát
-        showBottomNavigation()
+        // ✅ Chỉ hiện lại nếu user đã đăng nhập
+        showBottomNavigationIfLoggedIn()
     }
 
     private fun hideBottomNavigation() {
@@ -50,10 +61,13 @@ class ResetPasswordSuccessFragment : Fragment(R.layout.fragment_reset_password_s
         }
     }
 
-    private fun showBottomNavigation() {
+    private fun showBottomNavigationIfLoggedIn() {
         try {
+            val prefs = com.example.morp_prj.utils.PreferenceManager(requireContext())
+            val tokenStorage = com.example.morp_prj.security.SecureTokenStorage(requireContext())
+            val shouldShow = prefs.isLoggedIn() || tokenStorage.hasValidRefreshToken()
             val bottomNav = activity?.findViewById<View>(R.id.bottom_nav_view)
-            bottomNav?.visibility = View.VISIBLE
+            bottomNav?.visibility = if (shouldShow) View.VISIBLE else View.GONE
         } catch (e: Exception) {
             Log.e("ResetPasswordSuccessFragment", "Error showing bottom navigation", e)
         }

@@ -9,7 +9,7 @@
         android:id="@+id/teamDashboardFragment"
         android:name="com.example.morp_prj.ui.dashboard.TeamManagementDashboardFragment"
         android:label="Team Manager Dashboard"
-        tools:layout="@layout/fragment_task_dashboard">
+        tools:layout="@layout/fragment_team_dashboard">
         <argument
             android:name="teamId"
             app:argType="string"
@@ -17,7 +17,11 @@
         <!-- Action to open task detail from dashboard recent items -->
         <action
             android:id="@+id/action_teamDashboard_to_taskDetail"
-            app:destination="@id/teamTaskDetailFragment">
+            app:destination="@id/teamTaskDetailFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right">
             <argument
                 android:name="taskId"
                 app:argType="string" />
@@ -37,17 +41,13 @@
             android:name="inviteCode"
             app:argType="string"
             android:defaultValue="" />
-    </fragment>
-
-    <fragment
-        android:id="@+id/joinRequestFragment"
-        android:name="com.example.morp_prj.ui.JoinRequestFragment"
-        android:label="Join Requests"
-        tools:layout="@layout/fragment_join_requests">
-        <argument
-            android:name="teamId"
-            app:argType="string"
-            android:defaultValue="" />
+        <action
+            android:id="@+id/action_memberManagementFragment_to_profileFragment"
+            app:destination="@id/profileFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
     </fragment>
 
     <fragment
@@ -72,7 +72,11 @@
         <!-- Action to open task detail from assigned tasks list -->
         <action
             android:id="@+id/action_assignedTasks_to_taskDetail"
-            app:destination="@id/teamTaskDetailFragment">
+            app:destination="@id/teamTaskDetailFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right">
             <argument
                 android:name="taskId"
                 app:argType="string" />
@@ -90,7 +94,11 @@
             android:defaultValue="" />
         <action
             android:id="@+id/action_teamTaskManagement_to_taskDetail"
-            app:destination="@id/teamTaskDetailFragment" />
+            app:destination="@id/teamTaskDetailFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
     </fragment>
     <fragment
         android:id="@+id/teamTaskDetailFragment"
@@ -99,5 +107,82 @@
         <argument
             android:name="taskId"
             app:argType="string" />
+    </fragment>
+    <fragment
+        android:id="@+id/teamChatFragment"
+        android:name="com.example.morp_prj.ui.chat.TeamChatFragment"
+        android:label="Team Chat"
+        tools:layout="@layout/fragment_team_chat">
+        <argument
+            android:name="teamId"
+            app:argType="string" />
+        <argument
+            android:name="teamName"
+            app:argType="string"
+            android:defaultValue="Team Chat" />
+    </fragment>
+    <fragment
+        android:id="@+id/teamSettingsFragment"
+        android:name="com.example.morp_prj.ui.TeamSettingsFragment"
+        android:label="Team Chat"
+        tools:layout="@layout/fragment_team_settings">
+        <argument
+            android:name="teamId"
+            app:argType="string" />
+        <argument
+            android:name="teamName"
+            app:argType="string"
+            android:defaultValue="Team Chat" />
+    </fragment>
+    <fragment
+        android:id="@+id/teamInfoFragment"
+        android:name="com.example.morp_prj.ui.TeamInfoFragment"
+        android:label="Team Info"
+        tools:layout="@layout/fragment_team_info">
+        <argument
+            android:name="teamId"
+            app:argType="string"
+            android:defaultValue="" />
+        <argument
+            android:name="teamName"
+            app:argType="string"
+            android:defaultValue="" />
+        <argument
+            android:name="inviteCode"
+            app:argType="string"
+            android:defaultValue="" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/profileFragment"
+        android:name="com.example.morp_prj.ui.ProfileFragment"
+        android:label="Profile"
+        tools:layout="@layout/fragment_profile">
+        <argument
+            android:name="userId"
+            app:argType="string"
+            android:defaultValue="" />
+        <argument
+            android:name="readOnly"
+            app:argType="boolean"
+            android:defaultValue="false" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/memberDirectoryFragment"
+        android:name="com.example.morp_prj.ui.MemberDirectoryFragment"
+        android:label="Member Directory"
+        tools:layout="@layout/fragment_member_directory">
+        <argument
+            android:name="teamId"
+            app:argType="string"
+            android:defaultValue="" />
+        <action
+            android:id="@+id/action_memberDirectory_to_profileFragment"
+            app:destination="@id/profileFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
     </fragment>
 </navigation>

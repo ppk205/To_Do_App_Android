@@ -5,7 +5,6 @@ import android.view.View
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.findNavController
-import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.morp_prj.R
 import com.example.morp_prj.databinding.FragmentTeamChatBinding
@@ -22,7 +21,10 @@ class TeamChatFragment : Fragment(R.layout.fragment_team_chat) {
         super.onViewCreated(view, savedInstanceState)
         binding = FragmentTeamChatBinding.bind(view)
         preferenceManager = PreferenceManager(requireContext())
-        viewModel = ViewModelProvider(this)[TeamChatViewModel::class.java]
+
+        // Use factory to inject Context for encryption
+        val factory = TeamChatViewModelFactory(requireContext())
+        viewModel = ViewModelProvider(this, factory)[TeamChatViewModel::class.java]
 
         val currentUserId = preferenceManager.getUserId() ?: ""
         val currentUserName = preferenceManager.getDisplayName() ?: "Me"
@@ -65,6 +67,15 @@ class TeamChatFragment : Fragment(R.layout.fragment_team_chat) {
 
         binding.btnBack.setOnClickListener {
             findNavController().popBackStack()
+        }
+
+        // Auto-scroll to bottom when keyboard opens or new message arrives
+        binding.etMessage.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus && adapter.itemCount > 0) {
+                binding.rvChat.postDelayed({
+                    binding.rvChat.smoothScrollToPosition(adapter.itemCount - 1)
+                }, 100)
+            }
         }
 
         viewModel.errorMessage.observe(viewLifecycleOwner) { error ->

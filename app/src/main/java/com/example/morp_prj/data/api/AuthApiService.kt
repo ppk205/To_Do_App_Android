@@ -7,8 +7,9 @@ import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.POST
 import retrofit2.http.PUT
+import retrofit2.http.Path
 
-interface AuthApiService {
+interface   AuthApiService {
 
     @POST("api/auth/register")
     suspend fun register(@Body request: RegisterRequest): Response<AuthResponse>
@@ -27,6 +28,9 @@ interface AuthApiService {
 
     @GET("api/auth/profile")
     suspend fun getProfile(@Header("Authorization") token: String): Response<User>
+
+    @GET("api/auth/user/{userId}")
+    suspend fun getUserById(@Path("userId") userId: String): Response<User>
 
     @POST("api/auth/logout")
     suspend fun logout(@Body request: LogoutRequest): Response<AuthResponse>
@@ -59,4 +63,11 @@ interface AuthApiService {
         @Header("Authorization") token: String,
         @Body request: Map<String, String>
     ): Response<AuthResponse>
+
+    /**
+     * REQ-UPLOAD-01: Lấy signature cho Cloudinary signed upload
+     * App phải gọi endpoint này trước khi upload ảnh lên Cloudinary
+     */
+    @POST("api/auth/cloudinary-signature")
+    suspend fun getCloudinarySignature(): Response<CloudinarySignatureResponse>
 }

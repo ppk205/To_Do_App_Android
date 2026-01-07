@@ -1,9 +1,6 @@
 const { body, validationResult } = require('express-validator');
 const sanitizeHtml = require('sanitize-html');
 
-/**
- * ✅ Sanitize user input to prevent XSS attacks
- */
 const sanitizeInput = (value) => {
     if (typeof value !== 'string') return value;
     return sanitizeHtml(value, {
@@ -179,6 +176,84 @@ const resetPasswordValidation = [
         })
 ];
 
+/**
+ * REQ-PROF-03: Validation cho updateProfile
+ * - Sanitize HTML/Script tags từ displayName, bio (ngăn Stored XSS)
+ * - Validate URL format cho social links
+ * - Strict validate Cloudinary URL pattern
+ */
+const updateProfileValidation = [
+    // REQ-PROF-03: Sanitize displayName - strip all HTML/Script tags
+    body('displayName')
+        .optional({ nullable: true })
+        .trim()
+        .customSanitizer(sanitizeInput)
+        .isLength({ max: 150 })
+        .withMessage('Display name không được vượt quá 150 ký tự'),
+
+    // REQ-PROF-03: Sanitize bio - strip all HTML/Script tags
+    body('bio')
+        .optional({ nullable: true })
+        .trim()
+        .customSanitizer(sanitizeInput)
+        .isLength({ max: 500 })
+        .withMessage('Bio không được vượt quá 500 ký tự'),
+
+    // Sanitize phone
+    body('phone')
+        .optional({ nullable: true })
+        .trim()
+        .customSanitizer(sanitizeInput)
+        .matches(/^[0-9+\-\s()]*$/)
+        .withMessage('Số điện thoại không hợp lệ'),
+
+    // REQ-UPLOAD-03: Strict validate Cloudinary URL pattern
+    body('avatarUrl')
+        .optional({ nullable: true })
+        .trim()
+        .custom((value) => {
+            // Cho phép null hoặc empty string (xóa avatar)
+            if (value === null || value === '') return true;
+
+            // Chỉ chấp nhận URL từ Cloudinary
+            const cloudinaryPattern = /^https:\/\/res\.cloudinary\.com\/[a-zA-Z0-9_-]+\/image\/upload\/.+$/;
+            if (!cloudinaryPattern.test(value)) {
+                throw new Error('Avatar URL phải là link Cloudinary hợp lệ (https://res.cloudinary.com/...)');
+            }
+            return true;
+        }),
+
+    // Validate social URLs (optional, phải là URL hợp lệ nếu có)
+    body('githubUrl')
+        .optional({ nullable: true, checkFalsy: true })
+        .trim()
+        .customSanitizer(sanitizeInput)
+        .isURL({ protocols: ['https', 'http'], require_protocol: true })
+        .withMessage('GitHub URL không hợp lệ'),
+
+    body('linkedinUrl')
+        .optional({ nullable: true, checkFalsy: true })
+        .trim()
+        .customSanitizer(sanitizeInput)
+        .isURL({ protocols: ['https', 'http'], require_protocol: true })
+        .withMessage('LinkedIn URL không hợp lệ'),
+
+    body('websiteUrl')
+        .optional({ nullable: true, checkFalsy: true })
+        .trim()
+        .customSanitizer(sanitizeInput)
+        .isURL({ protocols: ['https', 'http'], require_protocol: true })
+        .withMessage('Website URL không hợp lệ'),
+
+    // REQ-PROF-02: Reject userId trong body (chống IDOR)
+    body('userId')
+        .isEmpty()
+        .withMessage('userId không được phép trong request body'),
+    body('id')
+        .isEmpty()
+        .withMessage('id không được phép trong request body')
+];
+
 // Middleware kiểm tra validation errors
 const validate = (req, res, next) => {
     const errors = validationResult(req);
@@ -200,5 +275,7 @@ module.exports = {
     registerInitValidation,
     forgotPasswordValidation,
     resetPasswordValidation,
-    validate
+    updateProfileValidation, // REQ-PROF-03: Validation cho updateProfile
+    validate,
+    sanitizeInput // Export để các module khác có thể sử dụng
 };

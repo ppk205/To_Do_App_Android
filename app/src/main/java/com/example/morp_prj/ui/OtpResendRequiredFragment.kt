@@ -63,7 +63,7 @@ class OtpResendRequiredFragment : Fragment(R.layout.fragment_otp_resend_required
         btnResendOtp.setTextColor(ContextCompat.getColor(requireContext(), R.color.text_secondary))
 
         countDownTimer?.cancel()
-        countDownTimer = object : CountDownTimer(30_000, 1000) {
+        countDownTimer = object : CountDownTimer(60_000, 1000) {
             override fun onTick(millisUntilFinished: Long) {
                 val seconds = millisUntilFinished / 1000
                 txtCountdown.text = getString(R.string.resend_countdown_format, seconds)
@@ -166,7 +166,7 @@ class OtpResendRequiredFragment : Fragment(R.layout.fragment_otp_resend_required
         super.onDestroyView()
         countDownTimer?.cancel()
 
-        // ✅ Hiện lại bottom navigation khi thoát nếu đã đăng nhập
+        // ✅ Chỉ hiện bottom navigation nếu đã đăng nhập
         showBottomNavigationIfLoggedIn()
     }
 

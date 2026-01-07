@@ -7,9 +7,11 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.splashscreen.SplashScreen
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -50,6 +52,30 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun shouldHideBottomNav(destinationId: Int): Boolean {
+        return when (destinationId) {
+            // Auth/onboarding flow: always hide
+            R.id.onboarding_fragment,
+            R.id.login_fragment,
+            R.id.register_fragment,
+            R.id.verify_otp_fragment,
+            R.id.otp_resend_required_fragment,
+            R.id.register_success_fragment,
+            R.id.forgot_password_fragment,
+            R.id.verify_reset_otp_fragment,
+            R.id.reset_otp_resend_required_fragment,
+            R.id.reset_password_fragment,
+            R.id.reset_password_success_fragment,
+            // Other full-screen destinations where nav bar must be hidden
+            R.id.taskFragment,
+            R.id.teamChatFragment,
+            R.id.create_new_team_fragment,
+            R.id.teamDetailFragment,
+            R.id.change_password_fragment -> true
+            else -> false
+        }
+    }
+
     @SuppressLint("UnprotectedBroadcastReceiver")
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
@@ -57,11 +83,6 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContentView(R.layout.activity_main)
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
-            insets
-        }
 
         val navHostFragment = supportFragmentManager
             .findFragmentById(R.id.nav_host_fragment) as NavHostFragment
@@ -69,6 +90,8 @@ class MainActivity : AppCompatActivity() {
 
         bottomNav = findViewById(R.id.bottom_nav_view)
         bottomNav.setupWithNavController(navController)
+        // Apply initial visibility based on current destination to avoid brief flashes
+        bottomNav.visibility = if (shouldHideBottomNav(navController.currentDestination?.id ?: -1)) View.GONE else View.VISIBLE
 
         // Register session expired receiver. Use API-guarded overload to avoid NoSuchMethodError on older devices
         val filter = IntentFilter(MyApplication.ACTION_SESSION_EXPIRED)
@@ -160,28 +183,7 @@ class MainActivity : AppCompatActivity() {
 
         // Hide bottom navigation on destinations that shouldn't show it (e.g. onboarding, login, register)
         navController.addOnDestinationChangedListener { _, destination, _ ->
-            bottomNav.visibility = when (destination.id) {
-                R.id.taskFragment -> View.GONE
-                else -> View.VISIBLE
-            }
-            when (destination.id) {
-                R.id.onboarding_fragment,
-                R.id.login_fragment,
-                R.id.register_fragment,
-                R.id.verify_otp_fragment,
-                R.id.otp_resend_required_fragment,
-                R.id.register_success_fragment,
-                R.id.forgot_password_fragment,
-                R.id.verify_reset_otp_fragment,
-                R.id.reset_password_fragment,
-                R.id.reset_password_success_fragment,
-                R.id.taskFragment,
-                R.id.create_new_team_fragment,
-                R.id.teamChatFragment,
-                R.id.teamDetailFragment,
-                R.id.change_password_fragment -> bottomNav.visibility = View.GONE
-                else -> bottomNav.visibility = View.VISIBLE
-            }
+            bottomNav.visibility = if (shouldHideBottomNav(destination.id)) View.GONE else View.VISIBLE
         }
     }
 
@@ -189,10 +191,27 @@ class MainActivity : AppCompatActivity() {
         super.onDestroy()
         try {
             unregisterReceiver(sessionExpiredReceiver)
-        } catch (_: Exception) {
+        } catch (e: Exception) {
             // ignore
         }
-        SocketManager.disconnect()
         notificationRealtimeRepository = null
+    }
+
+    fun connectSocket() {
+        val secureStorage = SecureTokenStorage(this)
+        val token = secureStorage.getAccessToken()
+        if (!token.isNullOrEmpty()) {
+            SocketManager.connect(token)
+
+            // Start realtime notifications (persist to Room + show device notification)
+            notificationRealtimeRepository = NotificationRealtimeRepository(this).also {
+                it.start(showDeviceNotifications = true)
+            }
+        }
+    }
+
+    fun disconnectSocket() {
+        SocketManager.disconnect()
+        Log.d("SocketManager","Close socket")
     }
 }
