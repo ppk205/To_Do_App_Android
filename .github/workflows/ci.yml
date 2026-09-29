@@ -102,15 +102,17 @@ jobs:
   sonar:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    # NOTE: `secrets` cannot be used in a job-level `if`.
+    # Job-level `env` CAN read secrets, so gate the step on `env` instead.
     # Skipped until SONAR_TOKEN is configured (see docs/SONARQUBE.md).
-    if: ${{ secrets.SONAR_TOKEN != '' }}
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: SonarQube scan (advisory, does not block merge)
+        if: ${{ env.SONAR_TOKEN != '' }}
         uses: SonarSource/sonarqube-scan-action@v8
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
         continue-on-error: true
