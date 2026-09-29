@@ -1,0 +1,129 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: 'Version bump type'
+        required: true
+        default: patch
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+concurrency: release
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    uses: ./.github/workflows/ci.yml
+
+  release:
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - name: Block non-main branch
+        run: |
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "Chỉ được phát hành từ nhánh main"
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Compute version
+        id: version
+        run: |
+          LATEST=$(git tag --list 'v*' --sort=-v:refname | head -n1)
+          if [ -z "$LATEST" ]; then
+            LATEST="v0.0.0"
+          fi
+          echo "Latest tag: $LATEST"
+          VER=${LATEST#v}
+          MAJOR=$(echo "$VER" | cut -d. -f1)
+          MINOR=$(echo "$VER" | cut -d. -f2)
+          PATCH=$(echo "$VER" | cut -d. -f3)
+          BUMP="${{ inputs.bump }}"
+          if [ "$BUMP" = "major" ]; then
+            MAJOR=$((MAJOR + 1))
+            MINOR=0
+            PATCH=0
+          elif [ "$BUMP" = "minor" ]; then
+            MINOR=$((MINOR + 1))
+            PATCH=0
+          else
+            PATCH=$((PATCH + 1))
+          fi
+          if [ "$MINOR" -ge 100 ] || [ "$PATCH" -ge 100 ]; then
+            echo "MINOR and PATCH must be < 100 (versionCode formula would collide)"
+            exit 1
+          fi
+          CODE=$((MAJOR * 10000 + MINOR * 100 + PATCH))
+          VERSION="$MAJOR.$MINOR.$PATCH"
+          TAG="v$VERSION"
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG already exists"
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "code=$CODE" >> "$GITHUB_OUTPUT"
+          echo "New version: $VERSION (code $CODE, tag $TAG)"
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Decode keystore
+        run: |
+          missing=""
+          if [ -z "$ANDROID_KEYSTORE_BASE64" ]; then missing="$missing ANDROID_KEYSTORE_BASE64"; fi
+          if [ -z "$ANDROID_KEYSTORE_PASSWORD" ]; then missing="$missing ANDROID_KEYSTORE_PASSWORD"; fi
+          if [ -z "$ANDROID_KEY_ALIAS" ]; then missing="$missing ANDROID_KEY_ALIAS"; fi
+          if [ -z "$ANDROID_KEY_PASSWORD" ]; then missing="$missing ANDROID_KEY_PASSWORD"; fi
+          if [ -n "$missing" ]; then
+            echo "Missing secrets:$missing"
+            exit 1
+          fi
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+          echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+
+      - name: Build signed release APK and AAB
+        run: ./gradlew assembleRelease bundleRelease -PversionName=${{ steps.version.outputs.version }} -PversionCode=${{ steps.version.outputs.code }}
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+
+      - name: Rename artifacts and checksum
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          cp app/build/outputs/apk/release/app-release.apk "taskly-v$VERSION.apk"
+          cp app/build/outputs/bundle/release/app-release.aab "taskly-v$VERSION.aab"
+          sha256sum "taskly-v$VERSION.apk" "taskly-v$VERSION.aab" > SHA256SUMS.txt
+          ls -lh taskly-* SHA256SUMS.txt
+
+      - name: Create tag and GitHub Release
+        run: |
+          TAG="${{ steps.version.outputs.tag }}"
+          gh release create "$TAG" taskly-*.apk taskly-*.aab SHA256SUMS.txt \
+            --target "$GITHUB_SHA" --title "Taskly $TAG" --generate-notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Delete temporary keystore
+        if: always()
+        run: rm -f "$RUNNER_TEMP/release.jks"
