@@ -25,7 +25,7 @@ playServicesAuth = "21.2.0"
 googleApiClientAndroid = "2.6.0"
 googleApiServicesDrive = "v3-rev20231030-2.0.0"
 cloudinaryAndroid = "3.0.2"
-googleHttpClientGson = "1.44.1"
+googleHttpClientGson = "2.2.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
